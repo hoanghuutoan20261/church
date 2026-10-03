@@ -44,6 +44,7 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
 
   const [activeUrl, setActiveUrl] = useState<string>(effectiveStreamUrl);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
+  const [isLocalStream, setIsLocalStream] = useState<boolean>(false);
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [volume, setVolume] = useState<number>(0.85);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
@@ -61,6 +62,99 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
   useEffect(() => {
     setActiveUrl(effectiveStreamUrl);
   }, [effectiveStreamUrl]);
+
+  const [probeSuccessMessage, setProbeSuccessMessage] = useState<string>("");
+
+  // Helper to resolve candidate local HLS URLs
+  const getCandidateUrls = useCallback(
+    (streamKey?: string, slug?: string) => {
+      const keys = [
+        streamKey,
+        slug,
+        "emmanuel-live",
+        "emmanuel",
+        "lbs-sunday",
+      ].filter(Boolean) as string[];
+
+      const urls: string[] = [];
+      for (const k of keys) {
+        urls.push(`http://localhost:8888/live/${k}/index.m3u8`);
+        urls.push(`http://localhost:8888/${k}/index.m3u8`);
+      }
+      return Array.from(new Set(urls));
+    },
+    []
+  );
+
+  const probeLiveHls = async (url: string): Promise<boolean> => {
+    try {
+      const res = await fetch(url, { method: "GET", cache: "no-store" });
+      if (res.ok) {
+        const text = await res.text();
+        if (text.includes("#EXTM3U")) {
+          return true;
+        }
+      }
+    } catch {}
+    return false;
+  };
+
+  // Auto probe local OBS stream on mount or when streamKey changes
+  useEffect(() => {
+    let isCancelled = false;
+    async function checkLocal() {
+      if (typeof window === "undefined") return;
+      if (
+        window.location.hostname === "localhost" ||
+        window.location.hostname === "127.0.0.1"
+      ) {
+        const candidates = getCandidateUrls(church?.streamKey, church?.slug);
+        for (const url of candidates) {
+          if (isCancelled) return;
+          const isLive = await probeLiveHls(url);
+          if (isLive && !isCancelled) {
+            setActiveUrl(url);
+            setIsLocalStream(true);
+            setHasError(false);
+            setErrorMessage("");
+            return;
+          }
+        }
+      }
+    }
+    checkLocal();
+    return () => {
+      isCancelled = true;
+    };
+  }, [church?.streamKey, church?.slug, getCandidateUrls]);
+
+  const handleProbeObs = async () => {
+    const candidates = getCandidateUrls(church?.streamKey, church?.slug);
+    for (const url of candidates) {
+      const isLive = await probeLiveHls(url);
+      if (isLive) {
+        setActiveUrl(url);
+        setIsLocalStream(true);
+        setHasError(false);
+        setErrorMessage("");
+        if (hlsRef.current) {
+          hlsRef.current.loadSource(url);
+          hlsRef.current.startLoad();
+        }
+        if (videoRef.current) {
+          videoRef.current.play().catch(() => {});
+        }
+        setProbeSuccessMessage("Đã bắt thành công luồng OBS trực tiếp!");
+        setTimeout(() => setProbeSuccessMessage(""), 4000);
+        return;
+      }
+    }
+
+    const key = church?.streamKey || "emmanuel-live";
+    alert(
+      `Chưa nhận được tín hiệu từ OBS!\n\nXin hãy kiểm tra:\n1. Mở phần mềm OBS Studio -> Settings -> Stream:\n   - Service: Custom...\n   - Server: rtmp://localhost:1935/live\n   - Stream Key: ${key}\n2. Bấm 'Start Streaming' trong OBS rồi bấm lại nút này.`
+    );
+  };
 
   // Initialize HLS Stream
   useEffect(() => {
@@ -98,6 +192,14 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
         if (data.fatal) {
           switch (data.type) {
             case Hls.ErrorTypes.NETWORK_ERROR:
+              // If it's local OBS, give it a chance to buffer rather than immediate fallback
+              if (isLocalStream) {
+                console.warn("Đang chờ nạp phân đoạn OBS...", activeUrl);
+                setTimeout(() => {
+                  if (hlsRef.current) hlsRef.current.startLoad();
+                }, 1000);
+                break;
+              }
               // If current stream fails and it wasn't the backup, switch to backup test stream
               if (activeUrl !== worshipData.streamUrl) {
                 console.warn(
@@ -256,7 +358,7 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
           showControls || !isPlaying ? "opacity-100" : "opacity-0"
         }`}
       >
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           {/* Reverent Live Indicator */}
           <div className="flex items-center gap-2 bg-black/60 backdrop-blur-sm border border-gold-400/30 px-2.5 py-1 rounded text-xs font-medium">
             <span className="relative flex h-2 w-2">
@@ -264,11 +366,23 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
               <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
             </span>
             <span className="text-red-400 tracking-wider text-[11px] font-semibold uppercase">
-              TRỰC TIẾP
+              {isLocalStream ? "TRỰC TIẾP (OBS LOCAL)" : "TRỰC TIẾP"}
             </span>
           </div>
 
-          <div className="hidden sm:flex items-center gap-1.5 text-xs text-sanctuary-300 bg-black/50 px-2.5 py-1 rounded border border-white/[0.06]">
+          {/* Quick OBS connection probe button */}
+          <button
+            onClick={handleProbeObs}
+            className="pointer-events-auto flex items-center gap-1.5 text-[11px] bg-black/70 hover:bg-gold-400/20 text-gold-300 border border-white/15 hover:border-gold-400/40 px-2.5 py-1 rounded transition-colors shadow-sm"
+            title="Kiểm tra và kết nối với OBS Studio trên máy của bạn"
+          >
+            <RefreshCw className="w-3 h-3 text-gold-400" />
+            <span className="hidden sm:inline">
+              {isLocalStream ? "Đang Bắt OBS" : "Bắt Luồng OBS"}
+            </span>
+          </button>
+
+          <div className="hidden md:flex items-center gap-1.5 text-xs text-sanctuary-300 bg-black/50 px-2.5 py-1 rounded border border-white/[0.06]">
             <Users className="w-3.5 h-3.5 text-sanctuary-400" />
             <span>{worshipData.viewersCount.toLocaleString("vi-VN")} đang hiệp ý</span>
           </div>
@@ -287,6 +401,14 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
           </p>
         </div>
       </div>
+
+      {/* Toast Notification when OBS stream connects */}
+      {probeSuccessMessage && (
+        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-30 bg-emerald-950/95 border border-emerald-500/60 text-emerald-200 px-4 py-2 rounded-md shadow-2xl text-xs font-serif flex items-center gap-2 pointer-events-none">
+          <Sparkles className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span>{probeSuccessMessage}</span>
+        </div>
+      )}
 
       {/* Center Subtle Play Button (Visible on Pause) */}
       {!isPlaying && (

@@ -35,3 +35,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local streaming tools
+/mediamtx/
+mediamtx.yml
+*.log
+*.exe
+
