@@ -11,29 +11,77 @@ import { SalvationModal } from "@/components/modals/SalvationModal";
 import { PrayerRequestModal } from "@/components/modals/PrayerRequestModal";
 import { HymnalSheetModal } from "@/components/modals/HymnalSheetModal";
 import { worshipData } from "@/data/worshipServiceData";
+import { SanctuaryWaitingRoom } from "@/components/sanctuary/SanctuaryWaitingRoom";
+import { ChurchWallView } from "@/components/wall/ChurchWallView";
 import { EyeOff, BookOpen, User, MapPin } from "lucide-react";
+import { useState, useEffect } from "react";
 
 function WorshipSanctuaryScreen() {
-  const { church, isFocusMode, toggleFocusMode } = useWorship();
+  const { church, isFocusMode, toggleFocusMode, activeView, setActiveView } = useWorship();
+  const [isLive, setIsLive] = useState<boolean>(
+    Boolean(church.currentService?.isLive)
+  );
+
+  // Scroll to top on mount
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
+  // Periodic polling for live broadcast state from Church Admin
+  useEffect(() => {
+    if (!church?.slug) return;
+    let isCancelled = false;
+
+    const pollLiveStatus = async () => {
+      try {
+        const res = await fetch(
+          `/api/churches?slug=${encodeURIComponent(church.slug)}`
+        );
+        if (res.ok) {
+          const json = await res.json();
+          if (json.success && json.data && !isCancelled) {
+            const serverLiveState = Boolean(json.data.currentService?.isLive);
+            setIsLive(serverLiveState);
+          }
+        }
+      } catch {}
+    };
+
+    const interval = setInterval(pollLiveStatus, 3500);
+    return () => {
+      isCancelled = true;
+      clearInterval(interval);
+    };
+  }, [church?.slug]);
 
   return (
     <div className="min-h-screen bg-sanctuary-900 text-sanctuary-100 flex flex-col font-sans relative selection:bg-gold-400/25 selection:text-gold-200">
       {/* 1. Sanctuary Top Bar (Hidden in Full Focus Mode) */}
       {!isFocusMode && <SanctuaryHeader />}
 
-      {/* 2. Main Sanctuary Workspace */}
-      <main
-        className={`flex-1 transition-all duration-300 p-2 sm:p-4 lg:p-5 flex flex-col ${
-          isFocusMode ? "justify-center max-w-7xl mx-auto w-full p-2 sm:p-6" : ""
-        }`}
-      >
+      {/* 2. Main Workspace: Church Profile Wall vs Sanctuary */}
+      {activeView === "wall" ? (
+        <ChurchWallView
+          onGoToSanctuary={() => setActiveView("sanctuary")}
+          isLive={isLive}
+        />
+      ) : (
+        <main
+          className={`flex-1 transition-all duration-300 p-2 sm:p-4 lg:p-5 flex flex-col ${
+            isFocusMode ? "justify-center max-w-7xl mx-auto w-full p-2 sm:p-6" : ""
+          }`}
+        >
         {isFocusMode ? (
           /* Full Focus Mode (Chế độ Chiêm Niệm - Distraction-free) */
           <div className="relative w-full flex flex-col items-center justify-center space-y-3">
             {/* Top Exit Floating Control */}
             <div className="w-full flex items-center justify-between pb-2">
               <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-gold-400 animate-pulse" />
+                <span
+                  className={`w-2 h-2 rounded-full ${
+                    isLive ? "bg-red-500 animate-pulse" : "bg-amber-400"
+                  }`}
+                />
                 <span className="text-xs uppercase tracking-widest text-gold-300 font-serif">
                   Chế Độ Chiêm Niệm Thờ Phượng — {church.name}
                 </span>
@@ -47,9 +95,9 @@ function WorshipSanctuaryScreen() {
               </button>
             </div>
 
-            {/* Expansive Player */}
+            {/* Expansive Player or Waiting Room */}
             <div className="w-full max-w-6xl shadow-2xl">
-              <HlsPlayer />
+              {isLive ? <HlsPlayer /> : <SanctuaryWaitingRoom />}
             </div>
 
             {/* Minimalist Subtitle/Scripture bar below focused player */}
@@ -67,8 +115,8 @@ function WorshipSanctuaryScreen() {
           <div className="flex-1 flex flex-col lg:flex-row gap-4 xl:gap-5 max-w-[1720px] mx-auto w-full">
             {/* Left / Center: Video Player & Service Details */}
             <div className="flex-1 flex flex-col min-w-0">
-              {/* High-priority Player with Dynamic Church Stream */}
-              <HlsPlayer />
+              {/* High-priority Player or Waiting Room */}
+              {isLive ? <HlsPlayer /> : <SanctuaryWaitingRoom />}
 
               {/* Quick Action Bar (Cần Cầu Nguyện, Tiếp Nhận Chúa, Dâng Hiến) */}
               <QuickActionBar />
@@ -157,6 +205,7 @@ function WorshipSanctuaryScreen() {
           </div>
         )}
       </main>
+      )}
 
       {/* 3. Sanctuary Modals */}
       <GivingModal />
@@ -167,9 +216,15 @@ function WorshipSanctuaryScreen() {
   );
 }
 
-export function SanctuaryClient({ church }: { church: CurrentChurchInfo }) {
+export function SanctuaryClient({
+  church,
+  initialView = "sanctuary",
+}: {
+  church: CurrentChurchInfo;
+  initialView?: "sanctuary" | "wall";
+}) {
   return (
-    <WorshipProvider initialChurch={church}>
+    <WorshipProvider initialChurch={church} initialView={initialView}>
       <WorshipSanctuaryScreen />
     </WorshipProvider>
   );

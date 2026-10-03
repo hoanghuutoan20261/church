@@ -22,6 +22,24 @@ export interface CurrentChurchInfo {
     accountHolder: string;
     branch?: string;
   };
+  currentService?: {
+    title: string;
+    speaker: string;
+    speakerTitle: string;
+    scriptureReference: string;
+    welcomeMessage: string;
+    isLive: boolean;
+    viewersCount: number;
+  };
+  profileConfig?: {
+    coverImageUrl?: string;
+    avatarUrl?: string;
+    about?: string;
+    leadPastor?: string;
+    contactPhone?: string;
+    contactEmail?: string;
+    slogan?: string;
+  };
   liveSchedule?: string;
 }
 
@@ -65,6 +83,8 @@ interface WorshipContextType {
   saveUserNotes: (notes: string) => void;
   selectedTranslation: string;
   setSelectedTranslation: (t: string) => void;
+  activeView: "sanctuary" | "wall";
+  setActiveView: (view: "sanctuary" | "wall") => void;
 }
 
 const WorshipContext = createContext<WorshipContextType | undefined>(undefined);
@@ -72,11 +92,14 @@ const WorshipContext = createContext<WorshipContextType | undefined>(undefined);
 export function WorshipProvider({
   children,
   initialChurch,
+  initialView = "sanctuary",
 }: {
   children: React.ReactNode;
   initialChurch?: CurrentChurchInfo;
+  initialView?: "sanctuary" | "wall";
 }) {
   const church = initialChurch || defaultChurchInfo;
+  const [activeView, setActiveView] = useState<"sanctuary" | "wall">(initialView);
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [fontSize, setFontSizeState] = useState<FontSizeOption>("normal");
   const [activeTab, setActiveTab] = useState<SidebarTab>("chat");
@@ -84,6 +107,19 @@ export function WorshipProvider({
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [userNotes, setUserNotes] = useState<string>("");
   const [selectedTranslation, setSelectedTranslation] = useState<string>("BTT 1925");
+
+  // Read URL query parameter ?view=wall or ?view=sanctuary on initial load
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const viewParam = params.get("view");
+      if (viewParam === "wall") {
+        setActiveView("wall");
+      } else {
+        setActiveView("sanctuary");
+      }
+    }
+  }, []);
 
   // Load chat messages scoped to this church from MongoDB
   useEffect(() => {
@@ -213,6 +249,8 @@ export function WorshipProvider({
         saveUserNotes,
         selectedTranslation,
         setSelectedTranslation,
+        activeView,
+        setActiveView,
       }}
     >
       {children}

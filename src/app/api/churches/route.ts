@@ -8,6 +8,28 @@ export async function GET(req: NextRequest) {
   try {
     await connectDB();
     const { searchParams } = new URL(req.url);
+    const slug = searchParams.get("slug");
+
+    // If specific slug is requested (used for live status polling)
+    if (slug) {
+      const church = await Church.findOne({
+        slug: slug.toLowerCase().trim(),
+        isActive: true,
+      }).lean();
+
+      if (!church) {
+        return NextResponse.json(
+          { success: false, error: "Hội Thánh không tồn tại" },
+          { status: 404 }
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        data: church,
+      });
+    }
+
     const search = searchParams.get("search") || "";
     const denomination = searchParams.get("denomination") || "";
 

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Search,
   Church as ChurchIcon,
@@ -15,6 +16,11 @@ import {
   Check,
   Building2,
   Users,
+  ShieldCheck,
+  Lock,
+  Mail,
+  User as UserIcon,
+  Newspaper,
 } from "lucide-react";
 
 interface ChurchItem {
@@ -26,6 +32,19 @@ interface ChurchItem {
   streamKey: string;
   liveSchedule: string;
   isActive: boolean;
+  profileConfig?: {
+    coverImageUrl?: string;
+    avatarUrl?: string;
+    slogan?: string;
+    about?: string;
+    leadPastor?: string;
+  };
+  currentService?: {
+    title: string;
+    speaker: string;
+    isLive: boolean;
+    viewersCount: number;
+  };
   bankingConfig?: {
     bankName: string;
     accountNumber: string;
@@ -34,6 +53,7 @@ interface ChurchItem {
 }
 
 export default function ChurchDirectoryPage() {
+  const router = useRouter();
   const [churches, setChurches] = useState<ChurchItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -47,6 +67,9 @@ export default function ChurchDirectoryPage() {
   const [formAddress, setFormAddress] = useState("");
   const [formStreamKey, setFormStreamKey] = useState("");
   const [formSchedule, setFormSchedule] = useState("Chúa Nhật, 09:00 - 11:15");
+  const [formAdminName, setFormAdminName] = useState("");
+  const [formEmail, setFormEmail] = useState("");
+  const [formPassword, setFormPassword] = useState("");
   const [formBankName, setFormBankName] = useState("MB Bank");
   const [formAccNumber, setFormAccNumber] = useState("");
   const [formAccHolder, setFormAccHolder] = useState("");
@@ -82,6 +105,7 @@ export default function ChurchDirectoryPage() {
   };
 
   useEffect(() => {
+    window.scrollTo(0, 0);
     fetchChurches();
   }, []);
 
@@ -106,21 +130,22 @@ export default function ChurchDirectoryPage() {
     setSubmitError("");
 
     try {
-      const res = await fetch("/api/churches", {
+      const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: formName,
+          churchName: formName,
           slug: formSlug,
           denomination: formDenomination,
           address: formAddress || "Việt Nam",
           streamKey: formStreamKey,
           liveSchedule: formSchedule,
-          bankingConfig: {
-            bankName: formBankName || "MB Bank",
-            accountNumber: formAccNumber || "0386888999",
-            accountHolder: formAccHolder || formName.toUpperCase(),
-          },
+          adminName: formAdminName || "Mục sư Quản Nhiệm",
+          email: formEmail,
+          password: formPassword,
+          bankName: formBankName || "MB Bank",
+          accountNumber: formAccNumber || "0386888999",
+          accountHolder: formAccHolder || formName.toUpperCase(),
         }),
       });
 
@@ -129,13 +154,11 @@ export default function ChurchDirectoryPage() {
         throw new Error(data.error || "Không thể đăng ký Hội Thánh");
       }
 
-      // Refresh list and close
+      // Refresh list, close modal, and redirect to Admin Dashboard
       await fetchChurches();
       setShowRegisterModal(false);
-      // Reset form
-      setFormName("");
-      setFormSlug("");
-      setFormStreamKey("");
+      router.push("/admin");
+      router.refresh();
     } catch (err: any) {
       setSubmitError(err.message);
     } finally {
@@ -172,15 +195,27 @@ export default function ChurchDirectoryPage() {
           </div>
         </div>
 
-        <button
-          onClick={() => setShowRegisterModal(true)}
-          className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-serif font-medium rounded-md bg-gold-400/10 hover:bg-gold-400/20 text-gold-300 border border-gold-400/40 transition-colors"
-          title="Đăng ký thêm Hội Thánh vào nền tảng"
-        >
-          <Plus className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">Đăng Ký Hội Thánh Mới</span>
-          <span className="sm:hidden">Thêm</span>
-        </button>
+        <div className="flex items-center gap-2 sm:gap-3">
+          <Link
+            href="/admin"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-serif font-medium rounded-md bg-sanctuary-850 hover:bg-sanctuary-800 text-stone-300 hover:text-gold-300 border border-white/10 hover:border-gold-400/40 transition-colors shadow-sm"
+            title="Đăng nhập vào bảng quản trị mục vụ Hội Thánh"
+          >
+            <ShieldCheck className="w-3.5 h-3.5 text-gold-400" />
+            <span className="hidden sm:inline">Quản Trị Mục Vụ</span>
+            <span className="sm:hidden">Quản Trị</span>
+          </Link>
+
+          <button
+            onClick={() => setShowRegisterModal(true)}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-serif font-medium rounded-md bg-gold-400/10 hover:bg-gold-400/20 text-gold-300 border border-gold-400/40 transition-colors shadow-sm"
+            title="Đăng ký thêm Hội Thánh vào nền tảng"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Đăng Ký Hội Thánh Mới</span>
+            <span className="sm:hidden">Thêm</span>
+          </button>
+        </div>
       </header>
 
       {/* 2. Hero Section */}
@@ -283,60 +318,132 @@ export default function ChurchDirectoryPage() {
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {filteredChurches.map((church) => (
-              <div
-                key={church._id}
-                className="group relative bg-sanctuary-900 hover:bg-sanctuary-850/80 border border-white/[0.08] hover:border-gold-400/40 rounded-lg p-5 flex flex-col justify-between transition-all duration-200 shadow-sm"
-              >
-                <div className="space-y-3">
-                  {/* Top Status & Denomination */}
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-[11px] font-medium text-gold-300 bg-gold-400/10 border border-gold-400/25 px-2 py-0.5 rounded font-sans truncate">
-                      {church.denomination}
-                    </span>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredChurches.map((church) => {
+              const coverImg =
+                church.profileConfig?.coverImageUrl ||
+                "https://images.unsplash.com/photo-1438232992991-995b7058bbb3?auto=format&fit=crop&w=1200&q=80";
+              const avatarImg =
+                church.profileConfig?.avatarUrl ||
+                "https://images.unsplash.com/photo-1548625361-16eb16428c0c?auto=format&fit=crop&w=400&q=80";
+              const isLive = Boolean(church.currentService?.isLive);
 
-                    {/* Live Indicator */}
-                    <div className="flex items-center gap-1.5 text-[11px] font-medium text-red-400 bg-red-950/40 border border-red-500/30 px-2 py-0.5 rounded">
-                      <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-                      <span className="uppercase text-[10px] tracking-wider">
-                        Trực Tiếp
-                      </span>
+              return (
+                <div
+                  key={church._id}
+                  className="group relative bg-sanctuary-900 hover:bg-[#14171e] border border-white/[0.08] hover:border-gold-400/40 rounded-xl overflow-hidden flex flex-col justify-between transition-all duration-300 shadow-md hover:shadow-xl hover:-translate-y-0.5"
+                >
+                  <div>
+                    {/* 1. Card Cover Image Banner */}
+                    <Link
+                      href={`/${church.slug}?view=sanctuary`}
+                      className="block relative h-44 sm:h-48 w-full overflow-hidden bg-sanctuary-950 cursor-pointer"
+                    >
+                      <img
+                        src={coverImg}
+                        alt={church.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
+                        loading="lazy"
+                      />
+
+                      {/* Dark Gradient Overlay */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-sanctuary-900 via-sanctuary-900/40 to-black/60" />
+
+                      {/* Badges on top of image */}
+                      <div className="absolute top-3 inset-x-3 flex items-center justify-between gap-2 z-10">
+                        <span className="text-[11px] font-medium text-gold-200 bg-sanctuary-950/85 backdrop-blur-md border border-gold-400/30 px-2.5 py-0.5 rounded-full font-sans truncate shadow-md">
+                          {church.denomination}
+                        </span>
+
+                        {isLive ? (
+                          <div className="flex items-center gap-1.5 text-[11px] font-bold text-white bg-red-600/90 backdrop-blur-md px-2.5 py-0.5 rounded-full shadow-md animate-pulse">
+                            <span className="w-2 h-2 rounded-full bg-white" />
+                            <span className="uppercase text-[10px] tracking-wider">
+                              Đang Trực Tiếp
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1 text-[10px] text-sanctuary-300 bg-sanctuary-950/80 backdrop-blur-md border border-white/10 px-2.5 py-0.5 rounded-full">
+                            <Clock className="w-3 h-3 text-gold-400" />
+                            <span>{church.liveSchedule?.split(",")[0] || "Chúa Nhật"}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Church Avatar overlapping banner */}
+                      <div className="absolute -bottom-4 left-4 z-10">
+                        <div className="w-12 h-12 rounded-xl bg-sanctuary-950 border-2 border-gold-400/60 p-0.5 shadow-xl overflow-hidden shrink-0">
+                          <img
+                            src={avatarImg}
+                            alt={church.name}
+                            className="w-full h-full object-cover rounded-lg"
+                          />
+                        </div>
+                      </div>
+                    </Link>
+
+                    {/* 2. Card Content Body */}
+                    <div className="pt-6 p-5 space-y-2.5">
+                      {/* Slogan Motto */}
+                      {church.profileConfig?.slogan && (
+                        <p className="text-[11px] italic font-serif text-gold-400/90 line-clamp-1">
+                          &ldquo;{church.profileConfig.slogan}&rdquo;
+                        </p>
+                      )}
+
+                      {/* Church Name */}
+                      <Link href={`/${church.slug}?view=sanctuary`} className="block">
+                        <h4 className="font-serif text-lg font-bold text-sanctuary-100 group-hover:text-gold-300 transition-colors line-clamp-1 hover:underline decoration-gold-400/40">
+                          {church.name}
+                        </h4>
+                      </Link>
+
+                      {/* Pastor Info */}
+                      {church.profileConfig?.leadPastor && (
+                        <div className="flex items-center gap-1 text-xs text-sanctuary-400">
+                          <span className="text-gold-400 font-serif text-[11px]">Quản nhiệm:</span>
+                          <span className="text-sanctuary-300 font-sans truncate">{church.profileConfig.leadPastor}</span>
+                        </div>
+                      )}
+
+                      {/* Address */}
+                      <div className="flex items-start gap-2 text-xs text-sanctuary-400 pt-0.5">
+                        <MapPin className="w-3.5 h-3.5 text-gold-400/70 shrink-0 mt-0.5" />
+                        <span className="line-clamp-1 font-sans">{church.address}</span>
+                      </div>
+
+                      {/* Schedule */}
+                      <div className="flex items-center gap-2 text-xs text-sanctuary-400">
+                        <Clock className="w-3.5 h-3.5 text-sanctuary-400 shrink-0" />
+                        <span className="font-sans text-sanctuary-300 line-clamp-1">
+                          {church.liveSchedule}
+                        </span>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Church Name */}
-                  <h4 className="font-serif text-lg font-bold text-sanctuary-100 group-hover:text-gold-200 transition-colors line-clamp-2">
-                    {church.name}
-                  </h4>
+                  {/* 3. Card Bottom Actions */}
+                  <div className="px-5 pb-5 pt-3 border-t border-white/[0.06] flex items-center gap-2">
+                    <Link
+                      href={`/${church.slug}?view=sanctuary`}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg bg-sanctuary-850 hover:bg-gold-400 text-gold-300 hover:text-sanctuary-950 border border-gold-400/30 hover:border-gold-400 transition-all font-serif text-xs sm:text-sm font-semibold tracking-wide shadow-sm"
+                    >
+                      <Radio className="w-3.5 h-3.5" />
+                      <span>Vào Thờ Phượng</span>
+                    </Link>
 
-                  {/* Address */}
-                  <div className="flex items-start gap-2 text-xs text-sanctuary-400">
-                    <MapPin className="w-3.5 h-3.5 text-gold-400/70 shrink-0 mt-0.5" />
-                    <span className="line-clamp-2 font-sans">{church.address}</span>
-                  </div>
-
-                  {/* Schedule */}
-                  <div className="flex items-center gap-2 text-xs text-sanctuary-400">
-                    <Clock className="w-3.5 h-3.5 text-sanctuary-400 shrink-0" />
-                    <span className="font-sans text-sanctuary-300">
-                      {church.liveSchedule}
-                    </span>
+                    <Link
+                      href={`/${church.slug}?view=wall`}
+                      className="py-2 px-3 rounded-lg bg-sanctuary-850 hover:bg-sanctuary-800 text-sanctuary-300 hover:text-gold-300 border border-white/10 transition-colors flex items-center gap-1.5 text-xs font-serif"
+                      title="Xem Tường & Bản Tin Hội Thánh"
+                    >
+                      <Newspaper className="w-3.5 h-3.5 text-gold-400" />
+                      <span className="hidden sm:inline">Tường</span>
+                    </Link>
                   </div>
                 </div>
-
-                {/* Card Bottom CTA */}
-                <div className="pt-5 mt-4 border-t border-white/[0.06]">
-                  <Link
-                    href={`/${church.slug}`}
-                    className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-md bg-sanctuary-850 hover:bg-gold-400 text-gold-300 hover:text-sanctuary-950 border border-gold-400/30 hover:border-gold-400 transition-all font-serif text-xs sm:text-sm font-semibold tracking-wide shadow-sm"
-                  >
-                    <span>Vào Phòng Thờ Phượng</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </Link>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </main>
@@ -490,10 +597,45 @@ export default function ChurchDirectoryPage() {
                 />
               </div>
 
+              {/* Admin User Credentials */}
+              <div className="p-3 bg-sanctuary-900 border border-white/[0.06] rounded-md space-y-2">
+                <span className="text-[11px] font-semibold text-gold-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <span>Tài Khoản Đăng Nhập Quản Trị</span>
+                </span>
+                <input
+                  required
+                  type="text"
+                  value={formAdminName}
+                  onChange={(e) => setFormAdminName(e.target.value)}
+                  placeholder="Họ & tên người quản trị (Mục sư / Trưởng ban kỹ thuật)"
+                  className="w-full bg-sanctuary-850 border border-white/[0.06] rounded px-2.5 py-1.5 text-xs text-sanctuary-100 placeholder-sanctuary-500 focus:outline-none"
+                />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <input
+                    required
+                    type="email"
+                    value={formEmail}
+                    onChange={(e) => setFormEmail(e.target.value)}
+                    placeholder="Email đăng nhập quản trị"
+                    className="w-full bg-sanctuary-850 border border-white/[0.06] rounded px-2.5 py-1.5 text-xs text-sanctuary-100 placeholder-sanctuary-500 focus:outline-none"
+                  />
+                  <input
+                    required
+                    type="password"
+                    value={formPassword}
+                    onChange={(e) => setFormPassword(e.target.value)}
+                    placeholder="Mật khẩu (tối thiểu 6 ký tự)"
+                    minLength={6}
+                    className="w-full bg-sanctuary-850 border border-white/[0.06] rounded px-2.5 py-1.5 text-xs text-sanctuary-100 placeholder-sanctuary-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+
               {/* Banking for VietQR */}
               <div className="p-3 bg-sanctuary-900 border border-white/[0.06] rounded-md space-y-2">
                 <span className="text-[11px] font-semibold text-gold-400 uppercase tracking-wider block">
-                  Tài khoản Dâng Hiến VietQR
+                  Tài khoản Dâng Hiến VietQR (Tùy chọn)
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <input
@@ -523,8 +665,15 @@ export default function ChurchDirectoryPage() {
               <div className="pt-2">
                 <button
                   type="submit"
-                  disabled={isSubmitting || !formName || !formSlug || !formStreamKey}
-                  className="w-full py-2.5 bg-gold-400 hover:bg-gold-500 disabled:opacity-40 text-sanctuary-950 font-serif font-semibold text-xs sm:text-sm rounded-md transition-all shadow-sm flex items-center justify-center gap-2"
+                  disabled={
+                    isSubmitting ||
+                    !formName ||
+                    !formSlug ||
+                    !formStreamKey ||
+                    !formEmail ||
+                    !formPassword
+                  }
+                  className="w-full py-2.5 bg-gold-400 hover:bg-gold-500 disabled:opacity-40 text-sanctuary-950 font-serif font-semibold text-xs sm:text-sm rounded-md transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer"
                 >
                   {isSubmitting ? (
                     <span>Đang khởi tạo phòng thờ phượng...</span>

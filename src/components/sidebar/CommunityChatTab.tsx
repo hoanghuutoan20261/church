@@ -17,11 +17,13 @@ import {
 export const CommunityChatTab: React.FC = () => {
   const { messages, addMessage } = useWorship();
   const [inputText, setInputText] = useState("");
-  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const chatContainerRef = useRef<HTMLDivElement | null>(null);
 
-  // Auto scroll to bottom of chat
+  // Auto scroll to bottom of chat container only (without scrolling the browser window)
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
   }, [messages]);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -80,7 +82,10 @@ export const CommunityChatTab: React.FC = () => {
       </div>
 
       {/* Messages Scroll Area */}
-      <div className="flex-1 overflow-y-auto p-3.5 space-y-3">
+      <div
+        ref={chatContainerRef}
+        className="flex-1 overflow-y-auto p-3.5 space-y-3"
+      >
         {messages.map((msg) => {
           const isMe = msg.sender.includes("Tôi");
           const isPinned = msg.id === "m-pinned";
@@ -136,7 +141,6 @@ export const CommunityChatTab: React.FC = () => {
             </div>
           );
         })}
-        <div ref={messagesEndRef} />
       </div>
 
       {/* Quick Spiritual Responses / Amen Chips (Reverent, no confetti spam) */}

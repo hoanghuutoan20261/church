@@ -11,6 +11,9 @@ interface PageProps {
   params: {
     churchSlug: string;
   };
+  searchParams?: {
+    view?: string;
+  };
 }
 
 export const dynamic = "force-dynamic";
@@ -39,7 +42,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 }
 
-export default async function ChurchSanctuaryPage({ params }: PageProps) {
+export default async function ChurchSanctuaryPage({ params, searchParams }: PageProps) {
   const slug = params.churchSlug.toLowerCase().trim();
 
   await connectDB();
@@ -103,8 +106,22 @@ export default async function ChurchSanctuaryPage({ params }: PageProps) {
         churchDoc.bankingConfig?.accountHolder || "HOI THANH TIN LANH LOI BAN SU SONG",
       branch: churchDoc.bankingConfig?.branch || "Chi nhánh TP. Hồ Chí Minh",
     },
+    profileConfig: churchDoc.profileConfig,
     liveSchedule: churchDoc.liveSchedule || "Chúa Nhật, 09:00 - 11:15",
+    currentService: churchDoc.currentService
+      ? {
+          title: churchDoc.currentService.title,
+          speaker: churchDoc.currentService.speaker,
+          speakerTitle: churchDoc.currentService.speakerTitle || "Diễn giả",
+          scriptureReference: churchDoc.currentService.scriptureReference,
+          welcomeMessage: churchDoc.currentService.welcomeMessage,
+          isLive: Boolean(churchDoc.currentService.isLive),
+          viewersCount: churchDoc.currentService.viewersCount || 0,
+        }
+      : undefined,
   };
 
-  return <SanctuaryClient church={churchData} />;
+  const initialView = searchParams?.view === "wall" ? "wall" : "sanctuary";
+
+  return <SanctuaryClient church={churchData} initialView={initialView} />;
 }

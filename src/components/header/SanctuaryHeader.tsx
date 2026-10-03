@@ -4,10 +4,18 @@ import React from "react";
 import Link from "next/link";
 import { useWorship, FontSizeOption } from "@/context/WorshipContext";
 import { worshipData } from "@/data/worshipServiceData";
-import { Eye, EyeOff, Type, ArrowLeft } from "lucide-react";
+import { Eye, EyeOff, Type, ArrowLeft, Radio, Newspaper } from "lucide-react";
 
 export const SanctuaryHeader: React.FC = () => {
-  const { church, isFocusMode, toggleFocusMode, fontSize, setFontSize } = useWorship();
+  const {
+    church,
+    isFocusMode,
+    toggleFocusMode,
+    fontSize,
+    setFontSize,
+    activeView,
+    setActiveView,
+  } = useWorship();
 
   const handleNextFontSize = () => {
     if (fontSize === "normal") setFontSize("large");
@@ -65,49 +73,67 @@ export const SanctuaryHeader: React.FC = () => {
             </span>
           </div>
           <h1 className="text-sm sm:text-base font-serif font-medium text-sanctuary-100 tracking-normal truncate">
-            {worshipData.serviceTitle} —{" "}
-            <span className="text-sanctuary-300 italic">
-              &ldquo;{worshipData.theme}&rdquo;
-            </span>
+            {church.currentService?.title || (
+              <>
+                {worshipData.serviceTitle} —{" "}
+                <span className="text-sanctuary-300 italic">
+                  &ldquo;{worshipData.theme}&rdquo;
+                </span>
+              </>
+            )}
           </h1>
         </div>
       </div>
 
-      {/* Center: Liturgical Stage Progress (Desktop) */}
-      <div className="hidden xl:flex items-center gap-2 bg-sanctuary-900/90 border border-white/[0.06] rounded-md px-3 py-1">
-        <span className="text-[11px] uppercase tracking-wider text-sanctuary-400 mr-1 font-medium">
-          Tiến trình:
-        </span>
-        <div className="flex items-center gap-1.5 text-xs">
-          {worshipData.stages.map((stage, idx) => {
-            const isCurrent = stage.status === "current";
-            const isDone = stage.status === "completed";
-            return (
-              <React.Fragment key={stage.id}>
-                {idx > 0 && <span className="text-sanctuary-700">›</span>}
-                <div
-                  className={`flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium transition-all ${
-                    isCurrent
-                      ? "bg-gold-400/15 text-gold-300 border border-gold-400/40"
-                      : isDone
-                      ? "text-sanctuary-500 line-through opacity-75"
-                      : "text-sanctuary-400"
-                  }`}
-                  title={`${stage.time} - ${stage.name}`}
-                >
-                  {isCurrent && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-gold-400 animate-pulse" />
-                  )}
-                  <span>{stage.name}</span>
-                </div>
-              </React.Fragment>
-            );
-          })}
-        </div>
+      {/* Center: Mode Switcher (Phòng Thờ Phượng vs Tường Hội Thánh) */}
+      <div className="flex items-center gap-1 bg-sanctuary-850 p-1 rounded-lg border border-white/[0.08] shadow-inner">
+        <button
+          onClick={() => setActiveView("wall")}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-serif transition-all cursor-pointer ${
+            activeView === "wall"
+              ? "bg-[#c5a059] text-stone-950 font-bold shadow-sm"
+              : "text-sanctuary-300 hover:text-stone-100 hover:bg-sanctuary-800"
+          }`}
+          title="Xem trang giới thiệu và bản tin mục vụ của Hội Thánh"
+        >
+          <Newspaper className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">Tường & Bản Tin</span>
+          <span className="sm:hidden">Tường</span>
+        </button>
+
+        <button
+          onClick={() => setActiveView("sanctuary")}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-serif transition-all cursor-pointer ${
+            activeView === "sanctuary"
+              ? "bg-sanctuary-950 text-gold-300 font-bold border border-gold-400/40 shadow-sm"
+              : "text-sanctuary-300 hover:text-stone-100 hover:bg-sanctuary-800"
+          }`}
+          title="Vào phòng thờ phượng và nghe giảng trực tuyến"
+        >
+          {church.currentService?.isLive ? (
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
+            </span>
+          ) : (
+            <Radio className="w-3.5 h-3.5 text-gold-400" />
+          )}
+          <span className="hidden sm:inline">Phòng Thờ Phượng</span>
+          <span className="sm:hidden">Phòng Live</span>
+        </button>
       </div>
 
       {/* Right: Accessibility & Focus Mode Controls */}
       <div className="flex items-center gap-2 shrink-0">
+        <Link
+          href="/admin"
+          className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-md bg-sanctuary-850 hover:bg-sanctuary-800 text-sanctuary-300 hover:text-gold-300 border border-white/[0.08] text-xs transition-colors flex items-center gap-1.5 shadow-sm"
+          title="Bảng điều khiển quản trị mục vụ Hội Thánh"
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-gold-400" />
+          <span className="hidden md:inline">Quản Trị</span>
+        </Link>
+
         <button
           onClick={handleNextFontSize}
           aria-label={getFontSizeLabel(fontSize)}

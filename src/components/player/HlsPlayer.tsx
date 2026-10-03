@@ -16,6 +16,7 @@ import {
   Users,
   RefreshCw,
   Sparkles,
+  Music2,
 } from "lucide-react";
 import { useWorship } from "@/context/WorshipContext";
 import { worshipData } from "@/data/worshipServiceData";
@@ -23,11 +24,13 @@ import { worshipData } from "@/data/worshipServiceData";
 interface HlsPlayerProps {
   streamUrl?: string;
   posterUrl?: string;
+  isAdminPreview?: boolean;
 }
 
 export const HlsPlayer: React.FC<HlsPlayerProps> = ({
   streamUrl,
   posterUrl = worshipData.fallbackPosterUrl,
+  isAdminPreview = false,
 }) => {
   const { church, isFocusMode, toggleFocusMode } = useWorship();
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -57,6 +60,43 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
   const [availableQualities, setAvailableQualities] = useState<
     { height: number; index: number }[]
   >([]);
+
+  // Real-time Live Lyrics Synchronization State
+  const [liveLyrics, setLiveLyrics] = useState<{
+    isEnabled: boolean;
+    songTitle?: string;
+    stanzaLabel?: string;
+    lines?: string[];
+  } | null>(null);
+  const [showLyricsSubtitle, setShowLyricsSubtitle] = useState<boolean>(true);
+
+  // Poll live lyrics for the current church
+  useEffect(() => {
+    const slug = church?.slug;
+    if (!slug) return;
+
+    let isMounted = true;
+    const fetchLyrics = async () => {
+      try {
+        const res = await fetch(`/api/lyrics?slug=${encodeURIComponent(slug)}`, {
+          cache: "no-store",
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (isMounted && data.success && data.liveLyrics) {
+            setLiveLyrics(data.liveLyrics);
+          }
+        }
+      } catch {}
+    };
+
+    fetchLyrics();
+    const interval = setInterval(fetchLyrics, 2500);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [church?.slug]);
 
   // Update activeUrl when effectiveStreamUrl changes
   useEffect(() => {
@@ -165,7 +205,11 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
       const hls = new Hls({
         enableWorker: true,
         lowLatencyMode: true,
-        backBufferLength: 60,
+        backBufferLength: 30,
+        maxLiveSyncPlaybackRate: 1.5,
+        liveSyncDurationCount: 2,
+        liveMaxLatencyDurationCount: 3,
+        liveDurationInfinity: true,
       });
 
       hlsRef.current = hls;
@@ -245,13 +289,76 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
     };
   }, [activeUrl]);
 
+  // Live synchronization state & pause tracking
+  const lastPauseTimeRef = useRef<number>(0);
+  const [isBehindLive, setIsBehindLive] = useState<boolean>(false);
+
+  // Jump to live broadcast edge
+  const jumpToLive = useCallback(() => {
+    const video = videoRef.current;
+    const hls = hlsRef.current;
+    if (!video) return;
+
+    if (hls) {
+      hls.startLoad();
+      if (typeof hls.liveSyncPosition === "number" && hls.liveSyncPosition > 0) {
+        video.currentTime = hls.liveSyncPosition;
+      } else if (video.seekable && video.seekable.length > 0) {
+        const liveEnd = video.seekable.end(video.seekable.length - 1);
+        video.currentTime = Math.max(0, liveEnd - 0.5);
+      }
+    } else if (video.seekable && video.seekable.length > 0) {
+      const liveEnd = video.seekable.end(video.seekable.length - 1);
+      video.currentTime = Math.max(0, liveEnd - 0.5);
+    }
+    setIsBehindLive(false);
+  }, []);
+
+  // Monitor live distance to detect if user has lagged behind
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const checkLiveDistance = () => {
+      const hls = hlsRef.current;
+      if (hls && typeof hls.liveSyncPosition === "number" && hls.liveSyncPosition > 0) {
+        const distance = hls.liveSyncPosition - video.currentTime;
+        setIsBehindLive(distance > 5);
+      } else if (video.seekable && video.seekable.length > 0) {
+        const liveEnd = video.seekable.end(video.seekable.length - 1);
+        const distance = liveEnd - video.currentTime;
+        setIsBehindLive(distance > 5);
+      }
+    };
+
+    const interval = setInterval(checkLiveDistance, 2500);
+    return () => clearInterval(interval);
+  }, []);
+
   // Video State listeners
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
 
-    const onPlay = () => setIsPlaying(true);
-    const onPause = () => setIsPlaying(false);
+    const onPlay = () => {
+      setIsPlaying(true);
+      // If resuming after a pause of more than 2 seconds, auto-jump to live edge!
+      const timePaused = Date.now() - lastPauseTimeRef.current;
+      if (lastPauseTimeRef.current > 0 && timePaused > 2000) {
+        if (timePaused > 8000 && hlsRef.current) {
+          hlsRef.current.stopLoad();
+          hlsRef.current.loadSource(activeUrl);
+          hlsRef.current.startLoad();
+        }
+        jumpToLive();
+      }
+    };
+
+    const onPause = () => {
+      setIsPlaying(false);
+      lastPauseTimeRef.current = Date.now();
+    };
+
     const onVolumeChange = () => {
       setVolume(video.volume);
       setIsMuted(video.muted);
@@ -266,7 +373,7 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
       video.removeEventListener("pause", onPause);
       video.removeEventListener("volumechange", onVolumeChange);
     };
-  }, []);
+  }, [activeUrl, jumpToLive]);
 
   // Fullscreen listener
   useEffect(() => {
@@ -297,10 +404,21 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
     const video = videoRef.current;
     if (!video) return;
     if (video.paused) {
+      const timePaused = Date.now() - lastPauseTimeRef.current;
+      // If paused for more than 2 seconds, immediately jump to the live edge
+      if (lastPauseTimeRef.current > 0 && timePaused > 2000) {
+        if (timePaused > 8000 && hlsRef.current) {
+          hlsRef.current.stopLoad();
+          hlsRef.current.loadSource(activeUrl);
+          hlsRef.current.startLoad();
+        }
+        jumpToLive();
+      }
       video.play().catch(() => {
         // Autoplay policy fallback
       });
     } else {
+      lastPauseTimeRef.current = Date.now();
       video.pause();
     }
   };
@@ -359,28 +477,63 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
         }`}
       >
         <div className="flex items-center gap-2.5">
-          {/* Reverent Live Indicator */}
-          <div className="flex items-center gap-2 bg-black/60 backdrop-blur-sm border border-gold-400/30 px-2.5 py-1 rounded text-xs font-medium">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
-            </span>
-            <span className="text-red-400 tracking-wider text-[11px] font-semibold uppercase">
-              {isLocalStream ? "TRỰC TIẾP (OBS LOCAL)" : "TRỰC TIẾP"}
-            </span>
-          </div>
-
-          {/* Quick OBS connection probe button */}
+          {/* Reverent Live / Preview Indicator & Click-to-Sync */}
           <button
-            onClick={handleProbeObs}
-            className="pointer-events-auto flex items-center gap-1.5 text-[11px] bg-black/70 hover:bg-gold-400/20 text-gold-300 border border-white/15 hover:border-gold-400/40 px-2.5 py-1 rounded transition-colors shadow-sm"
-            title="Kiểm tra và kết nối với OBS Studio trên máy của bạn"
+            onClick={() => {
+              jumpToLive();
+              if (videoRef.current?.paused) {
+                videoRef.current.play().catch(() => {});
+              }
+            }}
+            className={`pointer-events-auto flex items-center gap-2 px-2.5 py-1 rounded text-xs font-medium backdrop-blur-sm border transition-all ${
+              isAdminPreview
+                ? "bg-black/60 border-amber-400/50 text-amber-300"
+                : isBehindLive
+                ? "bg-red-950/90 hover:bg-red-900 border-red-500 text-red-200 animate-pulse cursor-pointer shadow-md ring-1 ring-red-500/40"
+                : "bg-black/60 border-gold-400/30 hover:border-gold-400/60 text-red-400 hover:text-red-300 cursor-pointer"
+            }`}
+            title={
+              isAdminPreview
+                ? "Màn hình xem trước luồng OBS của Admin"
+                : isBehindLive
+                ? "Bạn đang xem chậm hơn luồng phát trực tiếp. Bấm để đồng bộ ngay với Hội Thánh!"
+                : "Đang xem trực tiếp thời gian thực. Bấm để làm mới luồng."
+            }
           >
-            <RefreshCw className="w-3 h-3 text-gold-400" />
-            <span className="hidden sm:inline">
-              {isLocalStream ? "Đang Bắt OBS" : "Bắt Luồng OBS"}
+            <span className="relative flex h-2 w-2">
+              <span
+                className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                  isAdminPreview ? "bg-amber-400" : "bg-red-400"
+                }`}
+              />
+              <span
+                className={`relative inline-flex rounded-full h-2 w-2 ${
+                  isAdminPreview ? "bg-amber-500" : "bg-red-500"
+                }`}
+              />
+            </span>
+            <span className="tracking-wider text-[11px] font-semibold uppercase font-serif">
+              {isAdminPreview
+                ? "TỔNG DUYỆT (CHỈ ADMIN)"
+                : isBehindLive
+                ? "Về Trực Tiếp ⚡"
+                : "TRỰC TIẾP"}
             </span>
           </button>
+
+          {/* Quick OBS connection probe button - ONLY for Church Admin in preview mode */}
+          {isAdminPreview && (
+            <button
+              onClick={handleProbeObs}
+              className="pointer-events-auto flex items-center gap-1.5 text-[11px] bg-black/70 hover:bg-gold-400/20 text-gold-300 border border-white/15 hover:border-gold-400/40 px-2.5 py-1 rounded transition-colors shadow-sm"
+              title="Kiểm tra và kết nối với OBS Studio trên máy của bạn"
+            >
+              <RefreshCw className="w-3 h-3 text-gold-400" />
+              <span className="hidden sm:inline">
+                {isLocalStream ? "Đang Bắt OBS" : "Bắt Luồng OBS"}
+              </span>
+            </button>
+          )}
 
           <div className="hidden md:flex items-center gap-1.5 text-xs text-sanctuary-300 bg-black/50 px-2.5 py-1 rounded border border-white/[0.06]">
             <Users className="w-3.5 h-3.5 text-sanctuary-400" />
@@ -402,8 +555,8 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
         </div>
       </div>
 
-      {/* Toast Notification when OBS stream connects */}
-      {probeSuccessMessage && (
+      {/* Toast Notification when OBS stream connects - ONLY for Admin in preview mode */}
+      {isAdminPreview && probeSuccessMessage && (
         <div className="absolute top-16 left-1/2 -translate-x-1/2 z-30 bg-emerald-950/95 border border-emerald-500/60 text-emerald-200 px-4 py-2 rounded-md shadow-2xl text-xs font-serif flex items-center gap-2 pointer-events-none">
           <Sparkles className="w-4 h-4 text-emerald-400 shrink-0" />
           <span>{probeSuccessMessage}</span>
@@ -445,6 +598,37 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
           </button>
         </div>
       )}
+
+      {/* Live Synchronized Lyrics Lower-Third Overlay */}
+      {liveLyrics?.isEnabled &&
+        showLyricsSubtitle &&
+        liveLyrics.lines &&
+        liveLyrics.lines.length > 0 && (
+          <div className="absolute bottom-16 sm:bottom-20 left-2 right-2 sm:left-6 sm:right-6 z-20 flex flex-col items-center pointer-events-none transition-all duration-300">
+            <div className="bg-sanctuary-950/90 backdrop-blur-md border border-gold-400/40 rounded-xl px-4 py-2.5 sm:px-6 sm:py-3.5 shadow-2xl max-w-2xl w-full text-center">
+              <div className="flex items-center justify-center gap-2 text-[10px] sm:text-xs text-gold-400 font-serif tracking-wider uppercase mb-1">
+                <Music2 className="w-3 h-3 text-gold-400 animate-pulse" />
+                <span className="font-semibold">{liveLyrics.songTitle || "Thánh Ca Tôn Vinh"}</span>
+                {liveLyrics.stanzaLabel && (
+                  <>
+                    <span className="text-white/30">•</span>
+                    <span className="text-gold-300/90 font-medium">{liveLyrics.stanzaLabel}</span>
+                  </>
+                )}
+              </div>
+              <div className="space-y-0.5 sm:space-y-1">
+                {liveLyrics.lines.map((line, idx) => (
+                  <p
+                    key={idx}
+                    className="font-serif text-sm sm:text-base md:text-lg text-white font-medium drop-shadow-md leading-relaxed"
+                  >
+                    {line}
+                  </p>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
       {/* Bottom Minimalist Controls Bar */}
       <div
@@ -495,10 +679,17 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
             </div>
 
             {/* Live Synchronized Badge */}
-            <div className="hidden md:flex items-center gap-1.5 text-[11px] text-emerald-400/90 font-medium px-2 py-0.5 rounded bg-emerald-950/40 border border-emerald-500/20">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+            <button
+              onClick={() => {
+                jumpToLive();
+                if (videoRef.current?.paused) videoRef.current.play().catch(() => {});
+              }}
+              className="hidden md:flex items-center gap-1.5 text-[11px] text-emerald-400/90 hover:text-emerald-300 font-medium px-2 py-0.5 rounded bg-emerald-950/40 hover:bg-emerald-950/70 border border-emerald-500/20 hover:border-emerald-500/40 transition-colors cursor-pointer"
+              title="Bấm để đồng bộ ngay lập tức với luồng phát trực tiếp của Hội Thánh"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
               <span>Đồng bộ thời gian thực</span>
-            </div>
+            </button>
           </div>
 
           {/* Right Controls: Quality, Focus Mode, Fullscreen */}
@@ -580,6 +771,26 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
                 </div>
               )}
             </div>
+
+            {/* Live Lyrics Subtitles Toggle Button (CC) */}
+            {liveLyrics?.isEnabled && (
+              <button
+                onClick={() => setShowLyricsSubtitle((prev) => !prev)}
+                className={`flex items-center gap-1 text-xs px-2 py-1 rounded border transition-colors ${
+                  showLyricsSubtitle
+                    ? "bg-gold-400/25 border-gold-400/60 text-gold-300 font-medium shadow-sm"
+                    : "bg-black/40 border-white/10 text-sanctuary-400 hover:text-sanctuary-200"
+                }`}
+                title={
+                  showLyricsSubtitle
+                    ? "Tắt phụ đề lời hát trực tiếp"
+                    : "Bật phụ đề lời hát trực tiếp (CC)"
+                }
+              >
+                <Music2 className="w-3.5 h-3.5 text-gold-400" />
+                <span className="text-[11px] font-sans">Lời</span>
+              </button>
+            )}
 
             {/* Quick Focus Mode inside player */}
             <button

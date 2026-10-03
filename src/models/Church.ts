@@ -12,6 +12,38 @@ export interface IBankingConfig {
   branch?: string;
 }
 
+export interface ICurrentService {
+  title: string;
+  speaker: string;
+  speakerTitle: string;
+  scriptureReference: string;
+  welcomeMessage: string;
+  isLive: boolean;
+  viewersCount: number;
+}
+
+export interface IProfileConfig {
+  coverImageUrl?: string;
+  avatarUrl?: string;
+  about?: string;
+  leadPastor?: string;
+  contactPhone?: string;
+  contactEmail?: string;
+  slogan?: string;
+}
+
+export interface ILiveLyrics {
+  isEnabled: boolean;
+  songId?: string;
+  songNumber?: number | null;
+  songTitle?: string;
+  originalTitle?: string;
+  stanzaIndex?: number;
+  stanzaLabel?: string;
+  lines?: string[];
+  updatedAt?: Date;
+}
+
 export interface IChurch extends Document {
   name: string;
   slug: string;
@@ -20,6 +52,9 @@ export interface IChurch extends Document {
   streamKey: string;
   themeConfig: IThemeConfig;
   bankingConfig: IBankingConfig;
+  profileConfig?: IProfileConfig;
+  currentService?: ICurrentService;
+  liveLyrics?: ILiveLyrics;
   liveSchedule: string;
   isActive: boolean;
   createdAt: Date;
@@ -88,6 +123,107 @@ const ChurchSchema = new Schema<IChurch>(
     liveSchedule: {
       type: String,
       default: "Chúa Nhật, 09:00 - 11:15",
+    },
+    profileConfig: {
+      coverImageUrl: {
+        type: String,
+        default:
+          "https://images.unsplash.com/photo-1548625361-195972886a86?auto=format&fit=crop&w=1920&q=80",
+      },
+      avatarUrl: {
+        type: String,
+        default: "",
+      },
+      about: {
+        type: String,
+        default:
+          "Chào mừng bạn đến với trang thông tin chính thức của Hội Thánh. Nơi cùng nhau thờ phượng Chúa, gây dựng đức tin và kết nối yêu thương trong Đấng Christ.",
+      },
+      leadPastor: {
+        type: String,
+        default: "Mục sư Quản Nhiệm",
+      },
+      contactPhone: {
+        type: String,
+        default: "028 3822 5566",
+      },
+      contactEmail: {
+        type: String,
+        default: "mucvu@hoithanh.vn",
+      },
+      slogan: {
+        type: String,
+        default: "Hiệp Một — Yêu Thương — Phụng Sự",
+      },
+    },
+    currentService: {
+      title: {
+        type: String,
+        default: "Lễ Thờ Phượng Chúa Nhật — 'Bước Đi Trong Ân Điển'",
+      },
+      speaker: {
+        type: String,
+        default: "Mục sư Quản Nhiệm",
+      },
+      speakerTitle: {
+        type: String,
+        default: "Diễn giả",
+      },
+      scriptureReference: {
+        type: String,
+        default: "Ê-phê-sô 2:8–10",
+      },
+      welcomeMessage: {
+        type: String,
+        default:
+          "Chào mừng quý ông bà anh chị em hiệp một thờ phượng Chúa sáng nay. Nguyện xin sự bình an và ân điển của Ba Ngôi Đức Chúa Trời ở cùng hết thảy chúng ta.",
+      },
+      isLive: {
+        type: Boolean,
+        default: false,
+      },
+      viewersCount: {
+        type: Number,
+        default: 0,
+      },
+    },
+    liveLyrics: {
+      isEnabled: {
+        type: Boolean,
+        default: false,
+      },
+      songId: {
+        type: String,
+        default: "",
+      },
+      songNumber: {
+        type: Number,
+        default: null,
+      },
+      songTitle: {
+        type: String,
+        default: "",
+      },
+      originalTitle: {
+        type: String,
+        default: "",
+      },
+      stanzaIndex: {
+        type: Number,
+        default: 0,
+      },
+      stanzaLabel: {
+        type: String,
+        default: "",
+      },
+      lines: {
+        type: [String],
+        default: [],
+      },
+      updatedAt: {
+        type: Date,
+        default: Date.now,
+      },
     },
     isActive: {
       type: Boolean,
