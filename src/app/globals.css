@@ -1,0 +1,71 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-scale: 1;
+  color-scheme: dark;
+}
+
+/* Elderly-friendly font scaling */
+body[data-font-size="large"] {
+  --font-scale: 1.12;
+}
+
+body[data-font-size="xlarge"] {
+  --font-scale: 1.25;
+}
+
+html {
+  font-size: calc(16px * var(--font-scale, 1));
+  scroll-behavior: smooth;
+  background-color: #0f1115;
+  color: #f3f4f6;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #0f1115;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Custom dignified scrollbar for sanctuary panels */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #14171d;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2a313d;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #c5a059;
+}
+
+/* Remove default focus rings and use warm gold outline */
+*:focus-visible {
+  outline: 2px solid #c5a059;
+  outline-offset: 2px;
+}
+
+/* Scripture quote block styling */
+.scripture-verse {
+  font-feature-settings: "onum" 1, "pnum" 1;
+}
+
+/* Subtle transitions without heavy blur */
+.transition-sanctuary {
+  transition-property: color, background-color, border-color, opacity, transform;
+  transition-duration: 200ms;
+  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
