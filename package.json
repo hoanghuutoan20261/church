@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "seed": "node src/scripts/seed.mjs",
+    "seed:superadmin": "node src/scripts/seed-superadmin.mjs",
     "stream-server": ".\\mediamtx\\mediamtx.exe .\\mediamtx\\mediamtx.yml"
   },
   "dependencies": {
