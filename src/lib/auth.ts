@@ -13,8 +13,8 @@ export interface AuthTokenPayload {
   email: string;
   fullName: string;
   role: UserRole;
-  churchSlug: string;
-  churchId: string;
+  churchSlug?: string;
+  churchId?: string;
 }
 
 export async function hashPassword(password: string): Promise<string> {

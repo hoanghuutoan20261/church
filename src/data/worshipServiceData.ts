@@ -116,7 +116,7 @@ export const worshipData: WorshipServiceInfo = {
       title: "1. Bản Chất Của Sự Cứu Rỗi: Ân Điển Trưng Dẫn",
       verseRef: "Ê-phê-sô 2:8",
       summary:
-        "Sự cứu rỗi không bắt đầu từ nỗ lực đạo đức của con người, nhưng là món quà tuyệt đối từ tấm lòng nhân từ của Thiên Chúa.",
+        "Sự cứu rỗi không bắt đầu từ nỗ lực đạo đức của con người, nhưng là món quà tuyệt đối từ tấm lòng nhân từ của Đức Chúa Trời.",
       points: [
         "Ân điển (Charis): Ơn phước không xứng đáng nhận lãnh.",
         "Đức tin là chiếc cầu rỗng đón nhận hồng ân, không phải là công đức tích lũy.",

@@ -1,8 +1,14 @@
 export interface BibleVerse {
   verse: number;
-  text: string;
-  textBdm?: string; // Bản Dịch Mới
+  text: string; // Bản Truyền Thống 1925 (BTT)
+  textBthd?: string; // Bản Hiệu Đính 2010
+  textBdm?: string; // Bản Dịch Mới 2002
+  textBpt?: string; // Bản Phổ Thông
+  textBd2011?: string; // Bản Dịch 2011
   textNiv?: string; // New International Version (English)
+  textKjv?: string; // King James Version (English)
+  textEsv?: string; // English Standard Version (English)
+  textNlt?: string; // New Living Translation (English)
 }
 
 export interface ChapterData {
@@ -374,6 +380,166 @@ export const FOUNDATIONAL_CHAPTERS: Record<string, BibleVerse[]> = {
       textNiv: "He will wipe every tear from their eyes. There will be no more death or mourning or crying or pain, for the old order of things has passed away.",
     },
   ],
+
+  // ================= GIĂNG 1 =================
+  "JHN_1": [
+    {
+      verse: 1,
+      text: "Ban đầu có Đạo, Đạo ở cùng Đức Chúa Trời, và Đạo là Đức Chúa Trời.",
+      textBdm: "Ban đầu có Ngôi Lời, Ngôi Lời ở cùng Đức Chúa Trời, và Ngôi Lời là Đức Chúa Trời.",
+      textNiv: "In the beginning was the Word, and the Word was with God, and the Word was God.",
+    },
+    {
+      verse: 4,
+      text: "Trong Ngài có sự sống, và sự sống là sự sáng của loài người.",
+      textBdm: "Trong Ngài có sự sống, và sự sống là ánh sáng cho loài người.",
+      textNiv: "In him was life, and that life was the light of all mankind.",
+    },
+    {
+      verse: 12,
+      text: "Nhưng hễ ai đã nhận Ngài, thì Ngài ban cho quyền phép trở nên con cái Đức Chúa Trời, là ban cho những kẻ tin danh Ngài,",
+      textBdm: "Nhưng bất cứ ai tiếp nhận Ngài, tức là tin vào Danh Ngài, thì Ngài ban cho quyền trở nên con cái Đức Chúa Trời,",
+      textNiv: "Yet to all who did receive him, to those who believed in his name, he gave the right to become children of God—",
+    },
+    {
+      verse: 14,
+      text: "Đạo đã trở nên xác thịt, ở giữa chúng ta, đầy ơn và lẽ thật; chúng ta đã ngắm xem sự vinh hiển của Ngài, thật như vinh hiển của Con Một đến từ nơi Cha.",
+      textBdm: "Ngôi Lời đã trở nên xác phàm và cư ngụ giữa chúng ta, tràn đầy ân điển và chân lý. Chúng ta đã chiêm ngưỡng vinh quang Ngài, là vinh quang của Con Một đến từ Cha.",
+      textNiv: "The Word became flesh and made his dwelling among us. We have seen his glory, the glory of the one and only Son, who came from the Father, full of grace and truth.",
+    },
+  ],
+
+  // ================= PHI-LÍP 4 =================
+  "PHP_4": [
+    {
+      verse: 4,
+      text: "Hãy vui mừng trong Chúa luôn luôn. Tôi lại còn nói nữa: Hãy vui mừng đi!",
+      textBdm: "Hãy luôn luôn vui mừng trong Chúa! Tôi nhắc lại: Hãy vui mừng đi!",
+      textNiv: "Rejoice in the Lord always. I will say it again: Rejoice!",
+    },
+    {
+      verse: 6,
+      text: "Chớ lo phiền chi hết, song trong mọi sự hãy dùng lời cầu nguyện, nài xin, và sự tạ ơn mà trình các điều cầu xin của mình cho Đức Chúa Trời.",
+      textBdm: "Đừng lo lắng gì cả, nhưng trong mọi hoàn cảnh, hãy trình dâng những ước nguyện của anh chị em lên Đức Chúa Trời qua lời cầu nguyện, khẩn xin cùng với lời cảm tạ.",
+      textNiv: "Do not be anxious about anything, but in every situation, by prayer and petition, with thanksgiving, present your requests to God.",
+    },
+    {
+      verse: 7,
+      text: "Sự bình an của Đức Chúa Trời vượt quá mọi sự hiểu biết, sẽ gìn giữ lòng và ý tưởng anh em trong Đức Chúa Giê-xu Christ.",
+      textBdm: "Và sự bình an của Đức Chúa Trời, vượt quá mọi sự hiểu biết, sẽ gìn giữ tấm lòng và tâm trí anh chị em trong Chúa Cứu Thế Jêsus.",
+      textNiv: "And the peace of God, which transcends all understanding, will guard your hearts and your minds in Christ Jesus.",
+    },
+    {
+      verse: 13,
+      text: "Tôi làm được mọi sự nhờ Đấng ban thêm sức cho tôi.",
+      textBdm: "Tôi có thể làm được mọi sự nhờ Đấng ban năng lực cho tôi.",
+      textNiv: "I can do all this through him who gives me strength.",
+    },
+    {
+      verse: 19,
+      text: "Đức Chúa Trời tôi sẽ làm cho đầy đủ mọi sự cần dùng của anh em y theo sự giàu có của Ngài ở nơi vinh hiển trong Đức Chúa Giê-xu Christ.",
+      textBdm: "Đức Chúa Trời tôi sẽ cung cấp đầy đủ mọi nhu cầu của anh chị em theo sự giàu sang vinh quang của Ngài trong Chúa Cứu Thế Jêsus.",
+      textNiv: "And my God will meet all your needs according to the riches of his glory in Christ Jesus.",
+    },
+  ],
+
+  // ================= THI THIÊN 121 =================
+  "PSA_121": [
+    {
+      verse: 1,
+      text: "Tôi ngước mắt lên trên núi: Sự tiếp trợ tôi đến từ đâu?",
+      textBdm: "Tôi ngước mắt lên các ngọn núi: Nguồn cứu giúp tôi đến từ đâu?",
+      textNiv: "I lift up my eyes to the mountains—where does my help come from?",
+    },
+    {
+      verse: 2,
+      text: "Sự tiếp trợ tôi đến từ Đức Giê-hô-va, Là Đấng dựng nên trời và đất.",
+      textBdm: "Nguồn cứu giúp tôi đến từ CHÚA, Đấng tạo dựng trời và đất.",
+      textNiv: "My help comes from the LORD, the Maker of heaven and earth.",
+    },
+    {
+      verse: 3,
+      text: "Ngài không để cho chân ngươi xiêu tó; Đấng gìn giữ ngươi không hề nhắp mắt.",
+      textBdm: "Ngài không để chân bạn vấp ngã; Đấng gìn giữ bạn không bao giờ buồn ngủ.",
+      textNiv: "He will not let your foot slip—he who watches over you will not slumber;",
+    },
+    {
+      verse: 5,
+      text: "Đức Giê-hô-va là Đấng gìn giữ ngươi; Đức Giê-hô-va là bóng che ở bên hữu ngươi.",
+      textBdm: "CHÚA là Đấng che chở bạn; CHÚA là bóng râm bên tay phải bạn.",
+      textNiv: "The LORD watches over you—the LORD is your shade at your right hand;",
+    },
+    {
+      verse: 8,
+      text: "Đức Giê-hô-va sẽ gìn giữ ngươi khi ra khi vào, từ nay cho đến đời đời.",
+      textBdm: "CHÚA sẽ gìn giữ bạn khi đi ra và lúc đi vào, từ nay cho đến muôn đời muôn kiếp.",
+      textNiv: "the LORD will watch over your coming and going both now and forevermore.",
+    },
+  ],
+
+  // ================= HÊ-BƠ-RƠ 11 =================
+  "HEB_11": [
+    {
+      verse: 1,
+      text: "Vả, đức tin là sự biết chắc vững vàng của những điều mình đương trông mong, là bằng cớ của những điều mình chẳng xem thấy.",
+      textBdm: "Đức tin là sự bảo đảm cho những điều chúng ta hy vọng, là bằng chứng cho những điều chúng ta không thấy được.",
+      textNiv: "Now faith is confidence in what we hope for and assurance about what we do not see.",
+    },
+    {
+      verse: 6,
+      text: "Vả, không có đức tin, thì chẳng hề có thể nào làm cho đẹp ý Ngài; vì kẻ đến gần Đức Chúa Trời phải tin rằng có Đức Chúa Trời, và Ngài là Đấng thưởng cho những kẻ tìm kiếm Ngài.",
+      textBdm: "Không có đức tin thì không thể nào làm hài lòng Đức Chúa Trời; vì người nào đến gần Đức Chúa Trời phải tin rằng Ngài hiện hữu và Ngài ban phần thưởng cho những ai hết lòng tìm kiếm Ngài.",
+      textNiv: "And without faith it is impossible to please God, because anyone who comes to him must believe that he exists and that he rewards those who earnestly seek him.",
+    },
+  ],
+
+  // ================= CHÂM NGÔN 3 =================
+  "PRO_3": [
+    {
+      verse: 5,
+      text: "Hãy hết lòng tin cậy Đức Giê-hô-va, chớ nương cậy nơi sự thông sáng của con;",
+      textBdm: "Hãy hết lòng tin cậy CHÚA, đừng nương cậy vào sự hiểu biết của con;",
+      textNiv: "Trust in the LORD with all your heart and lean not on your own understanding;",
+    },
+    {
+      verse: 6,
+      text: "Phàm trong các việc làm của con, khá nhận biết Ngài, thì Ngài sẽ chỉ dẫn các nẻo của con.",
+      textBdm: "Trong mọi đường lối của con hãy nhận biết Ngài, thì Ngài sẽ chỉ dẫn các nẻo đường con đi.",
+      textNiv: "in all your ways submit to him, and he will make your paths straight.",
+    },
+  ],
+
+  // ================= Ê-SAI 40 =================
+  "ISA_40": [
+    {
+      verse: 29,
+      text: "Ngài ban sức mạnh cho kẻ nhọc nhằn, thêm lực lượng cho kẻ chẳng có sức.",
+      textBdm: "Ngài ban năng lực cho kẻ mệt mỏi, gia tăng sức mạnh cho người kiệt sức.",
+      textNiv: "He gives strength to the weary and increases the power of the weak.",
+    },
+    {
+      verse: 31,
+      text: "Nhưng ai trông đợi Đức Giê-hô-va thì chắc được sức mới, cất cánh bay cao như chim ưng; chạy mà không mệt nhọc, đi mà không mòn mỏi.",
+      textBdm: "Nhưng ai trông đợi CHÚA sẽ được tái sinh sức lực mới; họ sẽ sải cánh bay cao như đại bàng; họ chạy mà không mệt mỏi, họ đi mà không kiệt sức.",
+      textNiv: "but those who hope in the LORD will renew their strength. They will soar on wings like eagles; they will run and not grow weary, they will walk and not be faint.",
+    },
+  ],
+
+  // ================= 2 TI-MÔ-THÊ 3 =================
+  "2TI_3": [
+    {
+      verse: 16,
+      text: "Cả Kinh Thánh đều là bởi Đức Chúa Trời soi dẫn, có ích cho sự dạy dỗ, bẻ trách, sửa trị, dạy người trong sự công bình,",
+      textBdm: "Cả Kinh Thánh đều được Đức Chúa Trời hà hơi, hữu ích cho việc dạy dỗ, khiển trách, sửa trị và huấn luyện trong sự công chính,",
+      textNiv: "All Scripture is God-breathed and is useful for teaching, rebuking, correcting and training in righteousness,",
+    },
+    {
+      verse: 17,
+      text: "hầu cho người thuộc về Đức Chúa Trời được trọn vẹn và sắm sẵn để làm mọi việc lành.",
+      textBdm: "để người của Đức Chúa Trời được trang bị đầy đủ và sẵn sàng cho mọi việc lành.",
+      textNiv: "so that the servant of God may be thoroughly equipped for every good work.",
+    },
+  ],
 };
 
 /**
@@ -426,4 +592,40 @@ export function getChapterVerses(
   ];
 
   return fallbackVerses;
+}
+
+/**
+ * Extract verse text according to chosen translation ID with graceful fallback.
+ */
+export function getVerseTextByTranslation(
+  verse: BibleVerse,
+  translationId: string
+): string {
+  const tid = (translationId || "BTT").toUpperCase().trim();
+  if (tid.includes("BTHD")) {
+    return verse.textBthd || verse.text;
+  }
+  if (tid.includes("BDM") || tid.includes("2002")) {
+    return verse.textBdm || verse.text;
+  }
+  if (tid.includes("BPT")) {
+    return verse.textBpt || verse.text;
+  }
+  if (tid.includes("BD2011") || tid.includes("2011")) {
+    return verse.textBd2011 || verse.textBdm || verse.text;
+  }
+  if (tid.includes("NIV")) {
+    return verse.textNiv || verse.text;
+  }
+  if (tid.includes("KJV")) {
+    return verse.textKjv || verse.textNiv || verse.text;
+  }
+  if (tid.includes("ESV")) {
+    return verse.textEsv || verse.textNiv || verse.text;
+  }
+  if (tid.includes("NLT")) {
+    return verse.textNlt || verse.textNiv || verse.text;
+  }
+  // Default to BTT (Bản Truyền Thống 1925)
+  return verse.text;
 }

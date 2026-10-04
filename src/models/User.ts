@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 
-export type UserRole = "pastor" | "tech_leader" | "moderator" | "admin";
+export type UserRole = "superadmin" | "pastor" | "tech_leader" | "moderator" | "admin";
 
 export interface IUser extends Document {
   fullName: string;
@@ -8,8 +8,8 @@ export interface IUser extends Document {
   passwordHash: string;
   phone?: string;
   role: UserRole;
-  churchSlug: string;
-  churchId: mongoose.Types.ObjectId;
+  churchSlug?: string;
+  churchId?: mongoose.Types.ObjectId;
   isActive: boolean;
   lastLoginAt?: Date;
   createdAt: Date;
@@ -42,20 +42,21 @@ const UserSchema = new Schema<IUser>(
     },
     role: {
       type: String,
-      enum: ["pastor", "tech_leader", "moderator", "admin"],
+      enum: ["superadmin", "pastor", "tech_leader", "moderator", "admin"],
       default: "pastor",
     },
     churchSlug: {
       type: String,
-      required: [true, "Mã định danh Hội Thánh là bắt buộc"],
+      required: false,
       lowercase: true,
       trim: true,
+      default: "system",
       index: true,
     },
     churchId: {
       type: Schema.Types.ObjectId,
       ref: "Church",
-      required: true,
+      required: false,
       index: true,
     },
     isActive: {
@@ -71,7 +72,10 @@ const UserSchema = new Schema<IUser>(
   }
 );
 
-export const User: Model<IUser> =
-  mongoose.models.User || mongoose.model<IUser>("User", UserSchema);
+if (mongoose.models && mongoose.models.User) {
+  delete (mongoose.models as any).User;
+}
+
+export const User: Model<IUser> = mongoose.model<IUser>("User", UserSchema);
 
 export default User;

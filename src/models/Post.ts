@@ -13,7 +13,8 @@ export type PostCategory =
   | "scripture"
   | "devotion"
   | "sermon"
-  | "fellowship";
+  | "fellowship"
+  | "worship";
 
 export interface IPost extends Document {
   churchId: mongoose.Types.ObjectId;
@@ -93,7 +94,7 @@ const PostSchema = new Schema<IPost>(
     },
     category: {
       type: String,
-      enum: ["announcement", "scripture", "devotion", "sermon", "fellowship"],
+      enum: ["announcement", "scripture", "devotion", "sermon", "fellowship", "worship"],
       default: "announcement",
       index: true,
     },

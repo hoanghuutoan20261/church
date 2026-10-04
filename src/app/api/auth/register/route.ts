@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/mongoose";
 import { Church } from "@/models/Church";
 import { User } from "@/models/User";
 import { hashPassword, signToken, setAuthCookie } from "@/lib/auth";
+import { getDefaultChurchAvatar } from "@/lib/churchAvatar";
 
 export const dynamic = "force-dynamic";
 
@@ -119,8 +120,7 @@ export async function POST(req: NextRequest) {
       profileConfig: {
         coverImageUrl:
           "https://images.unsplash.com/photo-1438232992991-995b7058bbb3?auto=format&fit=crop&w=1200&q=80",
-        avatarUrl:
-          "https://images.unsplash.com/photo-1548625361-16eb16428c0c?auto=format&fit=crop&w=400&q=80",
+        avatarUrl: getDefaultChurchAvatar(churchName.trim(), slug.trim()),
         slogan: "Hiệp Một — Yêu Thương — Phụng Sự",
         about: `Chào mừng quý con cái Chúa và thân hữu đến với trang thông tin của ${churchName.trim()}. Nơi cùng nhau thờ phượng Chúa, gây dựng đức tin và kết nối yêu thương trong Đấng Christ.`,
         leadPastor: role === "pastor" ? adminName.trim() : "Mục sư Quản Nhiệm",

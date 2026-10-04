@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongoose";
 import { Church } from "@/models/Church";
+import { getChurchAvatar } from "@/lib/churchAvatar";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +27,17 @@ export async function GET(req: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        data: church,
+        data: {
+          ...church,
+          profileConfig: {
+            ...church.profileConfig,
+            avatarUrl: getChurchAvatar(
+              church.name,
+              church.slug,
+              church.profileConfig?.avatarUrl
+            ),
+          },
+        },
       });
     }
 
@@ -45,10 +56,18 @@ export async function GET(req: NextRequest) {
 
     const churches = await Church.find(query).sort({ createdAt: -1 }).lean();
 
+    const enrichedChurches = churches.map((c: any) => ({
+      ...c,
+      profileConfig: {
+        ...c.profileConfig,
+        avatarUrl: getChurchAvatar(c.name, c.slug, c.profileConfig?.avatarUrl),
+      },
+    }));
+
     return NextResponse.json({
       success: true,
-      count: churches.length,
-      data: churches,
+      count: enrichedChurches.length,
+      data: enrichedChurches,
     });
   } catch (error: any) {
     console.error("Lỗi lấy danh sách Hội Thánh:", error);

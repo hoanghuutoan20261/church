@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { CurrentChurchInfo, useWorship } from "@/context/WorshipContext";
+import { getChurchAvatar } from "@/lib/churchAvatar";
 import {
   Church as ChurchIcon,
   Radio,
@@ -70,7 +71,7 @@ const CHURCH_GALLERY_PHOTOS = [
     title: "Lễ Tiệc Thánh Thiêng Liêng",
     desc: "Hiệp lòng tưởng niệm sự thương khó và hy sinh của Chúa Cứu Thế Giê-xu trên thập tự giá.",
     url: "https://images.unsplash.com/photo-1544427920-c49ccfb85579?auto=format&fit=crop&w=1200&q=80",
-    category: "Thánh Lễ",
+    category: "Tiệc Thánh",
   },
   {
     id: 2,
@@ -81,10 +82,10 @@ const CHURCH_GALLERY_PHOTOS = [
   },
   {
     id: 3,
-    title: "Ban Ca Đoàn Tôn Vinh Chúa",
+    title: "Ban Hát Lễ Tôn Vinh Chúa",
     desc: "Dâng tiếng hát ngợi khen tôn cao danh Chúa trong buổi Lễ Chúa Nhật.",
     url: "https://images.unsplash.com/photo-1465847899084-d164df4dedc6?auto=format&fit=crop&w=1200&q=80",
-    category: "Ca Đoàn",
+    category: "Ban Hát Lễ",
   },
   {
     id: 4,
@@ -320,17 +321,11 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
               {/* Avatar + Basic Names */}
               <div className="flex flex-col sm:flex-row items-center sm:items-end gap-4">
                 <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-full bg-[#14161a] border-4 border-[#14161a] ring-2 ring-[#c5a059]/60 shadow-2xl flex items-center justify-center text-[#c5a059] shrink-0 overflow-hidden relative">
-                  {church.profileConfig?.avatarUrl ? (
-                    <img
-                      src={church.profileConfig.avatarUrl}
-                      alt={church.name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-stone-900 to-stone-950 flex items-center justify-center">
-                      <ChurchIcon className="w-14 h-14 text-[#c5a059]" />
-                    </div>
-                  )}
+                  <img
+                    src={getChurchAvatar(church.name, church.slug, church.profileConfig?.avatarUrl)}
+                    alt={church.name}
+                    className="w-full h-full object-cover"
+                  />
                 </div>
 
                 <div className="space-y-1">
@@ -663,15 +658,15 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
                       <div className="p-4 sm:p-5 pb-3 flex items-start justify-between gap-3">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-full bg-stone-900 border border-[#c5a059]/40 flex items-center justify-center text-[#c5a059] shrink-0 font-serif font-bold text-xs overflow-hidden">
-                            {post.author.avatarUrl ? (
-                              <img
-                                src={post.author.avatarUrl}
-                                alt={post.author.name}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <ChurchIcon className="w-5 h-5 text-[#c5a059]" />
-                            )}
+                            <img
+                              src={getChurchAvatar(
+                                post.author?.name || church.name,
+                                post.churchSlug || church.slug,
+                                post.author?.avatarUrl
+                              )}
+                              alt={post.author.name}
+                              className="w-full h-full object-cover"
+                            />
                           </div>
 
                           <div>

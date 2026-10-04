@@ -52,9 +52,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Fetch linked church
-    const church = await Church.findById(user.churchId);
-    if (!church || !church.isActive) {
+    // Fetch linked church if not superadmin
+    let church = null;
+    if (user.churchId) {
+      church = await Church.findById(user.churchId);
+    }
+
+    if (user.role !== "superadmin" && (!church || !church.isActive)) {
       return NextResponse.json(
         {
           success: false,
@@ -65,8 +69,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Update lastLoginAt
-    user.lastLoginAt = new Date();
-    await user.save();
+    await User.updateOne({ _id: user._id }, { $set: { lastLoginAt: new Date() } });
 
     // Issue Token
     const token = signToken({
@@ -74,8 +77,8 @@ export async function POST(req: NextRequest) {
       email: user.email,
       fullName: user.fullName,
       role: user.role,
-      churchSlug: church.slug,
-      churchId: (church._id as any).toString(),
+      churchSlug: church?.slug || "system",
+      churchId: church ? (church._id as any).toString() : "system",
     });
 
     const response = NextResponse.json({
@@ -87,13 +90,19 @@ export async function POST(req: NextRequest) {
           fullName: user.fullName,
           email: user.email,
           role: user.role,
+          isSuperAdmin: user.role === "superadmin",
         },
-        church: {
-          id: church._id,
-          name: church.name,
-          slug: church.slug,
-          streamKey: church.streamKey,
-        },
+        church: church
+          ? {
+              id: church._id,
+              name: church.name,
+              slug: church.slug,
+              streamKey: church.streamKey,
+            }
+          : {
+              name: "Hệ Thống Tổng Quản Trị",
+              slug: "system",
+            },
       },
     });
 

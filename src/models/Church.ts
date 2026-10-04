@@ -41,6 +41,10 @@ export interface ILiveLyrics {
   stanzaIndex?: number;
   stanzaLabel?: string;
   lines?: string[];
+  displayType?: "hymn" | "scripture";
+  referenceTranslation?: string;
+  layoutMode?: "lowerthird" | "subtitle" | "fullscreen";
+  themeStyle?: "gold" | "white" | "teal" | "amber";
   updatedAt?: Date;
 }
 
@@ -219,6 +223,22 @@ const ChurchSchema = new Schema<IChurch>(
       lines: {
         type: [String],
         default: [],
+      },
+      displayType: {
+        type: String,
+        default: "hymn",
+      },
+      referenceTranslation: {
+        type: String,
+        default: "BTT 1925",
+      },
+      layoutMode: {
+        type: String,
+        default: "lowerthird",
+      },
+      themeStyle: {
+        type: String,
+        default: "gold",
       },
       updatedAt: {
         type: Date,

@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/mongoose";
 import { Post } from "@/models/Post";
 import { Church } from "@/models/Church";
 import { getAuthUser } from "@/lib/auth";
+import { getChurchAvatar } from "@/lib/churchAvatar";
 
 // GET /api/posts?churchSlug=...&category=...
 export async function GET(req: NextRequest) {
@@ -11,16 +12,12 @@ export async function GET(req: NextRequest) {
     const churchSlug = searchParams.get("churchSlug")?.toLowerCase().trim();
     const category = searchParams.get("category");
 
-    if (!churchSlug) {
-      return NextResponse.json(
-        { success: false, message: "Thiếu churchSlug" },
-        { status: 400 }
-      );
-    }
-
     await connectDB();
 
-    const query: Record<string, any> = { churchSlug };
+    const query: Record<string, any> = {};
+    if (churchSlug && churchSlug !== "all") {
+      query.churchSlug = churchSlug;
+    }
     if (category && category !== "all") {
       query.category = category;
     }
@@ -29,9 +26,31 @@ export async function GET(req: NextRequest) {
       .sort({ isPinned: -1, createdAt: -1 })
       .lean();
 
+    // Fetch churches to enrich post author and details
+    const churches = await Church.find({}).lean();
+    const churchMap = new Map();
+    churches.forEach((c) => churchMap.set(c.slug, c));
+
+    const enrichedPosts = posts.map((post: any) => {
+      const church = churchMap.get(post.churchSlug);
+      return {
+        ...post,
+        churchName: church?.name || post.author?.name || "Hội Thánh Tin Lành",
+        churchDenomination: church?.denomination || "Hội Thánh Tin Lành Việt Nam",
+        churchAvatar: getChurchAvatar(
+          church?.name || post.author?.name || "Hội Thánh",
+          post.churchSlug,
+          church?.profileConfig?.avatarUrl || post.author?.avatarUrl
+        ),
+        isLive: Boolean(church?.currentService?.isLive),
+        viewersCount: church?.currentService?.viewersCount || 0,
+      };
+    });
+
     return NextResponse.json({
       success: true,
-      data: posts,
+      data: enrichedPosts,
+      count: enrichedPosts.length,
     });
   } catch (error: any) {
     console.error("GET /api/posts error:", error);
@@ -61,9 +80,9 @@ export async function POST(req: NextRequest) {
       authorRole,
     } = body;
 
-    if (!churchSlug || !title || !content) {
+    if (!churchSlug || !content) {
       return NextResponse.json(
-        { success: false, message: "Tiêu đề và nội dung là bắt buộc" },
+        { success: false, message: "Nội dung bài viết và Hội Thánh đăng tải là bắt buộc" },
         { status: 400 }
       );
     }
@@ -74,17 +93,48 @@ export async function POST(req: NextRequest) {
     const church = await Church.findOne({ slug: churchSlug.toLowerCase().trim() });
     if (!church) {
       return NextResponse.json(
-        { success: false, message: "Không tìm thấy Hội Thánh" },
+        { success: false, message: "Không tìm thấy Hội Thánh tương ứng" },
         { status: 404 }
       );
     }
 
-    // Role check if admin user is logged in
-    if (authUser && authUser.churchSlug !== churchSlug && authUser.role !== "pastor") {
+    // Require authenticated admin / pastor / superadmin
+    if (!authUser) {
       return NextResponse.json(
-        { success: false, message: "Bạn không có quyền đăng bài cho Hội Thánh này" },
+        {
+          success: false,
+          message:
+            "Chỉ Mục sư hoặc Ban Quản Trị Hội Thánh mới có quyền đăng bài chính thức lên Bảng Tin.",
+        },
+        { status: 401 }
+      );
+    }
+
+    const isSuperAdmin = authUser.role === "superadmin";
+    const isChurchAuthorized =
+      isSuperAdmin ||
+      (authUser.churchSlug &&
+        authUser.churchSlug.toLowerCase().trim() === churchSlug.toLowerCase().trim());
+
+    if (!isChurchAuthorized) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Bạn chỉ có quyền đăng bài chính thức cho Hội Thánh mà bạn đang phụ trách quản nhiệm.",
+        },
         { status: 403 }
       );
+    }
+
+    let finalTitle = title?.trim();
+    if (!finalTitle) {
+      if (category === "announcement") finalTitle = `Thông Báo Mục Vụ - ${church.name}`;
+      else if (category === "scripture") finalTitle = "Lời Chúa Nuôi Dưỡng Tâm Linh";
+      else if (category === "sermon") finalTitle = "Sứ Điệp Lời Chúa";
+      else if (category === "fellowship") finalTitle = "Làm Chứng & Thông Công";
+      else if (category === "worship") finalTitle = `Chương Trình Thờ Phượng - ${church.name}`;
+      else finalTitle = content.trim().slice(0, 60) + (content.length > 60 ? "..." : "");
     }
 
     const newPost = await Post.create({
@@ -98,13 +148,15 @@ export async function POST(req: NextRequest) {
           "Ban Truyền Thông Hội Thánh",
         role:
           authorRole ||
-          (authUser?.role === "pastor"
+          (authUser?.role === "superadmin"
+            ? "Tổng Quản Trị Hệ Thống"
+            : authUser?.role === "pastor"
             ? "Mục sư Quản Nhiệm"
             : "Ban Quản Trị Mục Vụ"),
         avatarUrl: church.profileConfig?.avatarUrl || "",
       },
       category,
-      title: title.trim(),
+      title: finalTitle,
       content: content.trim(),
       scriptureVerse: scriptureVerse?.trim() || "",
       imageUrl: imageUrl?.trim() || "",
@@ -114,11 +166,24 @@ export async function POST(req: NextRequest) {
       comments: [],
     });
 
+    const enrichedPost = {
+      ...newPost.toObject(),
+      churchName: church.name,
+      churchDenomination: church.denomination || "Hội Thánh Tin Lành Việt Nam",
+      churchAvatar: getChurchAvatar(
+        church.name,
+        church.slug,
+        church.profileConfig?.avatarUrl || newPost.author?.avatarUrl
+      ),
+      isLive: Boolean(church.currentService?.isLive),
+      viewersCount: church.currentService?.viewersCount || 0,
+    };
+
     return NextResponse.json(
       {
         success: true,
         message: "Đã đăng bài viết lên Tường Hội Thánh thành công!",
-        data: newPost,
+        data: enrichedPost,
       },
       { status: 201 }
     );

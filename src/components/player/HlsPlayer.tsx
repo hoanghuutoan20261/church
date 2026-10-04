@@ -17,6 +17,7 @@ import {
   RefreshCw,
   Sparkles,
   Music2,
+  BookOpen,
 } from "lucide-react";
 import { useWorship } from "@/context/WorshipContext";
 import { worshipData } from "@/data/worshipServiceData";
@@ -67,6 +68,8 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
     songTitle?: string;
     stanzaLabel?: string;
     lines?: string[];
+    displayType?: "hymn" | "scripture";
+    referenceTranslation?: string;
   } | null>(null);
   const [showLyricsSubtitle, setShowLyricsSubtitle] = useState<boolean>(true);
 
@@ -605,26 +608,52 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
         liveLyrics.lines &&
         liveLyrics.lines.length > 0 && (
           <div className="absolute bottom-16 sm:bottom-20 left-2 right-2 sm:left-6 sm:right-6 z-20 flex flex-col items-center pointer-events-none transition-all duration-300">
-            <div className="bg-sanctuary-950/90 backdrop-blur-md border border-gold-400/40 rounded-xl px-4 py-2.5 sm:px-6 sm:py-3.5 shadow-2xl max-w-2xl w-full text-center">
+            <div className="bg-sanctuary-950/95 backdrop-blur-md border border-gold-400/40 rounded-xl px-4 py-2.5 sm:px-6 sm:py-3.5 shadow-2xl max-w-2xl w-full text-center">
               <div className="flex items-center justify-center gap-2 text-[10px] sm:text-xs text-gold-400 font-serif tracking-wider uppercase mb-1">
-                <Music2 className="w-3 h-3 text-gold-400 animate-pulse" />
-                <span className="font-semibold">{liveLyrics.songTitle || "Thánh Ca Tôn Vinh"}</span>
-                {liveLyrics.stanzaLabel && (
+                {liveLyrics.displayType === "scripture" ? (
                   <>
-                    <span className="text-white/30">•</span>
-                    <span className="text-gold-300/90 font-medium">{liveLyrics.stanzaLabel}</span>
+                    <BookOpen className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+                    <span className="font-semibold text-amber-300">
+                      {liveLyrics.songTitle || "Kinh Thánh Lời Chúa"}
+                    </span>
+                    {liveLyrics.referenceTranslation && (
+                      <>
+                        <span className="text-white/30">•</span>
+                        <span className="text-stone-300 font-mono text-[10px]">
+                          {liveLyrics.referenceTranslation}
+                        </span>
+                      </>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <Music2 className="w-3 h-3 text-gold-400 animate-pulse" />
+                    <span className="font-semibold">{liveLyrics.songTitle || "Thánh Ca Tôn Vinh"}</span>
+                    {liveLyrics.stanzaLabel && (
+                      <>
+                        <span className="text-white/30">•</span>
+                        <span className="text-gold-300/90 font-medium">{liveLyrics.stanzaLabel}</span>
+                      </>
+                    )}
                   </>
                 )}
               </div>
               <div className="space-y-0.5 sm:space-y-1">
-                {liveLyrics.lines.map((line, idx) => (
-                  <p
-                    key={idx}
-                    className="font-serif text-sm sm:text-base md:text-lg text-white font-medium drop-shadow-md leading-relaxed"
-                  >
-                    {line}
-                  </p>
-                ))}
+                {liveLyrics.lines.map((line, idx) => {
+                  const isSecondary = line.startsWith("“") || line.startsWith('"');
+                  return (
+                    <p
+                      key={idx}
+                      className={`font-serif drop-shadow-md leading-relaxed ${
+                        isSecondary
+                          ? "text-xs sm:text-sm md:text-base text-gold-300 italic opacity-95"
+                          : "text-sm sm:text-base md:text-lg text-white font-medium"
+                      }`}
+                    >
+                      {line}
+                    </p>
+                  );
+                })}
               </div>
             </div>
           </div>

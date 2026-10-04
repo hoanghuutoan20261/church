@@ -25,10 +25,14 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const church = await Church.findById(user.churchId);
-    if (!church || !church.isActive) {
+    let church = null;
+    if (user.churchId) {
+      church = await Church.findById(user.churchId);
+    }
+
+    if (user.role !== "superadmin" && (!church || !church.isActive)) {
       return NextResponse.json(
-        { success: false, error: "Hội Thánh không tồn tại" },
+        { success: false, error: "Hội Thánh không tồn tại hoặc chưa kích hoạt" },
         { status: 404 }
       );
     }
@@ -38,6 +42,7 @@ export async function GET(req: NextRequest) {
       data: {
         user,
         church,
+        isSuperAdmin: user.role === "superadmin",
       },
     });
   } catch (error: any) {

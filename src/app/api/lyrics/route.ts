@@ -44,6 +44,10 @@ export async function GET(req: NextRequest) {
           stanzaIndex: 0,
           stanzaLabel: "",
           lines: [],
+          displayType: "hymn",
+          referenceTranslation: "BTT 1925",
+          layoutMode: "lowerthird",
+          themeStyle: "gold",
         },
       },
       {
@@ -94,6 +98,10 @@ export async function POST(req: NextRequest) {
       stanzaIndex,
       stanzaLabel,
       lines,
+      displayType,
+      referenceTranslation,
+      layoutMode,
+      themeStyle,
     } = body;
 
     church.liveLyrics = {
@@ -105,6 +113,10 @@ export async function POST(req: NextRequest) {
       stanzaIndex: typeof stanzaIndex === "number" ? stanzaIndex : 0,
       stanzaLabel: stanzaLabel || "",
       lines: Array.isArray(lines) ? lines : [],
+      displayType: displayType === "scripture" ? "scripture" : "hymn",
+      referenceTranslation: referenceTranslation || "BTT 1925",
+      layoutMode: layoutMode || "lowerthird",
+      themeStyle: themeStyle || "gold",
       updatedAt: new Date(),
     };
 

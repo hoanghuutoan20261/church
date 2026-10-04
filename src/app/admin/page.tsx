@@ -38,6 +38,7 @@ import {
 import { HlsPlayer } from "@/components/player/HlsPlayer";
 import { WorshipProvider } from "@/context/WorshipContext";
 import { AdminLyricsPresenter } from "@/components/admin/AdminLyricsPresenter";
+import { getChurchAvatar } from "@/lib/churchAvatar";
 
 interface AdminUser {
   id: string;
@@ -91,6 +92,10 @@ interface ChurchConfig {
     stanzaIndex?: number;
     stanzaLabel?: string;
     lines?: string[];
+    displayType?: "hymn" | "scripture";
+    referenceTranslation?: string;
+    layoutMode?: "lowerthird" | "subtitle" | "fullscreen";
+    themeStyle?: "gold" | "white" | "teal" | "amber";
   };
 }
 
@@ -129,7 +134,7 @@ interface ChatItem {
 const CHRISTIAN_ILLUSTRATIONS_POSTS = [
   {
     name: "Tiệc Thánh",
-    category: "Thánh Lễ",
+    category: "Tiệc Thánh",
     icon: "🍞",
     url: "https://images.unsplash.com/photo-1544427920-c49ccfb85579?auto=format&fit=crop&w=1200&q=80",
   },
@@ -146,7 +151,7 @@ const CHRISTIAN_ILLUSTRATIONS_POSTS = [
     url: "https://images.unsplash.com/photo-1511632765486-a01980e01a18?auto=format&fit=crop&w=1200&q=80",
   },
   {
-    name: "Ca Đoàn",
+    name: "Ban Hát Lễ",
     category: "Ngợi Khen",
     icon: "🎵",
     url: "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=1200&q=80",
@@ -679,8 +684,12 @@ export default function ChurchAdminDashboard() {
         {/* 1. Admin Top Navigation Bar */}
         <header className="sticky top-0 z-40 bg-[#14161a]/95 backdrop-blur-md border-b border-stone-800 px-4 sm:px-6 py-3.5 flex items-center justify-between shadow-md">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-stone-900 border border-[#c5a059]/40 flex items-center justify-center text-[#c5a059] shadow-sm">
-              <Church className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-full bg-stone-900 border border-[#c5a059]/50 flex items-center justify-center text-[#c5a059] shadow-sm overflow-hidden shrink-0">
+              <img
+                src={getChurchAvatar(church.name, church.slug, profileForm.avatarUrl || church.profileConfig?.avatarUrl)}
+                alt={church.name}
+                className="w-full h-full object-cover"
+              />
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -779,7 +788,7 @@ export default function ChurchAdminDashboard() {
               >
                 <div className="flex items-center gap-3">
                   <Music2 className="w-4 h-4 shrink-0 text-[#c5a059]" />
-                  <span>3. Chiếu Lời Thánh Ca</span>
+                  <span>3. Trình Chiếu Thánh Ca & Kinh Thánh</span>
                 </div>
                 {church.liveLyrics?.isEnabled && (
                   <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[9px] px-1.5 py-0.5 rounded-full font-mono font-bold animate-pulse">
@@ -2231,29 +2240,50 @@ export default function ChurchAdminDashboard() {
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-xs text-stone-300 font-medium">
-                        Ảnh Đại Diện / Logo (Avatar URL):
-                      </label>
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs text-stone-300 font-medium">
+                          Ảnh Đại Diện / Biểu Trưng (Avatar URL):
+                        </label>
+                        {profileForm.avatarUrl && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setProfileForm({ ...profileForm, avatarUrl: "" })
+                            }
+                            className="text-[11px] text-amber-400 hover:text-amber-300 underline cursor-pointer"
+                          >
+                            Khôi phục biểu trưng mặc định
+                          </button>
+                        )}
+                      </div>
                       <input
                         type="url"
                         value={profileForm.avatarUrl}
                         onChange={(e) =>
                           setProfileForm({ ...profileForm, avatarUrl: e.target.value })
                         }
-                        placeholder="https://example.com/logo.png"
+                        placeholder="Để trống để sử dụng biểu trưng mặc định thiêng liêng theo Hội Thánh"
                         className="w-full bg-[#14161a] border border-stone-700 rounded-lg px-3.5 py-2.5 text-xs sm:text-sm text-stone-100 focus:outline-none focus:border-[#c5a059]"
                       />
 
-                      {profileForm.avatarUrl && (
-                        <div className="flex items-center gap-2 pt-0.5">
-                          <img
-                            src={profileForm.avatarUrl}
-                            alt="Xem trước Logo"
-                            className="w-8 h-8 rounded-full object-cover border border-[#c5a059]"
-                          />
-                          <span className="text-[11px] text-stone-400">Xem trước hiển thị avatar</span>
+                      {/* Always show preview with either custom avatar or default SVG avatar */}
+                      <div className="flex items-center gap-3 p-3 rounded-lg bg-stone-900/90 border border-stone-800">
+                        <img
+                          src={getChurchAvatar(church.name, church.slug, profileForm.avatarUrl)}
+                          alt="Xem trước Logo"
+                          className="w-11 h-11 rounded-full object-cover border-2 border-[#c5a059] shrink-0 shadow-md"
+                        />
+                        <div className="text-xs space-y-0.5 min-w-0">
+                          <p className="text-stone-200 font-serif font-bold truncate">
+                            {profileForm.avatarUrl ? "Biểu trưng tùy chỉnh" : "Biểu trưng mặc định trang trọng"}
+                          </p>
+                          <p className="text-[11px] text-stone-400 leading-snug">
+                            {profileForm.avatarUrl
+                              ? "Đang sử dụng logo riêng do Hội Thánh tự tải lên hoặc liên kết."
+                              : "Hệ thống tự động thiết kế huy hiệu Thập Tự Giá theo màu sắc và danh xưng Hội Thánh."}
+                          </p>
                         </div>
-                      )}
+                      </div>
 
                       <div className="space-y-1.5 pt-1">
                         <span className="text-[11px] text-stone-400 flex items-center gap-1 font-serif">

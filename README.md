@@ -1,7 +1,7 @@
 # Nền Tảng Thờ Phượng Trực Tuyến Đa Hội Thánh (Multi-Tenant Sanctuary Platform)
 ### SaaS Cho Các Hội Thánh Tin Lành Việt Nam
 
-Một giải pháp phòng thờ phượng trực tuyến chuyên biệt đa giáo xứ (Multi-Tenant) dành cho các Hội Thánh Tin Lành tại Việt Nam, xây dựng trên nền tảng **Next.js 14 (App Router)**, **Tailwind CSS**, **Lucide React**, **Hls.js**, **Mongoose** và **MongoDB Atlas**.
+Một giải pháp phòng thờ phượng trực tuyến chuyên biệt đa Hội Thánh (Multi-Tenant) dành cho các Hội Thánh Tin Lành tại Việt Nam, xây dựng trên nền tảng **Next.js 14 (App Router)**, **Tailwind CSS**, **Lucide React**, **Hls.js**, **Mongoose** và **MongoDB Atlas**.
 
 ---
 
@@ -34,7 +34,7 @@ Dự án tuyệt đối tránh các yếu tố rập khuôn thị giác phổ bi
 - Bộ lọc theo hệ phái: *Tất Cả, HTTL Việt Nam, Báp-tít, Trưởng Lão, Liên Hữu Cơ Đốc...*
 - Thẻ thông tin từng Hội Thánh hiển thị: Tên, hệ phái, địa chỉ, lịch phát sóng và huy hiệu **TRỰC TIẾP**.
 - Nút bấm **"Vào Phòng Thờ Phượng"** dẫn trực tiếp đến không gian riêng biệt của Hội Thánh đó (`/[churchSlug]`).
-- Nút **"Đăng Ký Hội Thánh Mới"** cho phép thêm giáo xứ mới ngay trên giao diện.
+- Nút **"Đăng Ký Hội Thánh Mới"** cho phép Hội Thánh mới ngay trên giao diện.
 
 ### 2. Phòng Thờ Phượng Riêng Biệt (`/[churchSlug]`)
 - Tự động truy vấn dữ liệu Hội Thánh từ MongoDB Atlas theo `params.churchSlug`.
