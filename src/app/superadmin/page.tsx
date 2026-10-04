@@ -138,8 +138,9 @@ export default function SuperAdminPage() {
   // Auth state
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [authLoading, setAuthLoading] = useState(true);
-  const [loginEmail, setLoginEmail] = useState("superadmin@church.vn");
-  const [loginPassword, setLoginPassword] = useState("SuperAdmin@2026");
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState("");
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
@@ -734,9 +735,8 @@ export default function SuperAdminPage() {
           {/* Login Form */}
           <form onSubmit={handleLogin} className="mt-6 space-y-4 relative z-10">
             <div className="space-y-1.5">
-              <label className="text-xs font-serif font-medium text-sanctuary-200 flex items-center justify-between">
-                <span>Email Tổng Quản Trị</span>
-                <span className="text-[11px] text-gold-400 font-mono">superadmin@church.vn</span>
+              <label className="text-xs font-serif font-medium text-sanctuary-200">
+                Email Tổng Quản Trị
               </label>
               <div className="relative flex items-center">
                 <Mail className="w-4 h-4 text-sanctuary-400 absolute left-3.5 pointer-events-none" />
@@ -745,27 +745,34 @@ export default function SuperAdminPage() {
                   required
                   value={loginEmail}
                   onChange={(e) => setLoginEmail(e.target.value)}
-                  placeholder="superadmin@church.vn"
+                  placeholder="admin@church.vn"
                   className="w-full bg-[#131926] border border-white/[0.08] focus:border-gold-400/70 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-sanctuary-500 focus:outline-none transition-colors"
                 />
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-serif font-medium text-sanctuary-200 flex items-center justify-between">
-                <span>Mật khẩu tối cao</span>
-                <span className="text-[11px] text-gold-400 font-mono">SuperAdmin@2026</span>
+              <label className="text-xs font-serif font-medium text-sanctuary-200">
+                Mật khẩu tối cao
               </label>
               <div className="relative flex items-center">
                 <Lock className="w-4 h-4 text-sanctuary-400 absolute left-3.5 pointer-events-none" />
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   required
                   value={loginPassword}
                   onChange={(e) => setLoginPassword(e.target.value)}
                   placeholder="••••••••••••"
-                  className="w-full bg-[#131926] border border-white/[0.08] focus:border-gold-400/70 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-sanctuary-500 focus:outline-none transition-colors"
+                  className="w-full bg-[#131926] border border-white/[0.08] focus:border-gold-400/70 rounded-xl pl-10 pr-10 py-2.5 text-xs text-white placeholder-sanctuary-500 focus:outline-none transition-colors"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 text-sanctuary-400 hover:text-white transition-colors"
+                  aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
             </div>
 
@@ -788,21 +795,8 @@ export default function SuperAdminPage() {
             </button>
           </form>
 
-          {/* Quick Demo Login Preset Button */}
-          <div className="mt-5 pt-4 border-t border-white/[0.08] text-center space-y-2 relative z-10">
-            <button
-              type="button"
-              onClick={() => {
-                setLoginEmail("superadmin@church.vn");
-                setLoginPassword("SuperAdmin@2026");
-                handleLogin();
-              }}
-              className="w-full py-2 px-3 rounded-lg bg-sanctuary-850 hover:bg-sanctuary-800 text-gold-300 border border-gold-400/30 text-xs font-serif flex items-center justify-center gap-1.5 transition-colors"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-gold-400" />
-              <span>⚡ Đăng Nhập Nhanh Bằng Tài Khoản Mẫu</span>
-            </button>
-
+          {/* Footer Navigation */}
+          <div className="mt-6 pt-4 border-t border-white/[0.08] text-center relative z-10">
             <Link
               href="/"
               className="inline-block text-[11px] text-sanctuary-400 hover:text-white transition-colors"
