@@ -17,13 +17,18 @@ export const SanctuaryWaitingRoom: React.FC = () => {
   const { church, openModal } = useWorship();
 
   const serviceTitle =
-    church.currentService?.title || "Lễ Thờ Phượng Chúa Nhật Trực Tuyến";
-  const speaker = church.currentService?.speaker || "Mục sư Quản Nhiệm";
+    church.currentService?.title || `Lễ Thờ Phượng Trực Tuyến — ${church.name}`;
+  const speaker =
+    church.currentService?.speaker ||
+    church.profileConfig?.leadPastor ||
+    "Mục sư Quản Nhiệm";
   const speakerTitle = church.currentService?.speakerTitle || "Diễn giả";
-  const scripture = church.currentService?.scriptureReference || "Thi Thiên 23";
+  const scripture =
+    church.currentService?.scriptureReference || "Lời Chúa Hôm Nay";
   const welcomeMessage =
     church.currentService?.welcomeMessage ||
-    "Chào mừng quý con cái Chúa và thân hữu tham dự phòng thờ phượng trực tuyến. Ban Kỹ Thuật đang hoàn tất khâu chuẩn bị để phát sóng.";
+    church.profileConfig?.about ||
+    `Chào mừng quý con cái Chúa và thân hữu tham dự phòng thờ phượng trực tuyến của ${church.name}. Ban Kỹ Thuật đang hoàn tất khâu chuẩn bị để phát sóng.`;
 
   return (
     <div className="relative w-full aspect-video bg-[#111317] rounded-lg overflow-hidden border border-white/[0.08] shadow-2xl flex flex-col justify-between p-6 sm:p-8 select-none">

@@ -73,14 +73,8 @@ export const SanctuaryHeader: React.FC = () => {
             </span>
           </div>
           <h1 className="text-sm sm:text-base font-serif font-medium text-sanctuary-100 tracking-normal truncate">
-            {church.currentService?.title || (
-              <>
-                {worshipData.serviceTitle} —{" "}
-                <span className="text-sanctuary-300 italic">
-                  &ldquo;{worshipData.theme}&rdquo;
-                </span>
-              </>
-            )}
+            {church.currentService?.title ||
+              `Lễ Thờ Phượng Trực Tuyến — ${church.name}`}
           </h1>
         </div>
       </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { ChatMessage, initialMessages, worshipData } from "@/data/worshipServiceData";
+import { ChatMessage, worshipData } from "@/data/worshipServiceData";
 
 export type FontSizeOption = "normal" | "large" | "xlarge";
 export type SidebarTab = "chat" | "scripture" | "prayer";
@@ -77,7 +77,7 @@ interface WorshipContextType {
   openModal: (modal: ActiveModal) => void;
   closeModal: () => void;
   messages: ChatMessage[];
-  addMessage: (text: string, isAmen?: boolean) => Promise<void>;
+  addMessage: (text: string, isAmen?: boolean, customSender?: string) => Promise<void>;
   userNotes: string;
   setUserNotes: (notes: string) => void;
   saveUserNotes: (notes: string) => void;
@@ -104,7 +104,7 @@ export function WorshipProvider({
   const [fontSize, setFontSizeState] = useState<FontSizeOption>("normal");
   const [activeTab, setActiveTab] = useState<SidebarTab>("chat");
   const [activeModal, setActiveModal] = useState<ActiveModal>(null);
-  const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [userNotes, setUserNotes] = useState<string>("");
   const [selectedTranslation, setSelectedTranslation] = useState<string>("BTT 1925");
 
@@ -173,16 +173,27 @@ export function WorshipProvider({
     setActiveModal(null);
   };
 
-  const addMessage = async (text: string, isAmenOnly: boolean = false) => {
+  const addMessage = async (
+    text: string,
+    isAmenOnly: boolean = false,
+    customSender?: string
+  ) => {
     if (!text.trim()) return;
     const now = new Date();
     const timeStr = `${String(now.getHours()).padStart(2, "0")}:${String(
       now.getMinutes()
     ).padStart(2, "0")}`;
 
+    const senderName =
+      customSender?.trim() ||
+      (typeof window !== "undefined"
+        ? localStorage.getItem("church_chat_sender_name")
+        : null) ||
+      "Tín hữu trực tuyến";
+
     const tempMsg: ChatMessage = {
       id: `temp-${Date.now()}`,
-      sender: "Tôi (Bạn)",
+      sender: senderName,
       role: "member",
       location: "Trực tuyến",
       text: text.trim(),
@@ -198,7 +209,7 @@ export function WorshipProvider({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           churchSlug: church.slug,
-          sender: "Tôi (Bạn)",
+          sender: senderName,
           role: "member",
           location: "Trực tuyến",
           text: text.trim(),

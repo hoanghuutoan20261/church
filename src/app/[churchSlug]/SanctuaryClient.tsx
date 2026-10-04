@@ -103,10 +103,10 @@ function WorshipSanctuaryScreen() {
             {/* Minimalist Subtitle/Scripture bar below focused player */}
             <div className="text-center pt-2">
               <p className="font-serif italic text-xs sm:text-sm text-gold-200/90">
-                &ldquo;Vả, ấy là nhờ ân điển, bởi đức tin, mà anh em được cứu...&rdquo;
+                &ldquo;{church.profileConfig?.slogan || "Vả, ấy là nhờ ân điển, bởi đức tin, mà anh em được cứu..."}&rdquo;
               </p>
               <span className="text-[11px] text-sanctuary-400 font-sans">
-                — {worshipData.scriptureReference}
+                — {church.currentService?.scriptureReference || "Lời Chúa Hằng Sống"}
               </span>
             </div>
           </div>
@@ -137,19 +137,23 @@ function WorshipSanctuaryScreen() {
                       )}
                     </div>
                     <h2 className="font-serif text-lg sm:text-xl font-bold text-sanctuary-100">
-                      {worshipData.theme}
+                      {church.currentService?.title || `Lễ Thờ Phượng Chúa Nhật — ${church.name}`}
                     </h2>
                     <div className="flex items-center gap-3 text-xs text-sanctuary-400 pt-0.5">
                       <span className="flex items-center gap-1">
                         <BookOpen className="w-3.5 h-3.5 text-gold-400/80" />
                         <strong className="font-medium text-sanctuary-200">
-                          {worshipData.scriptureReference}
+                          {church.currentService?.scriptureReference || "Lời Chúa Hôm Nay"}
                         </strong>
                       </span>
                       <span>•</span>
                       <span className="flex items-center gap-1">
                         <User className="w-3.5 h-3.5 text-sanctuary-400" />
-                        <span>{worshipData.speaker}</span>
+                        <span>
+                          {church.currentService?.speaker ||
+                            church.profileConfig?.leadPastor ||
+                            "Mục sư Quản Nhiệm"}
+                        </span>
                       </span>
                     </div>
                   </div>
@@ -165,35 +169,46 @@ function WorshipSanctuaryScreen() {
                   </div>
                 </div>
 
-                {/* Liturgical Reflection Excerpt */}
+                {/* Liturgical Reflection / Church Service Details */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
                   <div className="p-3 bg-sanctuary-850/60 rounded border border-white/[0.04]">
                     <span className="text-[10px] uppercase font-semibold text-gold-400 block mb-1">
-                      1. Nguồn Gốc Ân Điển
+                      1. Thông Điệp Mục Vụ
                     </span>
-                    <p className="text-xs text-sanctuary-300 font-serif leading-relaxed">
-                      Sự tha thứ và phục hòa không phát xuất từ công trạng loài người, mà từ
-                      tấm lòng yêu thương vô điều kiện của Đức Chúa Cha.
+                    <p className="text-xs text-sanctuary-300 font-serif leading-relaxed line-clamp-3">
+                      {church.currentService?.welcomeMessage ||
+                        church.profileConfig?.about ||
+                        church.profileConfig?.slogan ||
+                        "Chào mừng quý ông bà anh chị em cùng hiệp một lòng dâng lời ca ngợi và lắng nghe Lời Chúa."}
                     </p>
                   </div>
 
                   <div className="p-3 bg-sanctuary-850/60 rounded border border-white/[0.04]">
                     <span className="text-[10px] uppercase font-semibold text-gold-400 block mb-1">
-                      2. Tiếp Nhận Bởi Đức Tin
+                      2. Lời Chúa Hôm Nay
                     </span>
                     <p className="text-xs text-sanctuary-300 font-serif leading-relaxed">
-                      Đức tin không phải là thành tích, mà là đôi tay mở rộng tiếp nhận món
-                      quà cứu chuộc qua sự chết của Chúa Cứu Thế Giê-xu.
+                      Phân đoạn Kinh Thánh nền tảng:{" "}
+                      <strong className="text-gold-300 font-medium">
+                        {church.currentService?.scriptureReference || "Theo chương trình phụng vụ"}
+                      </strong>
+                      . Diễn giả:{" "}
+                      <span className="text-sanctuary-200">
+                        {church.currentService?.speaker ||
+                          church.profileConfig?.leadPastor ||
+                          "Mục sư Quản Nhiệm"}
+                      </span>
+                      .
                     </p>
                   </div>
 
                   <div className="p-3 bg-sanctuary-850/60 rounded border border-white/[0.04]">
                     <span className="text-[10px] uppercase font-semibold text-gold-400 block mb-1">
-                      3. Sống Đời Bày Tỏ
+                      3. Lịch Phụng Vụ & Kết Nối
                     </span>
                     <p className="text-xs text-sanctuary-300 font-serif leading-relaxed">
-                      Mỗi người được tái sinh trở nên kiệt tác sống của Chúa, bước đi trong
-                      những việc lành đã được sắm sẵn trước cho chúng ta.
+                      {church.liveSchedule || "Chúa Nhật hàng tuần"}
+                      {church.address ? ` • ${church.address}` : ""}
                     </p>
                   </div>
                 </div>

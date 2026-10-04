@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 
 export const HymnalSheetModal: React.FC = () => {
-  const { activeModal, closeModal, addMessage, setActiveTab } = useWorship();
+  const { church, activeModal, closeModal, addMessage, setActiveTab } = useWorship();
   const [modalTab, setModalTab] = useState<"songbook" | "order">("songbook");
 
   // Songbook states
@@ -528,10 +528,10 @@ export const HymnalSheetModal: React.FC = () => {
           <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 max-w-2xl mx-auto w-full">
             <div className="border-b border-white/[0.06] pb-3">
               <h3 className="font-serif text-lg font-bold text-sanctuary-100">
-                Chương Trình Lễ Thờ Phượng Chúa Nhật
+                Chương Trình Lễ Thờ Phượng — {church.name}
               </h3>
               <p className="text-xs text-sanctuary-400 font-sans">
-                Tiến trình các tiết mục trong buổi lễ theo thời gian quy định
+                {church.liveSchedule || "Tiến trình các tiết mục trong buổi lễ theo thời gian quy định"}
               </p>
             </div>
 

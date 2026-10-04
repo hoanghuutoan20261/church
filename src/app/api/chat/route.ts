@@ -1,29 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongoose";
 import { ChatMessage } from "@/models/ChatMessage";
-import { initialMessages } from "@/data/worshipServiceData";
 
 export async function GET(req: NextRequest) {
   try {
     await connectDB();
     const { searchParams } = new URL(req.url);
     const churchSlug = (searchParams.get("churchSlug") || "loibansusong").toLowerCase().trim();
-
-    const count = await ChatMessage.countDocuments({ churchSlug });
-    if (count === 0) {
-      // Seed initial welcoming messages for this church if empty
-      const seeded = initialMessages.map((m) => ({
-        churchSlug,
-        sender: m.sender,
-        role: m.role || "member",
-        location: m.location || "Trực tuyến",
-        text: m.text,
-        timestamp: m.timestamp,
-        isAmenOnly: Boolean(m.isAmenOnly),
-        createdAt: new Date(),
-      }));
-      await ChatMessage.insertMany(seeded);
-    }
 
     const messages = await ChatMessage.find({ churchSlug })
       .sort({ createdAt: 1 })
@@ -48,7 +31,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       success: false,
       fallback: true,
-      data: initialMessages,
+      data: [],
       details: error.message,
     });
   }
