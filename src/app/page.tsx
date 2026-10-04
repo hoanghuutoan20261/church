@@ -48,7 +48,9 @@ import {
   CheckCircle2,
   ChevronRight,
   LogOut,
+  Trash2,
 } from "lucide-react";
+import { ImageUploadBox } from "@/components/common/ImageUploadBox";
 
 interface ChurchItem {
   _id: string;
@@ -58,6 +60,14 @@ interface ChurchItem {
   address: string;
   streamKey: string;
   liveSchedule: string;
+  worshipSchedules?: {
+    id?: string;
+    title: string;
+    dayOfWeek: string;
+    time: string;
+    type?: string;
+    description?: string;
+  }[];
   isActive: boolean;
   profileConfig?: {
     coverImageUrl?: string;
@@ -355,6 +365,26 @@ export default function ChurchDirectoryPage() {
   const [formAddress, setFormAddress] = useState("");
   const [formStreamKey, setFormStreamKey] = useState("");
   const [formSchedule, setFormSchedule] = useState("Chúa Nhật: Lễ 1 (08:00) • Lễ 2 (09:30)");
+  const [formSchedules, setFormSchedules] = useState<
+    { id: string; title: string; dayOfWeek: string; time: string; type: string; description: string }[]
+  >([
+    {
+      id: "1",
+      title: "Lễ Thờ Phượng 1",
+      dayOfWeek: "Chúa Nhật",
+      time: "08:00 - 09:30",
+      type: "main",
+      description: "Thánh đường",
+    },
+    {
+      id: "2",
+      title: "Lễ Thờ Phượng 2",
+      dayOfWeek: "Chúa Nhật",
+      time: "09:45 - 11:15",
+      type: "main",
+      description: "Phát sóng trực tuyến",
+    },
+  ]);
   const [formAdminName, setFormAdminName] = useState("");
   const [formEmail, setFormEmail] = useState("");
   const [formPassword, setFormPassword] = useState("");
@@ -826,7 +856,10 @@ export default function ChurchDirectoryPage() {
           denomination: formDenomination,
           address: formAddress || "Việt Nam",
           streamKey: formStreamKey,
-          liveSchedule: formSchedule,
+          liveSchedule: formSchedules.length > 0
+            ? formSchedules.map((s) => `${s.dayOfWeek}: ${s.title} (${s.time})`).join(" • ")
+            : formSchedule,
+          worshipSchedules: formSchedules,
           adminName: formAdminName || "Mục sư Quản Nhiệm",
           email: formEmail,
           password: formPassword,
@@ -1868,6 +1901,28 @@ export default function ChurchDirectoryPage() {
                       </div>
                     </div>
 
+                    {/* Worship Schedules Info */}
+                    <div className="space-y-1 bg-sanctuary-950/60 p-2.5 rounded-xl border border-white/[0.04]">
+                      <div className="flex items-center gap-1.5 text-[11px] text-gold-300 font-serif font-medium">
+                        <Clock className="w-3 h-3 text-gold-400 shrink-0" />
+                        <span>Lịch Thờ Phượng & Sinh Hoạt:</span>
+                      </div>
+                      {church.worshipSchedules && church.worshipSchedules.length > 0 ? (
+                        <div className="space-y-1">
+                          {church.worshipSchedules.map((sch, sIdx) => (
+                            <div key={sch.id || sIdx} className="flex items-center justify-between text-[11px] text-sanctuary-300">
+                              <span className="truncate pr-1">• {sch.dayOfWeek}: {sch.title}</span>
+                              <span className="font-mono text-amber-400 shrink-0">{sch.time}</span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-[11px] text-sanctuary-400">
+                          {church.liveSchedule || "Chúa Nhật: Lễ 1 (08:00) • Lễ 2 (09:30)"}
+                        </p>
+                      )}
+                    </div>
+
                     <div className="flex items-center gap-2 pt-2 border-t border-white/[0.05]">
                       <Link
                         href={`/${church.slug}?view=sanctuary`}
@@ -1975,6 +2030,28 @@ export default function ChurchDirectoryPage() {
               <div className="bg-sanctuary-950 p-2 rounded-xl border border-white/10">
                 <span className="block font-mono text-lg font-bold text-amber-400 animate-pulse">{String(timeLeft.seconds).padStart(2, "0")}</span>
                 <span className="text-[9px] uppercase text-sanctuary-400">Giây</span>
+              </div>
+            </div>
+
+            {/* Multi-Schedule Quick View */}
+            <div className="pt-2.5 border-t border-white/[0.08] space-y-1.5">
+              <span className="text-[11px] font-serif font-bold text-gold-300 flex items-center gap-1.5 uppercase tracking-wider">
+                <Clock className="w-3.5 h-3.5 text-gold-400" />
+                Các Giờ Lễ & Sinh Hoạt Trong Tuần
+              </span>
+              <div className="space-y-1 text-[11px]">
+                <div className="flex items-center justify-between text-sanctuary-300 bg-sanctuary-950/70 px-2.5 py-1.5 rounded-lg border border-white/[0.04]">
+                  <span>Lễ 1 (Sáng Chúa Nhật)</span>
+                  <span className="font-mono text-gold-400 font-medium">08:00 - 09:30</span>
+                </div>
+                <div className="flex items-center justify-between text-sanctuary-300 bg-sanctuary-950/70 px-2.5 py-1.5 rounded-lg border border-white/[0.04]">
+                  <span>Lễ 2 (Trực tuyến chính)</span>
+                  <span className="font-mono text-gold-400 font-medium">09:45 - 11:15</span>
+                </div>
+                <div className="flex items-center justify-between text-sanctuary-300 bg-sanctuary-950/70 px-2.5 py-1.5 rounded-lg border border-white/[0.04]">
+                  <span>Cầu Nguyện / Thanh Niên</span>
+                  <span className="font-mono text-amber-400 font-medium">Tối Thứ Bảy / CN</span>
+                </div>
               </div>
             </div>
           </div>
@@ -2191,6 +2268,109 @@ export default function ChurchDirectoryPage() {
                   placeholder="Ví dụ: 123 Đường Đoàn Hoàng Minh, TP. Bến Tre"
                   className="w-full bg-sanctuary-850 border border-white/[0.08] focus:border-gold-400/60 rounded-xl px-3.5 py-2.5 text-xs text-sanctuary-100 placeholder-sanctuary-500 focus:outline-none"
                 />
+              </div>
+
+              {/* Multi Worship Schedules */}
+              <div className="p-3.5 bg-sanctuary-900 border border-white/[0.06] rounded-xl space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-[11px] font-semibold text-gold-400 uppercase tracking-wider block">
+                      Lịch Thờ Phượng & Sinh Hoạt Trong Tuần
+                    </span>
+                    <span className="text-[10px] text-sanctuary-400">
+                      Hội Thánh có thể thêm nhiều giờ lễ (Lễ 1, Lễ 2, Cầu nguyện, Ban Thanh Niên...)
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormSchedules([
+                        ...formSchedules,
+                        {
+                          id: String(Date.now()),
+                          title: `Buổi Lễ ${formSchedules.length + 1}`,
+                          dayOfWeek: "Chúa Nhật",
+                          time: "19:30 - 21:00",
+                          type: "fellowship",
+                          description: "",
+                        },
+                      ]);
+                    }}
+                    className="px-2.5 py-1 rounded-lg bg-gold-400/20 text-gold-300 hover:bg-gold-400/30 border border-gold-400/40 text-[11px] font-medium transition-colors flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>+ Thêm lịch</span>
+                  </button>
+                </div>
+
+                <div className="space-y-2">
+                  {formSchedules.map((sch, idx) => (
+                    <div
+                      key={sch.id || idx}
+                      className="p-2.5 rounded-lg bg-sanctuary-850/90 border border-white/[0.06] space-y-2"
+                    >
+                      <div className="grid grid-cols-12 gap-1.5 items-center">
+                        <div className="col-span-4 sm:col-span-3">
+                          <select
+                            value={sch.dayOfWeek}
+                            onChange={(e) => {
+                              const updated = [...formSchedules];
+                              updated[idx].dayOfWeek = e.target.value;
+                              setFormSchedules(updated);
+                            }}
+                            className="w-full bg-sanctuary-900 border border-white/10 rounded-lg px-2 py-1.5 text-[11px] text-sanctuary-200 focus:outline-none"
+                          >
+                            <option value="Chúa Nhật">Chúa Nhật</option>
+                            <option value="Thứ Hai">Thứ Hai</option>
+                            <option value="Thứ Ba">Thứ Ba</option>
+                            <option value="Thứ Tư">Thứ Tư</option>
+                            <option value="Thứ Năm">Thứ Năm</option>
+                            <option value="Thứ Sáu">Thứ Sáu</option>
+                            <option value="Thứ Bảy">Thứ Bảy</option>
+                          </select>
+                        </div>
+                        <div className="col-span-4 sm:col-span-4">
+                          <input
+                            type="text"
+                            value={sch.time}
+                            onChange={(e) => {
+                              const updated = [...formSchedules];
+                              updated[idx].time = e.target.value;
+                              setFormSchedules(updated);
+                            }}
+                            placeholder="08:00 - 09:30"
+                            className="w-full bg-sanctuary-900 border border-white/10 rounded-lg px-2 py-1.5 text-[11px] text-sanctuary-100 focus:outline-none"
+                          />
+                        </div>
+                        <div className="col-span-3 sm:col-span-4">
+                          <input
+                            type="text"
+                            value={sch.title}
+                            onChange={(e) => {
+                              const updated = [...formSchedules];
+                              updated[idx].title = e.target.value;
+                              setFormSchedules(updated);
+                            }}
+                            placeholder="Tên buổi lễ..."
+                            className="w-full bg-sanctuary-900 border border-white/10 rounded-lg px-2 py-1.5 text-[11px] text-sanctuary-100 focus:outline-none"
+                          />
+                        </div>
+                        <div className="col-span-1 flex justify-center">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFormSchedules(formSchedules.filter((_, i) => i !== idx));
+                            }}
+                            disabled={formSchedules.length <= 1}
+                            className="text-sanctuary-500 hover:text-red-400 disabled:opacity-30 cursor-pointer p-1"
+                            title="Xóa giờ lễ này"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               {/* Admin User Credentials */}
@@ -2570,44 +2750,13 @@ export default function ChurchDirectoryPage() {
                 />
               </div>
 
-              {/* Image URL & Presets */}
-              <div className="space-y-1.5">
-                <label className="text-sanctuary-200 font-medium">
-                  Hình Ảnh Minh Họa <span className="text-sanctuary-500 font-normal">(Nhập URL hoặc chọn nhanh hình mẫu)</span>
-                </label>
-                <input
-                  type="url"
-                  value={pastorPostForm.imageUrl}
-                  onChange={(e) => setPastorPostForm({ ...pastorPostForm, imageUrl: e.target.value })}
-                  placeholder="https://... (URL hình ảnh minh họa)"
-                  className="w-full bg-[#131926] border border-white/10 rounded-xl px-3.5 py-1.5 text-white text-[11px] focus:outline-none focus:border-gold-400"
-                />
-                <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                  {PROTESTANT_ILLUSTRATIONS.map((ill) => (
-                    <button
-                      type="button"
-                      key={ill.name}
-                      onClick={() => setPastorPostForm({ ...pastorPostForm, imageUrl: ill.url })}
-                      className={`px-2 py-0.5 rounded-lg border text-[10px] transition-colors flex items-center gap-1 cursor-pointer ${pastorPostForm.imageUrl === ill.url
-                        ? "bg-gold-400/20 border-gold-400 text-gold-300 font-bold"
-                        : "bg-sanctuary-850 hover:bg-sanctuary-800 border-white/10 text-sanctuary-300"
-                        }`}
-                    >
-                      <span>{ill.icon}</span>
-                      <span>{ill.name}</span>
-                    </button>
-                  ))}
-                  {pastorPostForm.imageUrl && (
-                    <button
-                      type="button"
-                      onClick={() => setPastorPostForm({ ...pastorPostForm, imageUrl: "" })}
-                      className="px-1.5 py-0.5 text-[10px] text-red-400 hover:underline cursor-pointer"
-                    >
-                      Bỏ chọn ảnh
-                    </button>
-                  )}
-                </div>
-              </div>
+              {/* Image Upload Component with WebP compression */}
+              <ImageUploadBox
+                type="post"
+                value={pastorPostForm.imageUrl}
+                onChange={(url) => setPastorPostForm({ ...pastorPostForm, imageUrl: url })}
+                label="Hình Ảnh Minh Họa Bài Viết"
+              />
 
               {/* Buttons */}
               <div className="pt-2 flex items-center gap-2">

@@ -66,6 +66,7 @@ export async function PUT(req: NextRequest) {
       denomination,
       address,
       liveSchedule,
+      worshipSchedules,
       currentService,
       bankingConfig,
       themeConfig,
@@ -104,6 +105,15 @@ export async function PUT(req: NextRequest) {
     if (denomination) church.denomination = denomination.trim();
     if (address) church.address = address.trim();
     if (liveSchedule) church.liveSchedule = liveSchedule.trim();
+
+    if (Array.isArray(worshipSchedules)) {
+      church.worshipSchedules = worshipSchedules;
+      if (!liveSchedule && worshipSchedules.length > 0) {
+        church.liveSchedule = worshipSchedules
+          .map((s: any) => `${s.dayOfWeek}: ${s.title ? s.title + " " : ""}(${s.time})`)
+          .join(" • ");
+      }
+    }
 
     if (currentService) {
       church.currentService = {

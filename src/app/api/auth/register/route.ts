@@ -27,6 +27,8 @@ export async function POST(req: NextRequest) {
       accountNumber = "0386888999",
       accountHolder = "HOI THANH TIN LANH",
       branch = "Việt Nam",
+      liveSchedule = "Chúa Nhật, 09:00 - 11:15",
+      worshipSchedules,
     } = body;
 
     // Validate required fields
@@ -137,7 +139,8 @@ export async function POST(req: NextRequest) {
         isLive: false,
         viewersCount: 0,
       },
-      liveSchedule: "Chúa Nhật, 09:00 - 11:15",
+      liveSchedule: liveSchedule || "Chúa Nhật, 09:00 - 11:15",
+      worshipSchedules: Array.isArray(worshipSchedules) && worshipSchedules.length > 0 ? worshipSchedules : undefined,
       isActive: true,
     });
 

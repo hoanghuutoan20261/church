@@ -108,6 +108,16 @@ export default async function ChurchSanctuaryPage({ params, searchParams }: Page
     },
     profileConfig: churchDoc.profileConfig,
     liveSchedule: churchDoc.liveSchedule || "Chúa Nhật, 09:00 - 11:15",
+    worshipSchedules: churchDoc.worshipSchedules && churchDoc.worshipSchedules.length > 0
+      ? (churchDoc.worshipSchedules as any[]).map((s) => ({
+          id: s._id ? s._id.toString() : s.id,
+          title: s.title || "Lễ Thờ Phượng",
+          dayOfWeek: s.dayOfWeek || "Chúa Nhật",
+          time: s.time || "09:00",
+          type: s.type || "main",
+          description: s.description || "",
+        }))
+      : undefined,
     currentService: churchDoc.currentService
       ? {
           title: churchDoc.currentService.title,

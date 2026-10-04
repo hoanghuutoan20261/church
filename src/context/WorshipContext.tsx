@@ -41,6 +41,14 @@ export interface CurrentChurchInfo {
     slogan?: string;
   };
   liveSchedule?: string;
+  worshipSchedules?: {
+    id?: string;
+    title: string;
+    dayOfWeek: string;
+    time: string;
+    type?: string;
+    description?: string;
+  }[];
 }
 
 const defaultChurchInfo: CurrentChurchInfo = {
@@ -61,6 +69,29 @@ const defaultChurchInfo: CurrentChurchInfo = {
     branch: worshipData.givingInfo.branch,
   },
   liveSchedule: worshipData.dateTime,
+  worshipSchedules: [
+    {
+      title: "Lễ Thờ Phượng 1",
+      dayOfWeek: "Chúa Nhật",
+      time: "07:30 - 09:00",
+      type: "main",
+      description: "Thánh đường Trung Tâm",
+    },
+    {
+      title: "Lễ Thờ Phượng 2",
+      dayOfWeek: "Chúa Nhật",
+      time: "09:15 - 11:00",
+      type: "main",
+      description: "Phát sóng trực tuyến chính thức",
+    },
+    {
+      title: "Ban Thanh Niên & Tráng Niên",
+      dayOfWeek: "Chúa Nhật",
+      time: "18:30 - 20:30",
+      type: "youth",
+      description: "Sinh hoạt & Ca khen ngợi",
+    },
+  ],
 };
 
 interface WorshipContextType {

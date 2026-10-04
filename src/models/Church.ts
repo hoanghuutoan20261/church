@@ -48,6 +48,15 @@ export interface ILiveLyrics {
   updatedAt?: Date;
 }
 
+export interface IWorshipScheduleItem {
+  id?: string;
+  title: string;
+  dayOfWeek: string;
+  time: string;
+  type?: string;
+  description?: string;
+}
+
 export interface IChurch extends Document {
   name: string;
   slug: string;
@@ -60,6 +69,7 @@ export interface IChurch extends Document {
   currentService?: ICurrentService;
   liveLyrics?: ILiveLyrics;
   liveSchedule: string;
+  worshipSchedules?: IWorshipScheduleItem[];
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -128,6 +138,15 @@ const ChurchSchema = new Schema<IChurch>(
       type: String,
       default: "Chúa Nhật, 09:00 - 11:15",
     },
+    worshipSchedules: [
+      {
+        title: { type: String, trim: true, default: "Lễ Thờ Phượng Chúa Nhật" },
+        dayOfWeek: { type: String, trim: true, default: "Chúa Nhật" },
+        time: { type: String, trim: true, default: "09:00 - 11:15" },
+        type: { type: String, default: "main" },
+        description: { type: String, trim: true, default: "Trực tiếp & Online" },
+      },
+    ],
     profileConfig: {
       coverImageUrl: {
         type: String,

@@ -42,3 +42,7 @@ mediamtx.yml
 *.log
 *.exe
 
+# uploads
+/public/uploads/*
+!/public/uploads/.gitkeep
+

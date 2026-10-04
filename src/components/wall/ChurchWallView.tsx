@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { CurrentChurchInfo, useWorship } from "@/context/WorshipContext";
 import { getChurchAvatar } from "@/lib/churchAvatar";
+import { ImageUploadBox } from "@/components/common/ImageUploadBox";
 import {
   Church as ChurchIcon,
   Radio,
@@ -261,7 +262,31 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
   const [editProfileTab, setEditProfileTab] = useState<"appearance" | "info" | "banking">("appearance");
   const [isSavingProfile, setIsSavingProfile] = useState<boolean>(false);
   const [profileSuccessMsg, setProfileSuccessMsg] = useState<string>("");
-  const [profileFormData, setProfileFormData] = useState({
+  const [profileFormData, setProfileFormData] = useState<{
+    coverImageUrl: string;
+    avatarUrl: string;
+    slogan: string;
+    name: string;
+    denomination: string;
+    about: string;
+    leadPastor: string;
+    liveSchedule: string;
+    worshipSchedules: {
+      id?: string;
+      title: string;
+      dayOfWeek: string;
+      time: string;
+      type?: string;
+      description?: string;
+    }[];
+    address: string;
+    contactPhone: string;
+    contactEmail: string;
+    bankName: string;
+    accountNumber: string;
+    accountHolder: string;
+    branch: string;
+  }>({
     coverImageUrl: church.profileConfig?.coverImageUrl || "",
     avatarUrl: church.profileConfig?.avatarUrl || "",
     slogan: church.profileConfig?.slogan || "",
@@ -270,6 +295,18 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
     about: church.profileConfig?.about || "",
     leadPastor: church.profileConfig?.leadPastor || "",
     liveSchedule: church.liveSchedule || "",
+    worshipSchedules:
+      church.worshipSchedules && church.worshipSchedules.length > 0
+        ? church.worshipSchedules
+        : [
+          {
+            title: "Lễ Thờ Phượng Chúa Nhật",
+            dayOfWeek: "Chúa Nhật",
+            time: "09:00 - 11:15",
+            type: "main",
+            description: "Trực tiếp & Online",
+          },
+        ],
     address: church.address || "",
     contactPhone: church.profileConfig?.contactPhone || "",
     contactEmail: church.profileConfig?.contactEmail || "",
@@ -329,6 +366,18 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
       about: church.profileConfig?.about || "",
       leadPastor: church.profileConfig?.leadPastor || "",
       liveSchedule: church.liveSchedule || "",
+      worshipSchedules:
+        church.worshipSchedules && church.worshipSchedules.length > 0
+          ? church.worshipSchedules
+          : [
+            {
+              title: "Lễ Thờ Phượng Chúa Nhật",
+              dayOfWeek: "Chúa Nhật",
+              time: "09:00 - 11:15",
+              type: "main",
+              description: "Trực tiếp & Online",
+            },
+          ],
       address: church.address || "",
       contactPhone: church.profileConfig?.contactPhone || "",
       contactEmail: church.profileConfig?.contactEmail || "",
@@ -369,8 +418,8 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
           authorRole: adminSession?.isSuperAdmin
             ? "Tổng Quản Trị Hệ Thống"
             : church.profileConfig?.leadPastor
-            ? "Mục sư Quản Nhiệm"
-            : "Ban Quản Trị Mục Vụ",
+              ? "Mục sư Quản Nhiệm"
+              : "Ban Quản Trị Mục Vụ",
         }),
       });
 
@@ -479,6 +528,12 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
     setProfileSuccessMsg("");
 
     try {
+      const scheduleSummary = profileFormData.worshipSchedules.length > 0
+        ? profileFormData.worshipSchedules
+          .map((s) => `${s.dayOfWeek}: ${s.title ? s.title + " " : ""}(${s.time})`)
+          .join(" • ")
+        : profileFormData.liveSchedule.trim();
+
       const res = await fetch("/api/admin/church", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -487,7 +542,8 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
           name: profileFormData.name.trim(),
           denomination: profileFormData.denomination.trim(),
           address: profileFormData.address.trim(),
-          liveSchedule: profileFormData.liveSchedule.trim(),
+          liveSchedule: scheduleSummary,
+          worshipSchedules: profileFormData.worshipSchedules,
           profileConfig: {
             coverImageUrl: profileFormData.coverImageUrl.trim(),
             avatarUrl: profileFormData.avatarUrl.trim(),
@@ -512,7 +568,8 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
           name: profileFormData.name.trim(),
           denomination: profileFormData.denomination.trim(),
           address: profileFormData.address.trim(),
-          liveSchedule: profileFormData.liveSchedule.trim(),
+          liveSchedule: scheduleSummary,
+          worshipSchedules: profileFormData.worshipSchedules,
           profileConfig: {
             ...church.profileConfig,
             coverImageUrl: profileFormData.coverImageUrl.trim(),
@@ -765,7 +822,7 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
               className="w-full h-full object-cover brightness-[0.75]"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-[#14161a] via-[#14161a]/30 to-transparent" />
-            
+
             {/* Quick edit cover button for admin */}
             {isAuthorizedAdmin && (
               <button
@@ -836,8 +893,8 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
                 <button
                   onClick={onGoToSanctuary}
                   className={`w-full sm:w-auto px-4 py-2.5 rounded-xl font-serif font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg transition-all transform hover:scale-[1.02] cursor-pointer ${isLive
-                      ? "bg-red-600 hover:bg-red-500 text-white animate-pulse"
-                      : "bg-[#c5a059] hover:bg-[#d6b068] text-stone-950"
+                    ? "bg-red-600 hover:bg-red-500 text-white animate-pulse"
+                    : "bg-[#c5a059] hover:bg-[#d6b068] text-stone-950"
                     }`}
                 >
                   <Radio className="w-4 h-4 shrink-0" />
@@ -916,11 +973,10 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
         <div className="flex items-center bg-[#14161a] border border-stone-800 rounded-xl p-1 shadow-md">
           <button
             onClick={() => setMobileWallTab("feed")}
-            className={`flex-1 py-2 px-2 rounded-lg text-xs font-serif font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-              mobileWallTab === "feed"
+            className={`flex-1 py-2 px-2 rounded-lg text-xs font-serif font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer ${mobileWallTab === "feed"
                 ? "bg-[#c5a059] text-stone-950 font-bold shadow"
                 : "text-stone-400 hover:text-stone-200"
-            }`}
+              }`}
           >
             <Newspaper className="w-3.5 h-3.5 shrink-0" />
             <span>Bản Tin</span>
@@ -928,11 +984,10 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
 
           <button
             onClick={() => setMobileWallTab("about")}
-            className={`flex-1 py-2 px-2 rounded-lg text-xs font-serif font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-              mobileWallTab === "about"
+            className={`flex-1 py-2 px-2 rounded-lg text-xs font-serif font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer ${mobileWallTab === "about"
                 ? "bg-[#c5a059] text-stone-950 font-bold shadow"
                 : "text-stone-400 hover:text-stone-200"
-            }`}
+              }`}
           >
             <Info className="w-3.5 h-3.5 shrink-0" />
             <span>Giới Thiệu</span>
@@ -940,11 +995,10 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
 
           <button
             onClick={() => setMobileWallTab("gallery")}
-            className={`flex-1 py-2 px-2 rounded-lg text-xs font-serif font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-              mobileWallTab === "gallery"
+            className={`flex-1 py-2 px-2 rounded-lg text-xs font-serif font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer ${mobileWallTab === "gallery"
                 ? "bg-[#c5a059] text-stone-950 font-bold shadow"
                 : "text-stone-400 hover:text-stone-200"
-            }`}
+              }`}
           >
             <Camera className="w-3.5 h-3.5 shrink-0" />
             <span>Hình Ảnh</span>
@@ -982,12 +1036,58 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
                 </div>
 
                 <div className="flex items-start gap-2.5">
-                  <Calendar className="w-4 h-4 text-stone-500 shrink-0 mt-0.5" />
-                  <div>
-                    <span className="font-medium text-stone-200">Lịch thờ phượng:</span>
-                    <p className="text-stone-400 mt-0.5">
-                      {church.liveSchedule || "Chúa Nhật, 09:00 - 11:15"}
-                    </p>
+                  <Calendar className="w-4 h-4 text-[#c5a059] shrink-0 mt-0.5" />
+                  <div className="space-y-1.5 flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <span className="font-serif font-bold text-stone-200 text-xs">
+                        Lịch Thờ Phượng Chúa:
+                      </span>
+                      {isAuthorizedAdmin && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditProfileTab("info");
+                            openProfileModal();
+                          }}
+                          className="text-[10px] text-[#c5a059] hover:underline flex items-center gap-0.5 cursor-pointer font-serif"
+                        >
+                          <Edit3 className="w-2.5 h-2.5" />
+                          <span>Sửa/thêm</span>
+                        </button>
+                      )}
+                    </div>
+
+                    {church.worshipSchedules && church.worshipSchedules.length > 0 ? (
+                      <div className="space-y-1.5 pt-0.5">
+                        {church.worshipSchedules.map((item, idx) => (
+                          <div
+                            key={item.id || idx}
+                            className="p-2 rounded-lg bg-stone-900/90 border border-stone-800 text-xs space-y-0.5 shadow-sm"
+                          >
+                            <div className="flex items-center justify-between gap-1">
+                              <span className="font-serif font-bold text-[#c5a059] text-[11px]">
+                                {item.dayOfWeek}
+                              </span>
+                              <span className="font-mono text-[10px] bg-stone-800 px-1.5 py-0.5 rounded text-stone-300 font-semibold">
+                                {item.time}
+                              </span>
+                            </div>
+                            <p className="font-serif text-stone-200 text-xs font-medium">
+                              {item.title}
+                            </p>
+                            {item.description && (
+                              <p className="text-[10px] text-stone-400">
+                                {item.description}
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-stone-300 font-sans text-xs">
+                        {church.liveSchedule || "Chúa Nhật, 09:00 - 11:15"}
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -1238,11 +1338,10 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
                             type="button"
                             key={cat.id}
                             onClick={() => setNewPostCategory(cat.id as any)}
-                            className={`px-2.5 py-1 rounded-lg text-xs font-serif transition-colors cursor-pointer ${
-                              newPostCategory === cat.id
+                            className={`px-2.5 py-1 rounded-lg text-xs font-serif transition-colors cursor-pointer ${newPostCategory === cat.id
                                 ? "bg-[#c5a059] text-stone-950 font-bold shadow"
                                 : "bg-stone-900 text-stone-400 hover:text-stone-200 border border-stone-800"
-                            }`}
+                              }`}
                           >
                             {cat.label}
                           </button>
@@ -1284,84 +1383,17 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
                       />
                     </div>
 
-                    {/* Image Attachment & Curated Picker */}
-                    <div className="space-y-2 bg-stone-900/50 p-3 rounded-xl border border-stone-800/80">
-                      <div className="flex items-center justify-between">
-                        <label className="text-[11px] font-serif font-bold text-stone-300 flex items-center gap-1.5">
-                          <ImageIcon className="w-3.5 h-3.5 text-[#c5a059]" />
-                          <span>Hình ảnh đính kèm (URL hoặc chọn từ thư viện Cơ Đốc)</span>
-                        </label>
-                        <button
-                          type="button"
-                          onClick={() => setShowImagePicker(!showImagePicker)}
-                          className="text-[11px] text-[#c5a059] hover:underline font-serif cursor-pointer"
-                        >
-                          {showImagePicker ? "Đóng thư viện mẫu" : "⚡ Chọn ảnh đẹp có sẵn"}
-                        </button>
-                      </div>
-
-                      <input
-                        type="url"
-                        placeholder="https://images.unsplash.com/... (Dán liên kết ảnh)"
+                    {/* Image Upload Box with WebP compression directly to VPS */}
+                    <div className="bg-stone-900/50 p-3 rounded-xl border border-stone-800/80">
+                      <ImageUploadBox
+                        label="Hình ảnh đính kèm bài viết (Tải lên VPS hoặc chọn ảnh mẫu)"
                         value={newPostImageUrl}
-                        onChange={(e) => setNewPostImageUrl(e.target.value)}
-                        className="w-full bg-stone-900 border border-stone-800 focus:border-[#c5a059] rounded-lg px-3 py-1.5 text-xs text-stone-200 placeholder-stone-500 focus:outline-none"
+                        onChange={(url) => setNewPostImageUrl(url)}
+                        type="post"
+                        aspectRatio="post"
+                        presetSamples={CHRISTIAN_IMAGE_COLLECTION}
+                        helperText="Ảnh được nén WebP tự động lưu vào ổ cứng VPS, tối ưu tải trang và tiết kiệm dung lượng."
                       />
-
-                      {/* Curated Christian Images Grid */}
-                      {showImagePicker && (
-                        <div className="space-y-1.5 pt-1">
-                          <p className="text-[10px] text-stone-400">
-                            Chạm vào ảnh để tự động áp dụng làm hình ảnh bài viết:
-                          </p>
-                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 max-h-48 overflow-y-auto pr-1">
-                            {CHRISTIAN_IMAGE_COLLECTION.map((item, idx) => (
-                              <div
-                                key={idx}
-                                onClick={() => {
-                                  setNewPostImageUrl(item.url);
-                                  setShowImagePicker(false);
-                                }}
-                                className={`relative rounded-lg overflow-hidden border cursor-pointer group transition-all aspect-video ${
-                                  newPostImageUrl === item.url
-                                    ? "border-[#c5a059] ring-2 ring-[#c5a059]/50"
-                                    : "border-stone-800 hover:border-stone-600"
-                                }`}
-                              >
-                                <img
-                                  src={item.url}
-                                  alt={item.name}
-                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                                />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end p-1">
-                                  <span className="text-[9px] text-white line-clamp-1 font-serif">
-                                    {item.name}
-                                  </span>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Image Preview if provided */}
-                      {newPostImageUrl && (
-                        <div className="relative w-full h-36 rounded-lg overflow-hidden border border-stone-700 bg-stone-950 mt-2">
-                          <img
-                            src={newPostImageUrl}
-                            alt="Xem trước ảnh bài viết"
-                            className="w-full h-full object-cover"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setNewPostImageUrl("")}
-                            className="absolute top-2 right-2 p-1 rounded-full bg-black/70 hover:bg-black text-white cursor-pointer"
-                            title="Gỡ ảnh"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      )}
                     </div>
 
                     {/* Video / Livestream Link (Optional) */}
@@ -1441,8 +1473,8 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
                   key={tab.id}
                   onClick={() => setActiveCategory(tab.id)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${activeCategory === tab.id
-                      ? "bg-[#c5a059] text-stone-950 font-serif font-bold shadow-sm"
-                      : "text-stone-400 hover:text-stone-200 hover:bg-stone-850"
+                    ? "bg-[#c5a059] text-stone-950 font-serif font-bold shadow-sm"
+                    : "text-stone-400 hover:text-stone-200 hover:bg-stone-850"
                     }`}
                 >
                   {tab.label}
@@ -1538,11 +1570,10 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
                                 type="button"
                                 onClick={() => handleTogglePin(post._id, Boolean(post.isPinned))}
                                 title={post.isPinned ? "Bỏ ghim bài viết" : "Ghim bài viết lên đầu"}
-                                className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
-                                  post.isPinned
+                                className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${post.isPinned
                                     ? "bg-amber-500/20 border-amber-500/40 text-amber-300 hover:bg-amber-500/30"
                                     : "bg-stone-850 border-stone-700 text-stone-400 hover:text-amber-300 hover:border-amber-500/40"
-                                }`}
+                                  }`}
                               >
                                 <Pin className="w-3.5 h-3.5 rotate-45" />
                               </button>
@@ -1634,8 +1665,8 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
                         <button
                           onClick={() => handleLike(post._id)}
                           className={`flex-1 py-2 sm:py-2.5 min-h-[42px] flex items-center justify-center gap-1.5 rounded-lg transition-colors cursor-pointer ${hasLiked
-                              ? "text-[#c5a059] bg-[#c5a059]/10 font-bold"
-                              : "hover:bg-stone-850 hover:text-stone-100"
+                            ? "text-[#c5a059] bg-[#c5a059]/10 font-bold"
+                            : "hover:bg-stone-850 hover:text-stone-100"
                             }`}
                         >
                           <span className="text-sm">🙏</span>
@@ -1816,11 +1847,10 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
                       onClick={() =>
                         setEditingPost((prev) => (prev ? { ...prev, category: cat.id as any } : null))
                       }
-                      className={`px-2.5 py-1 rounded-lg text-xs font-serif transition-colors cursor-pointer ${
-                        editingPost.category === cat.id
+                      className={`px-2.5 py-1 rounded-lg text-xs font-serif transition-colors cursor-pointer ${editingPost.category === cat.id
                           ? "bg-[#c5a059] text-stone-950 font-bold shadow"
                           : "bg-stone-900 text-stone-400 hover:text-stone-200 border border-stone-800"
-                      }`}
+                        }`}
                     >
                       {cat.label}
                     </button>
@@ -1876,31 +1906,18 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
                 />
               </div>
 
-              {/* Image URL */}
-              <div className="space-y-1">
-                <label className="text-xs font-serif font-bold text-stone-300">
-                  Liên kết hình ảnh (URL)
-                </label>
-                <input
-                  type="url"
-                  placeholder="https://..."
+              {/* Image Upload with VPS compression */}
+              <div className="bg-stone-900/60 p-3 rounded-xl border border-stone-800">
+                <ImageUploadBox
+                  label="Hình ảnh đính kèm bài viết"
                   value={editingPost.imageUrl || ""}
-                  onChange={(e) =>
-                    setEditingPost((prev) =>
-                      prev ? { ...prev, imageUrl: e.target.value } : null
-                    )
+                  onChange={(url) =>
+                    setEditingPost((prev) => (prev ? { ...prev, imageUrl: url } : null))
                   }
-                  className="w-full bg-stone-900 border border-stone-800 focus:border-[#c5a059] rounded-lg px-3 py-1.5 text-xs text-stone-200 focus:outline-none"
+                  type="post"
+                  aspectRatio="post"
+                  presetSamples={CHRISTIAN_IMAGE_COLLECTION}
                 />
-                {editingPost.imageUrl && (
-                  <div className="relative w-full h-32 rounded-lg overflow-hidden border border-stone-700 bg-stone-950 mt-1.5">
-                    <img
-                      src={editingPost.imageUrl}
-                      alt="Preview"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                )}
               </div>
 
               {/* Pin */}
@@ -2001,11 +2018,10 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
               <button
                 type="button"
                 onClick={() => setEditProfileTab("appearance")}
-                className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-serif transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${
-                  editProfileTab === "appearance"
+                className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-serif transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${editProfileTab === "appearance"
                     ? "bg-[#c5a059] text-stone-950 font-bold shadow"
                     : "text-stone-400 hover:text-stone-200"
-                }`}
+                  }`}
               >
                 <Camera className="w-3.5 h-3.5" />
                 <span>Giao Diện & Châm Ngôn</span>
@@ -2014,11 +2030,10 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
               <button
                 type="button"
                 onClick={() => setEditProfileTab("info")}
-                className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-serif transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${
-                  editProfileTab === "info"
+                className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-serif transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${editProfileTab === "info"
                     ? "bg-[#c5a059] text-stone-950 font-bold shadow"
                     : "text-stone-400 hover:text-stone-200"
-                }`}
+                  }`}
               >
                 <Info className="w-3.5 h-3.5" />
                 <span>Thông Tin & Liên Hệ</span>
@@ -2027,11 +2042,10 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
               <button
                 type="button"
                 onClick={() => setEditProfileTab("banking")}
-                className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-serif transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${
-                  editProfileTab === "banking"
+                className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-serif transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${editProfileTab === "banking"
                     ? "bg-[#c5a059] text-stone-950 font-bold shadow"
                     : "text-stone-400 hover:text-stone-200"
-                }`}
+                  }`}
               >
                 <CreditCard className="w-3.5 h-3.5" />
                 <span>Dâng Hiến (VietQR)</span>
@@ -2043,112 +2057,34 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
               {/* Tab 1: Appearance */}
               {editProfileTab === "appearance" && (
                 <div className="space-y-4 animate-fadeIn">
-                  {/* Cover Photo */}
-                  <div className="space-y-2 bg-stone-900/60 p-3.5 rounded-xl border border-stone-800">
-                    <label className="text-xs font-serif font-bold text-stone-200 flex items-center justify-between">
-                      <span>Ảnh Bìa Tường (Cover Image URL)</span>
-                      <span className="text-[10px] text-stone-400 font-normal">Kích thước chuẩn: 1200x400</span>
-                    </label>
-                    <input
-                      type="url"
-                      placeholder="https://images.unsplash.com/... (Dán link ảnh bìa)"
+                  {/* Cover Photo Upload */}
+                  <div className="bg-stone-900/60 p-3.5 rounded-xl border border-stone-800">
+                    <ImageUploadBox
+                      label="Ảnh Bìa Tường (Cover Image - Tải ảnh lên VPS)"
                       value={profileFormData.coverImageUrl}
-                      onChange={(e) =>
-                        setProfileFormData((prev) => ({ ...prev, coverImageUrl: e.target.value }))
+                      onChange={(url) =>
+                        setProfileFormData((prev) => ({ ...prev, coverImageUrl: url }))
                       }
-                      className="w-full bg-stone-900 border border-stone-800 focus:border-[#c5a059] rounded-lg px-3 py-2 text-xs text-stone-200 focus:outline-none"
+                      type="cover"
+                      aspectRatio="cover"
+                      presetSamples={CHRISTIAN_COVERS_SAMPLE}
+                      helperText="Ảnh được nén chuẩn WebP và lưu trực tiếp trên ổ cứng VPS. Tỷ lệ khuyến nghị 1200x400 hoặc 1920x800."
                     />
-
-                    {/* Quick Christian Cover Samples */}
-                    <div className="space-y-1.5 pt-1">
-                      <p className="text-[10px] text-[#c5a059] font-serif">
-                        ⚡ Hoặc chọn nhanh ảnh bìa Cơ Đốc nghệ thuật cao:
-                      </p>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                        {CHRISTIAN_COVERS_SAMPLE.map((cov, idx) => (
-                          <div
-                            key={idx}
-                            onClick={() =>
-                              setProfileFormData((prev) => ({ ...prev, coverImageUrl: cov.url }))
-                            }
-                            className={`relative h-16 rounded-lg overflow-hidden border cursor-pointer group transition-all ${
-                              profileFormData.coverImageUrl === cov.url
-                                ? "border-[#c5a059] ring-2 ring-[#c5a059]/50"
-                                : "border-stone-800 hover:border-stone-600"
-                            }`}
-                          >
-                            <img
-                              src={cov.url}
-                              alt={cov.name}
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end p-1">
-                              <span className="text-[9px] text-white line-clamp-1 font-serif">
-                                {cov.name}
-                              </span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {profileFormData.coverImageUrl && (
-                      <div className="relative w-full h-24 rounded-lg overflow-hidden border border-stone-700 bg-stone-950 mt-1">
-                        <img
-                          src={profileFormData.coverImageUrl}
-                          alt="Cover Preview"
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                    )}
                   </div>
 
-                  {/* Avatar Photo */}
-                  <div className="space-y-2 bg-stone-900/60 p-3.5 rounded-xl border border-stone-800">
-                    <label className="text-xs font-serif font-bold text-stone-200 flex items-center justify-between">
-                      <span>Ảnh Đại Diện Hội Thánh (Avatar URL)</span>
-                      <span className="text-[10px] text-stone-400 font-normal">Kích thước chuẩn: Hình vuông / Tròn</span>
-                    </label>
-                    <input
-                      type="url"
-                      placeholder="https://... (Dán link ảnh đại diện)"
+                  {/* Avatar Photo Upload */}
+                  <div className="bg-stone-900/60 p-3.5 rounded-xl border border-stone-800">
+                    <ImageUploadBox
+                      label="Ảnh Đại Diện Hội Thánh (Avatar / Logo - Tải ảnh lên VPS)"
                       value={profileFormData.avatarUrl}
-                      onChange={(e) =>
-                        setProfileFormData((prev) => ({ ...prev, avatarUrl: e.target.value }))
+                      onChange={(url) =>
+                        setProfileFormData((prev) => ({ ...prev, avatarUrl: url }))
                       }
-                      className="w-full bg-stone-900 border border-stone-800 focus:border-[#c5a059] rounded-lg px-3 py-2 text-xs text-stone-200 focus:outline-none"
+                      type="avatar"
+                      aspectRatio="square"
+                      presetSamples={CHRISTIAN_AVATARS_SAMPLE}
+                      helperText="Tải lên ảnh logo vuông hoặc tròn. Tự động tối ưu WebP siêu nhẹ."
                     />
-
-                    {/* Quick Christian Avatar Samples */}
-                    <div className="space-y-1.5 pt-1">
-                      <p className="text-[10px] text-[#c5a059] font-serif">
-                        ⚡ Hoặc chọn nhanh biểu trưng Hội Thánh mẫu:
-                      </p>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                        {CHRISTIAN_AVATARS_SAMPLE.map((av, idx) => (
-                          <div
-                            key={idx}
-                            onClick={() =>
-                              setProfileFormData((prev) => ({ ...prev, avatarUrl: av.url }))
-                            }
-                            className={`flex items-center gap-2 p-1.5 rounded-lg border cursor-pointer group transition-all ${
-                              profileFormData.avatarUrl === av.url
-                                ? "border-[#c5a059] bg-[#c5a059]/10"
-                                : "border-stone-800 hover:border-stone-700 bg-stone-900"
-                            }`}
-                          >
-                            <img
-                              src={av.url}
-                              alt={av.name}
-                              className="w-8 h-8 rounded-full object-cover shrink-0"
-                            />
-                            <span className="text-[10px] text-stone-300 font-serif line-clamp-1">
-                              {av.name}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
                   </div>
 
                   {/* Slogan */}
@@ -2204,35 +2140,189 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <label className="text-xs font-serif font-bold text-stone-200">
-                        Mục sư Quản Nhiệm
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="Mục sư..."
-                        value={profileFormData.leadPastor}
-                        onChange={(e) =>
-                          setProfileFormData((prev) => ({ ...prev, leadPastor: e.target.value }))
-                        }
-                        className="w-full bg-stone-900 border border-stone-800 focus:border-[#c5a059] rounded-xl px-3 py-2 text-xs text-stone-100 focus:outline-none"
-                      />
+                  <div className="space-y-1">
+                    <label className="text-xs font-serif font-bold text-stone-200">
+                      Mục sư Quản Nhiệm
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Mục sư..."
+                      value={profileFormData.leadPastor}
+                      onChange={(e) =>
+                        setProfileFormData((prev) => ({ ...prev, leadPastor: e.target.value }))
+                      }
+                      className="w-full bg-stone-900 border border-stone-800 focus:border-[#c5a059] rounded-xl px-3 py-2 text-xs text-stone-100 focus:outline-none"
+                    />
+                  </div>
+
+                  {/* Multi-Worship Schedules Editor */}
+                  <div className="space-y-2.5 bg-stone-900/60 p-3.5 rounded-xl border border-stone-800">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <label className="text-xs font-serif font-bold text-stone-200 flex items-center gap-1.5">
+                          <Calendar className="w-3.5 h-3.5 text-[#c5a059]" />
+                          <span>Lịch Thờ Phượng Chúa Trong Tuần</span>
+                        </label>
+                        <p className="text-[10px] text-stone-400">
+                          Thêm nhiều lịch thờ phượng (Lễ 1, Lễ 2, Cầu Nguyện, Ban Thanh Niên...)
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setProfileFormData((prev) => ({
+                            ...prev,
+                            worshipSchedules: [
+                              ...prev.worshipSchedules,
+                              {
+                                id: Date.now().toString(),
+                                title: `Lễ Thờ Phượng ${prev.worshipSchedules.length + 1}`,
+                                dayOfWeek: "Chúa Nhật",
+                                time: "19:30 - 21:00",
+                                type: "main",
+                                description: "Trực tiếp & Online",
+                              },
+                            ],
+                          }));
+                        }}
+                        className="px-2.5 py-1.5 rounded-lg bg-[#c5a059] hover:bg-[#d6b068] text-stone-950 font-serif font-bold text-xs flex items-center gap-1 transition-all cursor-pointer shadow"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Thêm Lịch Mới</span>
+                      </button>
                     </div>
 
-                    <div className="space-y-1">
-                      <label className="text-xs font-serif font-bold text-stone-200">
-                        Lịch nhóm thờ phượng trực tiếp
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="Chúa Nhật, 09:00 & 19:30"
-                        value={profileFormData.liveSchedule}
-                        onChange={(e) =>
-                          setProfileFormData((prev) => ({ ...prev, liveSchedule: e.target.value }))
-                        }
-                        className="w-full bg-stone-900 border border-stone-800 focus:border-[#c5a059] rounded-xl px-3 py-2 text-xs text-stone-100 focus:outline-none"
-                      />
+                    <div className="space-y-2.5 pt-1">
+                      {profileFormData.worshipSchedules.map((sch, idx) => (
+                        <div
+                          key={sch.id || idx}
+                          className="p-3 rounded-xl bg-stone-950/80 border border-stone-800 space-y-2 relative"
+                        >
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="font-serif font-bold text-[#c5a059] flex items-center gap-1.5">
+                              <span>Buổi #{idx + 1}:</span>
+                              <span>{sch.title || "Buổi Lễ"}</span>
+                            </span>
+
+                            {profileFormData.worshipSchedules.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setProfileFormData((prev) => ({
+                                    ...prev,
+                                    worshipSchedules: prev.worshipSchedules.filter((_, i) => i !== idx),
+                                  }));
+                                }}
+                                className="text-stone-500 hover:text-red-400 p-1 rounded transition-colors cursor-pointer"
+                                title="Xóa buổi lễ này"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                            <div>
+                              <label className="text-[10px] text-stone-400 block mb-0.5 font-serif">
+                                Thứ / Ngày
+                              </label>
+                              <select
+                                value={sch.dayOfWeek}
+                                onChange={(e) => {
+                                  const updated = [...profileFormData.worshipSchedules];
+                                  updated[idx] = { ...updated[idx], dayOfWeek: e.target.value };
+                                  setProfileFormData((prev) => ({ ...prev, worshipSchedules: updated }));
+                                }}
+                                className="w-full bg-stone-900 border border-stone-800 rounded-lg px-2.5 py-1.5 text-xs text-stone-200 focus:outline-none focus:border-[#c5a059]"
+                              >
+                                <option value="Chúa Nhật">Chúa Nhật</option>
+                                <option value="Thứ Hai">Thứ Hai</option>
+                                <option value="Thứ Ba">Thứ Ba</option>
+                                <option value="Thứ Tư">Thứ Tư</option>
+                                <option value="Thứ Năm">Thứ Năm</option>
+                                <option value="Thứ Sáu">Thứ Sáu</option>
+                                <option value="Thứ Bảy">Thứ Bảy</option>
+                                <option value="Hằng Ngày">Hằng Ngày</option>
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="text-[10px] text-stone-400 block mb-0.5 font-serif">
+                                Khung giờ
+                              </label>
+                              <input
+                                type="text"
+                                placeholder="08:00 - 09:30"
+                                value={sch.time}
+                                onChange={(e) => {
+                                  const updated = [...profileFormData.worshipSchedules];
+                                  updated[idx] = { ...updated[idx], time: e.target.value };
+                                  setProfileFormData((prev) => ({ ...prev, worshipSchedules: updated }));
+                                }}
+                                className="w-full bg-stone-900 border border-stone-800 rounded-lg px-2.5 py-1.5 text-xs font-mono font-semibold text-[#c5a059] focus:outline-none focus:border-[#c5a059]"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="text-[10px] text-stone-400 block mb-0.5 font-serif">
+                                Phân loại buổi lễ
+                              </label>
+                              <select
+                                value={sch.type || "main"}
+                                onChange={(e) => {
+                                  const updated = [...profileFormData.worshipSchedules];
+                                  updated[idx] = { ...updated[idx], type: e.target.value };
+                                  setProfileFormData((prev) => ({ ...prev, worshipSchedules: updated }));
+                                }}
+                                className="w-full bg-stone-900 border border-stone-800 rounded-lg px-2.5 py-1.5 text-xs text-stone-200 focus:outline-none focus:border-[#c5a059]"
+                              >
+                                <option value="main">Lễ Chính (Toàn Thể)</option>
+                                <option value="youth">Thanh Niên / Tráng Niên</option>
+                                <option value="children">Thiếu Nhi / Thiếu Niên</option>
+                                <option value="prayer">Cầu Nguyện / Hiệp Nguyện</option>
+                                <option value="other">Sinh Hoạt Khác</option>
+                              </select>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <div>
+                              <label className="text-[10px] text-stone-400 block mb-0.5 font-serif">
+                                Tên buổi lễ / Chương trình
+                              </label>
+                              <input
+                                type="text"
+                                placeholder="Ví dụ: Lễ Thờ Phượng 1, Ban Thanh Niên..."
+                                value={sch.title}
+                                onChange={(e) => {
+                                  const updated = [...profileFormData.worshipSchedules];
+                                  updated[idx] = { ...updated[idx], title: e.target.value };
+                                  setProfileFormData((prev) => ({ ...prev, worshipSchedules: updated }));
+                                }}
+                                className="w-full bg-stone-900 border border-stone-800 rounded-lg px-2.5 py-1.5 text-xs text-stone-200 focus:outline-none focus:border-[#c5a059]"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="text-[10px] text-stone-400 block mb-0.5 font-serif">
+                                Ghi chú địa điểm / Phát sóng
+                              </label>
+                              <input
+                                type="text"
+                                placeholder="Ví dụ: Thánh đường chính & Phát sóng online"
+                                value={sch.description || ""}
+                                onChange={(e) => {
+                                  const updated = [...profileFormData.worshipSchedules];
+                                  updated[idx] = { ...updated[idx], description: e.target.value };
+                                  setProfileFormData((prev) => ({ ...prev, worshipSchedules: updated }));
+                                }}
+                                className="w-full bg-stone-900 border border-stone-800 rounded-lg px-2.5 py-1.5 text-xs text-stone-200 focus:outline-none focus:border-[#c5a059]"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
 

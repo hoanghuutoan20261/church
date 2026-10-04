@@ -6,6 +6,21 @@ import mongoose from "mongoose";
 
 export const dynamic = "force-dynamic";
 
+export async function GET(req: NextRequest) {
+  try {
+    const authSession = await getAuthUser(req);
+    if (!authSession) {
+      return NextResponse.json(
+        { success: false, error: "Yêu cầu đăng nhập quản trị" },
+        { status: 401 }
+      );
+    }
+    return NextResponse.json({ success: true, message: "Chat admin endpoint active" });
+  } catch (error: any) {
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}
+
 export async function DELETE(req: NextRequest) {
   try {
     const authSession = await getAuthUser(req);

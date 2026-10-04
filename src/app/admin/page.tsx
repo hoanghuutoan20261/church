@@ -34,11 +34,14 @@ import {
   ThumbsUp,
   Image as ImageIcon,
   Music2,
+  Plus,
 } from "lucide-react";
 import { HlsPlayer } from "@/components/player/HlsPlayer";
 import { WorshipProvider } from "@/context/WorshipContext";
 import { AdminLyricsPresenter } from "@/components/admin/AdminLyricsPresenter";
 import { getChurchAvatar } from "@/lib/churchAvatar";
+import { ImageUploadBox } from "@/components/common/ImageUploadBox";
+import { IWorshipScheduleItem } from "@/models/Church";
 
 interface AdminUser {
   id: string;
@@ -55,6 +58,7 @@ interface ChurchConfig {
   address: string;
   streamKey: string;
   liveSchedule: string;
+  worshipSchedules?: IWorshipScheduleItem[];
   currentService: {
     title: string;
     speaker: string;
@@ -266,6 +270,7 @@ export default function ChurchAdminDashboard() {
     denomination: "",
     address: "",
     liveSchedule: "",
+    worshipSchedules: [] as IWorshipScheduleItem[],
   });
 
   const [profileForm, setProfileForm] = useState({
@@ -361,6 +366,7 @@ export default function ChurchAdminDashboard() {
             denomination: ch.denomination || "",
             address: ch.address || "",
             liveSchedule: ch.liveSchedule || "",
+            worshipSchedules: ch.worshipSchedules || [],
           });
         } else {
           router.push("/admin/login");
@@ -478,6 +484,7 @@ export default function ChurchAdminDashboard() {
 
       const data = await res.json();
       if (data.success) {
+        if (data.church) setChurch(data.church);
         setSaveSuccess("Cập nhật thông tin Hội Thánh & Dâng hiến thành công!");
         setTimeout(() => setSaveSuccess(""), 4000);
       }
@@ -1841,78 +1848,13 @@ export default function ChurchAdminDashboard() {
                         />
                       </div>
 
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <label className="text-xs text-stone-300 font-medium flex items-center gap-1.5">
-                            <ImageIcon className="w-3.5 h-3.5 text-stone-400" />
-                            <span>Link Hình Ảnh Đính Kèm (URL):</span>
-                          </label>
-                          {postForm.imageUrl && (
-                            <button
-                              type="button"
-                              onClick={() => setPostForm({ ...postForm, imageUrl: "" })}
-                              className="text-[11px] text-red-400 hover:text-red-300 cursor-pointer"
-                            >
-                              Xóa ảnh
-                            </button>
-                          )}
-                        </div>
-
-                        <input
-                          type="url"
-                          value={postForm.imageUrl}
-                          onChange={(e) =>
-                            setPostForm({ ...postForm, imageUrl: e.target.value })
-                          }
-                          placeholder="Dán link ảnh hoặc chọn nhanh từ bộ sưu tập mẫu bên dưới..."
-                          className="w-full bg-[#14161a] border border-stone-700 rounded-lg px-3 py-2 text-xs text-stone-100 focus:outline-none focus:border-[#c5a059]"
-                        />
-
-                        {/* Image Preview if chosen */}
-                        {postForm.imageUrl && (
-                          <div className="relative rounded-lg overflow-hidden border border-[#c5a059]/40 h-28 w-full bg-stone-900 group">
-                            <img
-                              src={postForm.imageUrl}
-                              alt="Xem trước ảnh minh họa"
-                              className="w-full h-full object-cover"
-                            />
-                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                              <span className="text-[11px] text-stone-200 bg-black/70 px-2 py-1 rounded">
-                                Ảnh minh họa sẽ hiển thị trên bài viết
-                              </span>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Christian Illustration Presets */}
-                        <div className="space-y-1.5 pt-1">
-                          <span className="text-[11px] text-stone-400 flex items-center gap-1 font-serif">
-                            <Sparkles className="w-3 h-3 text-[#c5a059]" />
-                            <span>Chọn nhanh hình minh họa Cơ Đốc chuẩn HD:</span>
-                          </span>
-                          <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5">
-                            {CHRISTIAN_ILLUSTRATIONS_POSTS.map((item) => {
-                              const isSelected = postForm.imageUrl === item.url;
-                              return (
-                                <button
-                                  key={item.name}
-                                  type="button"
-                                  onClick={() =>
-                                    setPostForm({ ...postForm, imageUrl: item.url })
-                                  }
-                                  className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg border text-[11px] text-left transition-all cursor-pointer ${isSelected
-                                      ? "bg-[#c5a059]/20 border-[#c5a059] text-[#c5a059] font-semibold"
-                                      : "bg-stone-900/80 border-stone-800 text-stone-300 hover:border-stone-700 hover:text-stone-100"
-                                    }`}
-                                >
-                                  <span className="text-xs">{item.icon}</span>
-                                  <span className="truncate">{item.name}</span>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      </div>
+                      {/* Image Upload Box with WebP compression */}
+                      <ImageUploadBox
+                        type="post"
+                        value={postForm.imageUrl}
+                        onChange={(url) => setPostForm({ ...postForm, imageUrl: url })}
+                        label="Hình Ảnh Đính Kèm Bài Viết"
+                      />
 
                       <div className="flex items-center gap-2 pt-1">
                         <input
@@ -2201,21 +2143,154 @@ export default function ChurchAdminDashboard() {
                       />
                     </div>
 
-                    <div className="space-y-1.5">
-                      <label className="text-xs text-stone-300 font-medium">
-                        Lịch Giờ Nhóm Hàng Tuần:
-                      </label>
-                      <input
-                        type="text"
-                        value={churchInfoForm.liveSchedule}
-                        onChange={(e) =>
-                          setChurchInfoForm({
-                            ...churchInfoForm,
-                            liveSchedule: e.target.value,
-                          })
-                        }
-                        className="w-full bg-[#14161a] border border-stone-700 rounded-lg px-3.5 py-2.5 text-xs sm:text-sm text-stone-100 focus:outline-none focus:border-[#c5a059]"
-                      />
+                    {/* Multi-Schedule Management */}
+                    <div className="space-y-3 sm:col-span-2 p-3.5 rounded-xl bg-[#14161a] border border-stone-800">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <label className="text-xs text-[#c5a059] font-serif font-bold uppercase tracking-wider block">
+                            Danh Sách Các Giờ Lễ & Sinh Hoạt Trong Tuần
+                          </label>
+                          <span className="text-[11px] text-stone-400">
+                            Thêm nhiều khung giờ cho các buổi lễ của Hội Thánh (Lễ 1, Lễ 2, Cầu nguyện, Ban Thanh Niên...)
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newSchedules = [
+                              ...(churchInfoForm.worshipSchedules || []),
+                              {
+                                id: String(Date.now()),
+                                title: `Lễ Thờ Phượng ${(churchInfoForm.worshipSchedules?.length || 0) + 1}`,
+                                dayOfWeek: "Chúa Nhật",
+                                time: "08:00 - 09:30",
+                                type: "main",
+                                description: "",
+                              },
+                            ];
+                            const summary = newSchedules.map((s) => `${s.dayOfWeek}: ${s.title} (${s.time})`).join(" • ");
+                            setChurchInfoForm({
+                              ...churchInfoForm,
+                              worshipSchedules: newSchedules,
+                              liveSchedule: summary,
+                            });
+                          }}
+                          className="px-2.5 py-1.5 rounded-lg bg-[#c5a059]/20 hover:bg-[#c5a059]/30 text-[#c5a059] border border-[#c5a059]/40 text-xs font-medium transition-colors flex items-center gap-1 cursor-pointer"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Thêm Buổi Lễ Mới</span>
+                        </button>
+                      </div>
+
+                      {/* Schedule Items List */}
+                      {churchInfoForm.worshipSchedules && churchInfoForm.worshipSchedules.length > 0 ? (
+                        <div className="space-y-2">
+                          {churchInfoForm.worshipSchedules.map((item, idx) => (
+                            <div
+                              key={item.id || idx}
+                              className="p-3 rounded-lg bg-stone-900 border border-stone-800 space-y-2"
+                            >
+                              <div className="grid grid-cols-12 gap-2 items-center">
+                                <div className="col-span-12 sm:col-span-3">
+                                  <label className="text-[10px] text-stone-400 block mb-0.5">Ngày trong tuần</label>
+                                  <select
+                                    value={item.dayOfWeek}
+                                    onChange={(e) => {
+                                      const updated = [...(churchInfoForm.worshipSchedules || [])];
+                                      updated[idx] = { ...updated[idx], dayOfWeek: e.target.value };
+                                      const summary = updated.map((s) => `${s.dayOfWeek}: ${s.title} (${s.time})`).join(" • ");
+                                      setChurchInfoForm({ ...churchInfoForm, worshipSchedules: updated, liveSchedule: summary });
+                                    }}
+                                    className="w-full bg-[#14161a] border border-stone-700 rounded-lg px-2.5 py-1.5 text-xs text-stone-200 focus:outline-none focus:border-[#c5a059]"
+                                  >
+                                    <option value="Chúa Nhật">Chúa Nhật</option>
+                                    <option value="Thứ Hai">Thứ Hai</option>
+                                    <option value="Thứ Ba">Thứ Ba</option>
+                                    <option value="Thứ Tư">Thứ Tư</option>
+                                    <option value="Thứ Năm">Thứ Năm</option>
+                                    <option value="Thứ Sáu">Thứ Sáu</option>
+                                    <option value="Thứ Bảy">Thứ Bảy</option>
+                                  </select>
+                                </div>
+
+                                <div className="col-span-12 sm:col-span-3">
+                                  <label className="text-[10px] text-stone-400 block mb-0.5">Khung giờ</label>
+                                  <input
+                                    type="text"
+                                    value={item.time}
+                                    onChange={(e) => {
+                                      const updated = [...(churchInfoForm.worshipSchedules || [])];
+                                      updated[idx] = { ...updated[idx], time: e.target.value };
+                                      const summary = updated.map((s) => `${s.dayOfWeek}: ${s.title} (${s.time})`).join(" • ");
+                                      setChurchInfoForm({ ...churchInfoForm, worshipSchedules: updated, liveSchedule: summary });
+                                    }}
+                                    placeholder="08:00 - 09:30"
+                                    className="w-full bg-[#14161a] border border-stone-700 rounded-lg px-2.5 py-1.5 text-xs text-stone-100 focus:outline-none focus:border-[#c5a059]"
+                                  />
+                                </div>
+
+                                <div className="col-span-10 sm:col-span-5">
+                                  <label className="text-[10px] text-stone-400 block mb-0.5">Tên chương trình / Buổi lễ</label>
+                                  <input
+                                    type="text"
+                                    value={item.title}
+                                    onChange={(e) => {
+                                      const updated = [...(churchInfoForm.worshipSchedules || [])];
+                                      updated[idx] = { ...updated[idx], title: e.target.value };
+                                      const summary = updated.map((s) => `${s.dayOfWeek}: ${s.title} (${s.time})`).join(" • ");
+                                      setChurchInfoForm({ ...churchInfoForm, worshipSchedules: updated, liveSchedule: summary });
+                                    }}
+                                    placeholder="Lễ Thờ Phượng 1..."
+                                    className="w-full bg-[#14161a] border border-stone-700 rounded-lg px-2.5 py-1.5 text-xs text-stone-100 focus:outline-none focus:border-[#c5a059]"
+                                  />
+                                </div>
+
+                                <div className="col-span-2 sm:col-span-1 flex items-end justify-center pb-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const updated = (churchInfoForm.worshipSchedules || []).filter((_, i) => i !== idx);
+                                      const summary = updated.map((s) => `${s.dayOfWeek}: ${s.title} (${s.time})`).join(" • ");
+                                      setChurchInfoForm({ ...churchInfoForm, worshipSchedules: updated, liveSchedule: summary });
+                                    }}
+                                    className="p-1.5 text-stone-400 hover:text-red-400 transition-colors cursor-pointer"
+                                    title="Xóa giờ lễ này"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="p-3 rounded-lg bg-stone-900 border border-dashed border-stone-700 text-center space-y-1">
+                          <p className="text-xs text-stone-400">
+                            Chưa thiết lập nhiều giờ lễ. Hệ thống đang dùng chuỗi tóm tắt:
+                          </p>
+                          <p className="text-xs text-gold-300 font-mono">
+                            {churchInfoForm.liveSchedule || "Chưa có lịch"}
+                          </p>
+                        </div>
+                      )}
+
+                      <div className="pt-1">
+                        <label className="text-[10px] text-stone-400 block mb-0.5">
+                          Tóm tắt hiển thị trực tiếp (Live Schedule Text):
+                        </label>
+                        <input
+                          type="text"
+                          value={churchInfoForm.liveSchedule}
+                          onChange={(e) =>
+                            setChurchInfoForm({
+                              ...churchInfoForm,
+                              liveSchedule: e.target.value,
+                            })
+                          }
+                          className="w-full bg-[#0f1115] border border-stone-800 rounded-lg px-3 py-1.5 text-xs text-stone-300 focus:outline-none focus:border-[#c5a059]"
+                          placeholder="Chúa Nhật: Lễ 1 (08:00) • Lễ 2 (09:30)"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -2243,133 +2318,21 @@ export default function ChurchAdminDashboard() {
                     </div>
 
                     <div className="space-y-2 sm:col-span-2">
-                      <label className="text-xs text-stone-300 font-medium">
-                        Ảnh Bìa Tường Hội Thánh (Cover Image URL):
-                      </label>
-                      <input
-                        type="url"
+                      <ImageUploadBox
+                        type="cover"
                         value={profileForm.coverImageUrl}
-                        onChange={(e) =>
-                          setProfileForm({ ...profileForm, coverImageUrl: e.target.value })
-                        }
-                        placeholder="https://images.unsplash.com/... hoặc chọn nhanh bên dưới"
-                        className="w-full bg-[#14161a] border border-stone-700 rounded-lg px-3.5 py-2.5 text-xs sm:text-sm text-stone-100 focus:outline-none focus:border-[#c5a059]"
+                        onChange={(url) => setProfileForm({ ...profileForm, coverImageUrl: url })}
+                        label="Ảnh Bìa Tường Hội Thánh (Cover Image)"
                       />
-
-                      {profileForm.coverImageUrl && (
-                        <div className="relative rounded-lg overflow-hidden border border-stone-700 h-24 w-full bg-stone-900">
-                          <img
-                            src={profileForm.coverImageUrl}
-                            alt="Xem trước ảnh bìa"
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      )}
-
-                      <div className="space-y-1.5 pt-1">
-                        <span className="text-[11px] text-stone-400 flex items-center gap-1 font-serif">
-                          <Sparkles className="w-3 h-3 text-[#c5a059]" />
-                          <span>Mẫu ảnh bìa thánh đường uy nghiêm:</span>
-                        </span>
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                          {CHRISTIAN_COVERS.map((cov) => (
-                            <button
-                              key={cov.name}
-                              type="button"
-                              onClick={() =>
-                                setProfileForm({ ...profileForm, coverImageUrl: cov.url })
-                              }
-                              className={`p-1.5 rounded-lg border text-[11px] text-left transition-all cursor-pointer flex flex-col gap-1 ${profileForm.coverImageUrl === cov.url
-                                  ? "border-[#c5a059] bg-[#c5a059]/10 text-[#c5a059]"
-                                  : "border-stone-800 bg-stone-900 text-stone-300 hover:border-stone-700"
-                                }`}
-                            >
-                              <img
-                                src={cov.url}
-                                alt={cov.name}
-                                className="h-10 w-full object-cover rounded"
-                              />
-                              <span className="truncate text-[10px]">{cov.name}</span>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
                     </div>
 
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <label className="text-xs text-stone-300 font-medium">
-                          Ảnh Đại Diện / Biểu Trưng (Avatar URL):
-                        </label>
-                        {profileForm.avatarUrl && (
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setProfileForm({ ...profileForm, avatarUrl: "" })
-                            }
-                            className="text-[11px] text-amber-400 hover:text-amber-300 underline cursor-pointer"
-                          >
-                            Khôi phục biểu trưng mặc định
-                          </button>
-                        )}
-                      </div>
-                      <input
-                        type="url"
+                    <div className="space-y-2 sm:col-span-2">
+                      <ImageUploadBox
+                        type="avatar"
                         value={profileForm.avatarUrl}
-                        onChange={(e) =>
-                          setProfileForm({ ...profileForm, avatarUrl: e.target.value })
-                        }
-                        placeholder="Để trống để sử dụng biểu trưng mặc định thiêng liêng theo Hội Thánh"
-                        className="w-full bg-[#14161a] border border-stone-700 rounded-lg px-3.5 py-2.5 text-xs sm:text-sm text-stone-100 focus:outline-none focus:border-[#c5a059]"
+                        onChange={(url) => setProfileForm({ ...profileForm, avatarUrl: url })}
+                        label="Ảnh Đại Diện / Biểu Trưng (Avatar)"
                       />
-
-                      {/* Always show preview with either custom avatar or default SVG avatar */}
-                      <div className="flex items-center gap-3 p-3 rounded-lg bg-stone-900/90 border border-stone-800">
-                        <img
-                          src={getChurchAvatar(church.name, church.slug, profileForm.avatarUrl)}
-                          alt="Xem trước Logo"
-                          className="w-11 h-11 rounded-full object-cover border-2 border-[#c5a059] shrink-0 shadow-md"
-                        />
-                        <div className="text-xs space-y-0.5 min-w-0">
-                          <p className="text-stone-200 font-serif font-bold truncate">
-                            {profileForm.avatarUrl ? "Biểu trưng tùy chỉnh" : "Biểu trưng mặc định trang trọng"}
-                          </p>
-                          <p className="text-[11px] text-stone-400 leading-snug">
-                            {profileForm.avatarUrl
-                              ? "Đang sử dụng logo riêng do Hội Thánh tự tải lên hoặc liên kết."
-                              : "Hệ thống tự động thiết kế huy hiệu Thập Tự Giá theo màu sắc và danh xưng Hội Thánh."}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="space-y-1.5 pt-1">
-                        <span className="text-[11px] text-stone-400 flex items-center gap-1 font-serif">
-                          <Sparkles className="w-3 h-3 text-[#c5a059]" />
-                          <span>Mẫu biểu trưng / avatar:</span>
-                        </span>
-                        <div className="grid grid-cols-2 gap-1.5">
-                          {CHRISTIAN_AVATARS.map((av) => (
-                            <button
-                              key={av.name}
-                              type="button"
-                              onClick={() =>
-                                setProfileForm({ ...profileForm, avatarUrl: av.url })
-                              }
-                              className={`flex items-center gap-1.5 p-1 rounded-lg border text-[10px] transition-all cursor-pointer ${profileForm.avatarUrl === av.url
-                                  ? "border-[#c5a059] bg-[#c5a059]/10 text-[#c5a059]"
-                                  : "border-stone-800 bg-stone-900 text-stone-300 hover:border-stone-700"
-                                }`}
-                            >
-                              <img
-                                src={av.url}
-                                alt={av.name}
-                                className="w-5 h-5 rounded-full object-cover shrink-0"
-                              />
-                              <span className="truncate">{av.name}</span>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
                     </div>
 
                     <div className="space-y-1.5">
