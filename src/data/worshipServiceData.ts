@@ -168,54 +168,5 @@ export const worshipData: WorshipServiceInfo = {
   },
 };
 
-export const initialMessages: ChatMessage[] = [
-  {
-    id: "m-pinned",
-    sender: "Ban Mục Vụ Thờ Phượng",
-    role: "pastor",
-    text: "Kính chào quý con cái Chúa và quý thân hữu tham dự chương trình thờ phượng trực tuyến sáng nay. Nguyện xin sự bình an, ân điển và lẽ thật của Chúa Thánh Linh tuôn đổ trên mỗi gia đình.",
-    timestamp: "08:58",
-  },
-  {
-    id: "m-1",
-    sender: "Bác Đào Văn Thuận",
-    role: "elder",
-    location: "Hà Nội",
-    text: "Chào Mục sư và Hội Thánh. Gia đình tôi tại Hà Nội cùng hiệp một thờ phượng Chúa sáng nay. Nguyện xin Chúa ban phước buổi nhóm.",
-    timestamp: "09:02",
-  },
-  {
-    id: "m-2",
-    sender: "Nguyễn Thị Mai Lan",
-    role: "member",
-    location: "Đà Nẵng",
-    text: "Tạ ơn Chúa vì bài thánh ca tôn vinh Chúa sáng nay quá cảm động!",
-    timestamp: "09:18",
-  },
-  {
-    id: "m-3",
-    sender: "Trần Hữu Phước",
-    role: "moderator",
-    location: "Cần Thơ",
-    text: "Quý thân hữu cần hỗ trợ kinh thánh hoặc cầu thay xin nhấn nút 'Cần Cầu Nguyện' ở góc dưới màn hình.",
-    timestamp: "09:35",
-  },
-  {
-    id: "m-4",
-    sender: "Lê Hoàng Yến",
-    role: "member",
-    location: "TP. Hồ Chí Minh",
-    text: "Amen! Con cảm tạ Chúa vì Lời Chúa trong Ê-phê-sô đã nhắc nhở con sáng nay.",
-    timestamp: "10:04",
-    isAmenOnly: false,
-  },
-  {
-    id: "m-5",
-    sender: "Phạm Minh Tâm",
-    role: "member",
-    location: "Vũng Tàu",
-    text: "Amen! Nguyện Chúa thăm viếng đời sống mỗi chúng con.",
-    timestamp: "10:12",
-    isAmenOnly: true,
-  },
-];
+// Completely clean initial chat state - no fake or hardcoded messages
+export const initialMessages: ChatMessage[] = [];

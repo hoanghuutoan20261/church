@@ -124,6 +124,7 @@ interface SalvationItem {
 
 interface ChatItem {
   _id: string;
+  id?: string;
   sender: string;
   role: string;
   text: string;
@@ -632,18 +633,59 @@ export default function ChurchAdminDashboard() {
 
   // Delete chat message
   const handleDeleteChatMessage = async (id: string) => {
+    if (!id) {
+      alert("Không tìm thấy ID của tin nhắn.");
+      return;
+    }
     if (!confirm("Bạn có chắc chắn muốn xóa tin nhắn này khỏi phòng chat?"))
       return;
     try {
-      const res = await fetch(`/api/admin/chat?id=${id}`, {
-        method: "DELETE",
-      });
+      const slug = church?.slug || "";
+      const res = await fetch(
+        `/api/admin/chat?id=${encodeURIComponent(id)}&churchSlug=${encodeURIComponent(slug)}`,
+        {
+          method: "DELETE",
+        }
+      );
       const data = await res.json();
       if (data.success) {
-        setChatMessages((prev) => prev.filter((m) => m._id !== id));
+        setChatMessages((prev) =>
+          prev.filter((m) => m._id !== id && (m as any).id !== id)
+        );
+      } else {
+        alert(data.error || "Không thể xóa tin nhắn");
       }
     } catch (err) {
       console.error(err);
+      alert("Lỗi kết nối khi xóa tin nhắn");
+    }
+  };
+
+  // Clear all chat messages for this church
+  const handleClearAllChatMessages = async () => {
+    if (
+      !confirm(
+        "Bạn có chắc chắn muốn xóa toàn bộ tin nhắn trong phòng chat của Hội Thánh này?"
+      )
+    )
+      return;
+    try {
+      const slug = church?.slug || "";
+      const res = await fetch(
+        `/api/admin/chat?clearAll=true&churchSlug=${encodeURIComponent(slug)}`,
+        {
+          method: "DELETE",
+        }
+      );
+      const data = await res.json();
+      if (data.success) {
+        setChatMessages([]);
+      } else {
+        alert(data.error || "Không thể dọn dẹp phòng chat");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Lỗi kết nối khi dọn dẹp phòng chat");
     }
   };
 
@@ -1617,19 +1659,31 @@ export default function ChurchAdminDashboard() {
                     </p>
                   </div>
 
-                  <button
-                    onClick={() => {
-                      fetch(`/api/chat?churchSlug=${encodeURIComponent(church.slug)}`)
-                        .then((r) => r.json())
-                        .then((data) => {
-                          if (data.success) setChatMessages(data.data || []);
-                        });
-                    }}
-                    className="p-2 text-stone-400 hover:text-stone-200 transition-colors"
-                    title="Làm mới bình luận"
-                  >
-                    <RefreshCw className="w-4 h-4" />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {chatMessages.length > 0 && (
+                      <button
+                        onClick={handleClearAllChatMessages}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-red-950/40 hover:bg-red-900/60 text-red-300 border border-red-500/30 transition-colors cursor-pointer"
+                        title="Dọn sạch toàn bộ tin nhắn phòng chat"
+                      >
+                        <Trash2 className="w-3.5 h-3.5 text-red-400" />
+                        <span>Dọn sạch phòng chat</span>
+                      </button>
+                    )}
+                    <button
+                      onClick={() => {
+                        fetch(`/api/chat?churchSlug=${encodeURIComponent(church.slug)}`)
+                          .then((r) => r.json())
+                          .then((data) => {
+                            if (data.success) setChatMessages(data.data || []);
+                          });
+                      }}
+                      className="p-2 text-stone-400 hover:text-stone-200 transition-colors rounded-lg bg-stone-900 border border-stone-800"
+                      title="Làm mới bình luận"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
 
                 {chatMessages.length === 0 ? (
@@ -1639,34 +1693,37 @@ export default function ChurchAdminDashboard() {
                   </div>
                 ) : (
                   <div className="divide-y divide-stone-800/80 border border-stone-800 rounded-lg overflow-hidden bg-[#0f1115] max-h-[500px] overflow-y-auto">
-                    {chatMessages.map((msg) => (
-                      <div
-                        key={msg._id}
-                        className="p-3.5 flex items-center justify-between gap-3 hover:bg-stone-900/50 transition-colors"
-                      >
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-serif font-bold text-stone-200 text-xs sm:text-sm">
-                              {msg.sender}
-                            </span>
-                            <span className="text-[10px] text-stone-500 font-mono">
-                              {msg.timestamp}
-                            </span>
-                          </div>
-                          <p className="text-xs sm:text-sm text-stone-300 font-sans">
-                            {msg.text}
-                          </p>
-                        </div>
-
-                        <button
-                          onClick={() => handleDeleteChatMessage(msg._id)}
-                          className="p-2 rounded hover:bg-red-950/60 text-stone-500 hover:text-red-400 transition-colors cursor-pointer"
-                          title="Xóa bình luận vi phạm"
+                    {chatMessages.map((msg) => {
+                      const msgId = msg._id || (msg as any).id;
+                      return (
+                        <div
+                          key={msgId}
+                          className="p-3.5 flex items-center justify-between gap-3 hover:bg-stone-900/50 transition-colors"
                         >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    ))}
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-serif font-bold text-stone-200 text-xs sm:text-sm">
+                                {msg.sender}
+                              </span>
+                              <span className="text-[10px] text-stone-500 font-mono">
+                                {msg.timestamp}
+                              </span>
+                            </div>
+                            <p className="text-xs sm:text-sm text-stone-300 font-sans">
+                              {msg.text}
+                            </p>
+                          </div>
+
+                          <button
+                            onClick={() => handleDeleteChatMessage(msgId)}
+                            className="p-2 rounded hover:bg-red-950/60 text-stone-500 hover:text-red-400 transition-colors cursor-pointer"
+                            title="Xóa bình luận vi phạm"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>

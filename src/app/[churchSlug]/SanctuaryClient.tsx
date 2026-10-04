@@ -13,7 +13,10 @@ import { HymnalSheetModal } from "@/components/modals/HymnalSheetModal";
 import { worshipData } from "@/data/worshipServiceData";
 import { SanctuaryWaitingRoom } from "@/components/sanctuary/SanctuaryWaitingRoom";
 import { ChurchWallView } from "@/components/wall/ChurchWallView";
-import { EyeOff, BookOpen, User, MapPin } from "lucide-react";
+import { CommunityChatTab } from "@/components/sidebar/CommunityChatTab";
+import { ScriptureNotesTab } from "@/components/sidebar/ScriptureNotesTab";
+import { PrivatePrayerTab } from "@/components/sidebar/PrivatePrayerTab";
+import { EyeOff, BookOpen, User, MapPin, MessageSquare, Lock, Info } from "lucide-react";
 import { useState, useEffect } from "react";
 
 function WorshipSanctuaryScreen() {
@@ -21,6 +24,7 @@ function WorshipSanctuaryScreen() {
   const [isLive, setIsLive] = useState<boolean>(
     Boolean(church.currentService?.isLive)
   );
+  const [mobileTab, setMobileTab] = useState<"chat" | "scripture" | "prayer" | "info">("chat");
 
   // Scroll to top on mount
   useEffect(() => {
@@ -53,6 +57,101 @@ function WorshipSanctuaryScreen() {
       clearInterval(interval);
     };
   }, [church?.slug]);
+
+  // Service details & reflection briefing card
+  const ServiceDetailsCard = () => (
+    <div className="bg-sanctuary-950 border border-white/[0.08] rounded-lg p-3.5 sm:p-5 shadow-sm space-y-3 sm:space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/[0.06] pb-3.5 sm:pb-4">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] tracking-wider uppercase font-semibold text-gold-400 font-sans">
+              {church.denomination || "Hội Thánh Tin Lành"}
+            </span>
+            {church.address && (
+              <span className="text-xs text-sanctuary-400 flex items-center gap-1 font-sans">
+                • <MapPin className="w-3 h-3 text-sanctuary-500 shrink-0" />
+                <span className="truncate max-w-[260px] sm:max-w-[320px]">{church.address}</span>
+              </span>
+            )}
+          </div>
+          <h2 className="font-serif text-base sm:text-xl font-bold text-sanctuary-100">
+            {church.currentService?.title || `Lễ Thờ Phượng Chúa Nhật — ${church.name}`}
+          </h2>
+          <div className="flex items-center gap-3 text-xs text-sanctuary-400 pt-0.5">
+            <span className="flex items-center gap-1">
+              <BookOpen className="w-3.5 h-3.5 text-gold-400/80 shrink-0" />
+              <strong className="font-medium text-sanctuary-200">
+                {church.currentService?.scriptureReference || "Lời Chúa Hôm Nay"}
+              </strong>
+            </span>
+            <span>•</span>
+            <span className="flex items-center gap-1">
+              <User className="w-3.5 h-3.5 text-sanctuary-400 shrink-0" />
+              <span>
+                {church.currentService?.speaker ||
+                  church.profileConfig?.leadPastor ||
+                  "Mục sư Quản Nhiệm"}
+              </span>
+            </span>
+          </div>
+        </div>
+
+        {/* Church Service Badge */}
+        <div className="shrink-0 bg-sanctuary-850/90 border border-white/[0.06] px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-md text-left sm:text-right">
+          <span className="text-[10px] text-sanctuary-400 block uppercase font-medium">
+            Thời gian phát sóng
+          </span>
+          <span className="text-xs font-serif text-gold-300 font-medium">
+            {church.liveSchedule || worshipData.dateTime}
+          </span>
+        </div>
+      </div>
+
+      {/* Liturgical Reflection / Church Service Details */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 sm:gap-3 pt-1">
+        <div className="p-3 bg-sanctuary-850/60 rounded border border-white/[0.04]">
+          <span className="text-[10px] uppercase font-semibold text-gold-400 block mb-1">
+            1. Thông Điệp Mục Vụ
+          </span>
+          <p className="text-xs text-sanctuary-300 font-serif leading-relaxed line-clamp-3">
+            {church.currentService?.welcomeMessage ||
+              church.profileConfig?.about ||
+              church.profileConfig?.slogan ||
+              "Chào mừng quý ông bà anh chị em cùng hiệp một lòng dâng lời ca ngợi và lắng nghe Lời Chúa."}
+          </p>
+        </div>
+
+        <div className="p-3 bg-sanctuary-850/60 rounded border border-white/[0.04]">
+          <span className="text-[10px] uppercase font-semibold text-gold-400 block mb-1">
+            2. Lời Chúa Hôm Nay
+          </span>
+          <p className="text-xs text-sanctuary-300 font-serif leading-relaxed">
+            Phân đoạn Kinh Thánh nền tảng:{" "}
+            <strong className="text-gold-300 font-medium">
+              {church.currentService?.scriptureReference || "Theo chương trình phụng vụ"}
+            </strong>
+            . Diễn giả:{" "}
+            <span className="text-sanctuary-200">
+              {church.currentService?.speaker ||
+                church.profileConfig?.leadPastor ||
+                "Mục sư Quản Nhiệm"}
+            </span>
+            .
+          </p>
+        </div>
+
+        <div className="p-3 bg-sanctuary-850/60 rounded border border-white/[0.04]">
+          <span className="text-[10px] uppercase font-semibold text-gold-400 block mb-1">
+            3. Lịch Phụng Vụ & Kết Nối
+          </span>
+          <p className="text-xs text-sanctuary-300 font-serif leading-relaxed">
+            {church.liveSchedule || "Chúa Nhật hàng tuần"}
+            {church.address ? ` • ${church.address}` : ""}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-sanctuary-900 text-sanctuary-100 flex flex-col font-sans relative selection:bg-gold-400/25 selection:text-gold-200">
@@ -121,102 +220,93 @@ function WorshipSanctuaryScreen() {
               {/* Quick Action Bar (Cần Cầu Nguyện, Tiếp Nhận Chúa, Dâng Hiến) */}
               <QuickActionBar />
 
-              {/* Service & Speaker Briefing Card (Dignified Architectural Panel) */}
-              <div className="bg-sanctuary-950 border border-white/[0.08] rounded-lg p-4 sm:p-5 shadow-sm space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/[0.06] pb-4">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[11px] tracking-wider uppercase font-semibold text-gold-400 font-sans">
-                        {church.denomination || "Hội Thánh Tin Lành"}
-                      </span>
-                      {church.address && (
-                        <span className="text-xs text-sanctuary-400 flex items-center gap-1 font-sans">
-                          • <MapPin className="w-3 h-3 text-sanctuary-500" />
-                          <span className="truncate max-w-[320px]">{church.address}</span>
-                        </span>
-                      )}
-                    </div>
-                    <h2 className="font-serif text-lg sm:text-xl font-bold text-sanctuary-100">
-                      {church.currentService?.title || `Lễ Thờ Phượng Chúa Nhật — ${church.name}`}
-                    </h2>
-                    <div className="flex items-center gap-3 text-xs text-sanctuary-400 pt-0.5">
-                      <span className="flex items-center gap-1">
-                        <BookOpen className="w-3.5 h-3.5 text-gold-400/80" />
-                        <strong className="font-medium text-sanctuary-200">
-                          {church.currentService?.scriptureReference || "Lời Chúa Hôm Nay"}
-                        </strong>
-                      </span>
-                      <span>•</span>
-                      <span className="flex items-center gap-1">
-                        <User className="w-3.5 h-3.5 text-sanctuary-400" />
-                        <span>
-                          {church.currentService?.speaker ||
-                            church.profileConfig?.leadPastor ||
-                            "Mục sư Quản Nhiệm"}
-                        </span>
-                      </span>
-                    </div>
-                  </div>
+              {/* Mobile Sub-Player Segmented Tabs (< lg) */}
+              <div className="lg:hidden">
+                <div className="flex items-center border border-white/[0.08] bg-sanctuary-950 rounded-t-lg overflow-hidden">
+                  <button
+                    onClick={() => setMobileTab("chat")}
+                    className={`flex-1 py-2.5 px-1 sm:px-2 text-xs font-serif font-medium flex items-center justify-center gap-1 sm:gap-1.5 border-b-2 transition-all cursor-pointer ${
+                      mobileTab === "chat"
+                        ? "border-gold-400 text-gold-300 bg-sanctuary-900/90 font-bold"
+                        : "border-transparent text-sanctuary-400 hover:text-sanctuary-200"
+                    }`}
+                  >
+                    <MessageSquare className="w-3.5 h-3.5 text-gold-400 shrink-0" />
+                    <span>Trò Chuyện</span>
+                  </button>
 
-                  {/* Church Service Badge */}
-                  <div className="shrink-0 bg-sanctuary-850/90 border border-white/[0.06] px-3.5 py-2 rounded-md text-right sm:text-left">
-                    <span className="text-[10px] text-sanctuary-400 block uppercase font-medium">
-                      Thời gian phát sóng
-                    </span>
-                    <span className="text-xs font-serif text-gold-300 font-medium">
-                      {church.liveSchedule || worshipData.dateTime}
-                    </span>
-                  </div>
+                  <button
+                    onClick={() => setMobileTab("scripture")}
+                    className={`flex-1 py-2.5 px-1 sm:px-2 text-xs font-serif font-medium flex items-center justify-center gap-1 sm:gap-1.5 border-b-2 transition-all cursor-pointer ${
+                      mobileTab === "scripture"
+                        ? "border-gold-400 text-gold-300 bg-sanctuary-900/90 font-bold"
+                        : "border-transparent text-sanctuary-400 hover:text-sanctuary-200"
+                    }`}
+                  >
+                    <BookOpen className="w-3.5 h-3.5 text-gold-400 shrink-0" />
+                    <span>Kinh Thánh</span>
+                  </button>
+
+                  <button
+                    onClick={() => setMobileTab("prayer")}
+                    className={`flex-1 py-2.5 px-1 sm:px-2 text-xs font-serif font-medium flex items-center justify-center gap-1 sm:gap-1.5 border-b-2 transition-all cursor-pointer ${
+                      mobileTab === "prayer"
+                        ? "border-gold-400 text-gold-300 bg-sanctuary-900/90 font-bold"
+                        : "border-transparent text-sanctuary-400 hover:text-sanctuary-200"
+                    }`}
+                  >
+                    <Lock className="w-3.5 h-3.5 text-gold-400 shrink-0" />
+                    <span>Cầu Nguyện</span>
+                  </button>
+
+                  <button
+                    onClick={() => setMobileTab("info")}
+                    className={`flex-1 py-2.5 px-1 sm:px-2 text-xs font-serif font-medium flex items-center justify-center gap-1 sm:gap-1.5 border-b-2 transition-all cursor-pointer ${
+                      mobileTab === "info"
+                        ? "border-gold-400 text-gold-300 bg-sanctuary-900/90 font-bold"
+                        : "border-transparent text-sanctuary-400 hover:text-sanctuary-200"
+                    }`}
+                  >
+                    <Info className="w-3.5 h-3.5 text-gold-400 shrink-0" />
+                    <span>Chi Tiết</span>
+                  </button>
                 </div>
 
-                {/* Liturgical Reflection / Church Service Details */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
-                  <div className="p-3 bg-sanctuary-850/60 rounded border border-white/[0.04]">
-                    <span className="text-[10px] uppercase font-semibold text-gold-400 block mb-1">
-                      1. Thông Điệp Mục Vụ
-                    </span>
-                    <p className="text-xs text-sanctuary-300 font-serif leading-relaxed line-clamp-3">
-                      {church.currentService?.welcomeMessage ||
-                        church.profileConfig?.about ||
-                        church.profileConfig?.slogan ||
-                        "Chào mừng quý ông bà anh chị em cùng hiệp một lòng dâng lời ca ngợi và lắng nghe Lời Chúa."}
-                    </p>
-                  </div>
-
-                  <div className="p-3 bg-sanctuary-850/60 rounded border border-white/[0.04]">
-                    <span className="text-[10px] uppercase font-semibold text-gold-400 block mb-1">
-                      2. Lời Chúa Hôm Nay
-                    </span>
-                    <p className="text-xs text-sanctuary-300 font-serif leading-relaxed">
-                      Phân đoạn Kinh Thánh nền tảng:{" "}
-                      <strong className="text-gold-300 font-medium">
-                        {church.currentService?.scriptureReference || "Theo chương trình phụng vụ"}
-                      </strong>
-                      . Diễn giả:{" "}
-                      <span className="text-sanctuary-200">
-                        {church.currentService?.speaker ||
-                          church.profileConfig?.leadPastor ||
-                          "Mục sư Quản Nhiệm"}
-                      </span>
-                      .
-                    </p>
-                  </div>
-
-                  <div className="p-3 bg-sanctuary-850/60 rounded border border-white/[0.04]">
-                    <span className="text-[10px] uppercase font-semibold text-gold-400 block mb-1">
-                      3. Lịch Phụng Vụ & Kết Nối
-                    </span>
-                    <p className="text-xs text-sanctuary-300 font-serif leading-relaxed">
-                      {church.liveSchedule || "Chúa Nhật hàng tuần"}
-                      {church.address ? ` • ${church.address}` : ""}
-                    </p>
-                  </div>
+                {/* Mobile Active Tab Content */}
+                <div className="border border-t-0 border-white/[0.08] rounded-b-lg overflow-hidden bg-sanctuary-950 shadow-sanctuary mb-3">
+                  {mobileTab === "chat" && (
+                    <div className="h-[480px]">
+                      <CommunityChatTab />
+                    </div>
+                  )}
+                  {mobileTab === "scripture" && (
+                    <div className="h-[520px]">
+                      <ScriptureNotesTab />
+                    </div>
+                  )}
+                  {mobileTab === "prayer" && (
+                    <div className="h-[520px]">
+                      <PrivatePrayerTab />
+                    </div>
+                  )}
+                  {mobileTab === "info" && (
+                    <div className="p-3">
+                      <ServiceDetailsCard />
+                    </div>
+                  )}
                 </div>
+              </div>
+
+              {/* Desktop Service & Speaker Briefing Card (hidden on mobile, shown on lg+) */}
+              <div className="hidden lg:block">
+                <ServiceDetailsCard />
               </div>
             </div>
 
-            {/* Right Column: Tabbed Modular Panel (Cộng Đồng, Kinh Thánh, Cầu Nguyện Kín) */}
-            <SidebarContainer />
+            {/* Right Column: Tabbed Modular Panel (Cộng Đồng, Kinh Thánh, Cầu Nguyện Kín) - Desktop Only */}
+            <div className="hidden lg:flex shrink-0">
+              <SidebarContainer />
+            </div>
           </div>
         )}
       </main>

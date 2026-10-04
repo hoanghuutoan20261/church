@@ -15,16 +15,21 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: messages.map((m) => ({
-        id: (m as any)._id ? (m as any)._id.toString() : String((m as any).id || Date.now()),
-        churchSlug: m.churchSlug,
-        sender: m.sender,
-        role: m.role || "member",
-        location: m.location,
-        text: m.text,
-        timestamp: m.timestamp,
-        isAmenOnly: Boolean(m.isAmenOnly),
-      })),
+      data: messages.map((m) => {
+        const idStr = (m as any)._id ? (m as any)._id.toString() : String((m as any).id || Date.now());
+        return {
+          _id: idStr,
+          id: idStr,
+          churchSlug: m.churchSlug,
+          sender: m.sender,
+          role: m.role || "member",
+          location: m.location,
+          text: m.text,
+          timestamp: m.timestamp,
+          isAmenOnly: Boolean(m.isAmenOnly),
+          createdAt: (m as any).createdAt,
+        };
+      }),
     });
   } catch (error: any) {
     console.error("Lỗi tải tin nhắn:", error);
@@ -65,11 +70,13 @@ export async function POST(req: NextRequest) {
       createdAt: new Date(),
     });
 
+    const idStr = newRecord._id.toString();
     return NextResponse.json(
       {
         success: true,
         data: {
-          id: newRecord._id.toString(),
+          _id: idStr,
+          id: idStr,
           churchSlug: slug,
           sender: newRecord.sender,
           role: newRecord.role,
@@ -77,6 +84,7 @@ export async function POST(req: NextRequest) {
           text: newRecord.text,
           timestamp: newRecord.timestamp,
           isAmenOnly: newRecord.isAmenOnly,
+          createdAt: newRecord.createdAt,
         },
       },
       { status: 201 }

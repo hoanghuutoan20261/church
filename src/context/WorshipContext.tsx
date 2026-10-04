@@ -121,14 +121,15 @@ export function WorshipProvider({
     }
   }, []);
 
-  // Load chat messages scoped to this church from MongoDB
+  // Load and sync chat messages scoped to this church from MongoDB
   useEffect(() => {
+    let isCancelled = false;
     async function loadChat() {
       try {
         const res = await fetch(`/api/chat?churchSlug=${encodeURIComponent(church.slug)}`);
         if (res.ok) {
           const json = await res.json();
-          if (json.data && Array.isArray(json.data) && json.data.length > 0) {
+          if (json.data && Array.isArray(json.data) && !isCancelled) {
             setMessages(json.data);
           }
         }
@@ -136,7 +137,14 @@ export function WorshipProvider({
         console.warn("Using offline fallback chat messages:", err);
       }
     }
+
     loadChat();
+    const interval = setInterval(loadChat, 3500);
+
+    return () => {
+      isCancelled = true;
+      clearInterval(interval);
+    };
   }, [church.slug]);
 
   // Load persisted notes and accessibility settings

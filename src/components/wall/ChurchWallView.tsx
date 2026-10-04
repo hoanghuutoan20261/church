@@ -30,6 +30,8 @@ import {
   Camera,
   QrCode,
   Image as ImageIcon,
+  Newspaper,
+  Info,
 } from "lucide-react";
 
 interface CommentItem {
@@ -118,6 +120,7 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
   const [posts, setPosts] = useState<WallPost[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [activeCategory, setActiveCategory] = useState<string>("all");
+  const [mobileWallTab, setMobileWallTab] = useState<"feed" | "about" | "gallery">("feed");
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
   const [showContactModal, setShowContactModal] = useState<boolean>(false);
   const [selectedLightboxImage, setSelectedLightboxImage] = useState<{
@@ -353,51 +356,59 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
               </div>
 
               {/* Top Quick Actions */}
-              <div className="flex items-center gap-2 flex-wrap justify-center">
+              <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
                 <button
                   onClick={onGoToSanctuary}
-                  className={`px-4 py-2.5 rounded-xl font-serif font-bold text-xs sm:text-sm flex items-center gap-2 shadow-lg transition-all transform hover:scale-[1.02] cursor-pointer ${isLive
+                  className={`w-full sm:w-auto px-4 py-2.5 rounded-xl font-serif font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg transition-all transform hover:scale-[1.02] cursor-pointer ${isLive
                       ? "bg-red-600 hover:bg-red-500 text-white animate-pulse"
                       : "bg-[#c5a059] hover:bg-[#d6b068] text-stone-950"
                     }`}
                 >
-                  <Radio className="w-4 h-4" />
+                  <Radio className="w-4 h-4 shrink-0" />
                   <span>{isLive ? "Xem Trực Tiếp (Live)" : "Phòng Thờ Phượng"}</span>
                 </button>
 
-                <button
-                  onClick={() => openModal("prayer")}
-                  className="px-3.5 py-2.5 rounded-xl bg-stone-850 hover:bg-stone-800 text-stone-200 border border-stone-700 text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
-                >
-                  <HeartHandshake className="w-4 h-4 text-red-400" />
-                  <span>Xin Cầu Nguyện</span>
-                </button>
+                <div className="grid grid-cols-3 sm:flex items-center gap-2 w-full sm:w-auto">
+                  <button
+                    onClick={() => openModal("prayer")}
+                    className="px-2.5 sm:px-3.5 py-2.5 rounded-xl bg-stone-850 hover:bg-stone-800 text-stone-200 border border-stone-700 text-xs font-medium flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <HeartHandshake className="w-3.5 h-3.5 text-red-400 shrink-0" />
+                    <span>Cầu Nguyện</span>
+                  </button>
 
-                <button
-                  onClick={() => openModal("giving")}
-                  className="px-3.5 py-2.5 rounded-xl bg-stone-850 hover:bg-stone-800 text-stone-200 border border-stone-700 text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
-                >
-                  <CreditCard className="w-4 h-4 text-[#c5a059]" />
-                  <span>Dâng Hiến</span>
-                </button>
+                  <button
+                    onClick={() => openModal("giving")}
+                    className="px-2.5 sm:px-3.5 py-2.5 rounded-xl bg-stone-850 hover:bg-stone-800 text-stone-200 border border-stone-700 text-xs font-medium flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <CreditCard className="w-3.5 h-3.5 text-[#c5a059] shrink-0" />
+                    <span>Dâng Hiến</span>
+                  </button>
 
-                <button
-                  onClick={copyPageLink}
-                  className="p-2.5 rounded-xl bg-stone-850 hover:bg-stone-800 text-stone-300 border border-stone-700 text-xs transition-colors cursor-pointer"
-                  title="Sao chép liên kết trang Hội Thánh"
-                >
-                  {copiedLink ? (
-                    <Check className="w-4 h-4 text-emerald-400" />
-                  ) : (
-                    <Share2 className="w-4 h-4" />
-                  )}
-                </button>
+                  <button
+                    onClick={copyPageLink}
+                    className="px-2.5 sm:px-3 py-2.5 rounded-xl bg-stone-850 hover:bg-stone-800 text-stone-300 border border-stone-700 text-xs transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                    title="Sao chép liên kết trang Hội Thánh"
+                  >
+                    {copiedLink ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                        <span className="text-emerald-300 text-[11px] sm:hidden">Đã chép</span>
+                      </>
+                    ) : (
+                      <>
+                        <Share2 className="w-3.5 h-3.5 shrink-0" />
+                        <span className="text-stone-300 text-[11px] sm:hidden">Chia sẻ</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
 
             {/* Slogan Motto Banner */}
             <div className="pt-3 border-t border-stone-800/80 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-stone-400">
-              <p className="italic font-serif text-stone-300">
+              <p className="italic font-serif text-stone-300 text-center sm:text-left">
                 &ldquo;{church.profileConfig?.slogan || "Hiệp Một — Yêu Thương — Phụng Sự"}&rdquo;
               </p>
               <div className="flex items-center gap-4 text-[11px] text-stone-400">
@@ -413,13 +424,54 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
         </div>
       </div>
 
+      {/* 2.5 Mobile Segmented Tab Switcher (< lg) */}
+      <div className="lg:hidden max-w-6xl mx-auto px-3 sm:px-4 mt-3">
+        <div className="flex items-center bg-[#14161a] border border-stone-800 rounded-xl p-1 shadow-md">
+          <button
+            onClick={() => setMobileWallTab("feed")}
+            className={`flex-1 py-2 px-2 rounded-lg text-xs font-serif font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+              mobileWallTab === "feed"
+                ? "bg-[#c5a059] text-stone-950 font-bold shadow"
+                : "text-stone-400 hover:text-stone-200"
+            }`}
+          >
+            <Newspaper className="w-3.5 h-3.5 shrink-0" />
+            <span>Bản Tin</span>
+          </button>
+
+          <button
+            onClick={() => setMobileWallTab("about")}
+            className={`flex-1 py-2 px-2 rounded-lg text-xs font-serif font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+              mobileWallTab === "about"
+                ? "bg-[#c5a059] text-stone-950 font-bold shadow"
+                : "text-stone-400 hover:text-stone-200"
+            }`}
+          >
+            <Info className="w-3.5 h-3.5 shrink-0" />
+            <span>Giới Thiệu</span>
+          </button>
+
+          <button
+            onClick={() => setMobileWallTab("gallery")}
+            className={`flex-1 py-2 px-2 rounded-lg text-xs font-serif font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+              mobileWallTab === "gallery"
+                ? "bg-[#c5a059] text-stone-950 font-bold shadow"
+                : "text-stone-400 hover:text-stone-200"
+            }`}
+          >
+            <Camera className="w-3.5 h-3.5 shrink-0" />
+            <span>Hình Ảnh</span>
+          </button>
+        </div>
+      </div>
+
       {/* 3. Main 2-Column Body: Left Sidebar (Info) & Right Feed (Wall Posts) */}
-      <div className="max-w-6xl mx-auto px-4 mt-6">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="max-w-6xl mx-auto px-3 sm:px-4 mt-3 sm:mt-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
           {/* ================= LEFT COLUMN: CHURCH ABOUT & INFO ================= */}
-          <aside className="lg:col-span-4 space-y-5">
+          <aside className={`lg:col-span-4 space-y-4 sm:space-y-5 ${mobileWallTab === "feed" ? "hidden lg:block" : "block"}`}>
             {/* Card 1: Giới thiệu & Mục vụ */}
-            <div className="bg-[#14161a] border border-stone-800 rounded-xl p-5 space-y-4 shadow-lg">
+            <div className={`bg-[#14161a] border border-stone-800 rounded-xl p-4 sm:p-5 space-y-4 shadow-lg ${mobileWallTab === "gallery" ? "hidden lg:block" : "block"}`}>
               <div className="flex items-center justify-between border-b border-stone-800 pb-3">
                 <h3 className="font-serif text-sm font-bold text-stone-100 flex items-center gap-2">
                   <ChurchIcon className="w-4 h-4 text-[#c5a059]" />
@@ -480,7 +532,7 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
 
             {/* Card 2: Dâng Hiến Mục Vụ (kèm mã VietQR minh họa) */}
             {church.bankingConfig && (
-              <div className="bg-[#14161a] border border-stone-800 rounded-xl p-5 space-y-3.5 shadow-lg">
+              <div className={`bg-[#14161a] border border-stone-800 rounded-xl p-4 sm:p-5 space-y-3.5 shadow-lg ${mobileWallTab === "gallery" ? "hidden lg:block" : "block"}`}>
                 <div className="flex items-center justify-between border-b border-stone-800 pb-3">
                   <h3 className="font-serif text-sm font-bold text-stone-100 flex items-center gap-2">
                     <CreditCard className="w-4 h-4 text-[#c5a059]" />
@@ -536,8 +588,8 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
               </div>
             )}
 
-            {/* Card: Thư Viện Hình Ảnh Sinh Hoạt (Giống Facebook Photos Box) */}
-            <div className="bg-[#14161a] border border-stone-800 rounded-xl p-5 space-y-3.5 shadow-lg">
+            {/* Card 3: Thư Viện Hình Ảnh Sinh Hoạt (Giống Facebook Photos Box) */}
+            <div className={`bg-[#14161a] border border-stone-800 rounded-xl p-4 sm:p-5 space-y-3.5 shadow-lg ${mobileWallTab === "about" ? "hidden lg:block" : "block"}`}>
               <div className="flex items-center justify-between border-b border-stone-800 pb-3">
                 <h3 className="font-serif text-sm font-bold text-stone-100 flex items-center gap-2">
                   <Camera className="w-4 h-4 text-[#c5a059]" />
@@ -548,8 +600,8 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
                 </span>
               </div>
 
-              {/* Grid 3x2 Photos */}
-              <div className="grid grid-cols-3 gap-2">
+              {/* Grid: 2 cols on mobile, 3 cols on sm+ */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {CHURCH_GALLERY_PHOTOS.map((photo) => (
                   <div
                     key={photo.id}
@@ -568,8 +620,8 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
                       alt={photo.title}
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-1.5">
-                      <span className="text-[9px] font-serif text-stone-200 line-clamp-1">
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-1.5 sm:p-2">
+                      <span className="text-[10px] sm:text-[9px] font-serif text-stone-200 line-clamp-1">
                         {photo.title}
                       </span>
                     </div>
@@ -582,8 +634,8 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
               </p>
             </div>
 
-            {/* Card 3: Lời Chúa Khích Lệ */}
-            <div className="bg-gradient-to-br from-[#1c1f26] to-[#14161a] border border-[#c5a059]/30 rounded-xl p-5 space-y-2.5 shadow-lg">
+            {/* Card 4: Lời Chúa Khích Lệ */}
+            <div className={`bg-gradient-to-br from-[#1c1f26] to-[#14161a] border border-[#c5a059]/30 rounded-xl p-4 sm:p-5 space-y-2.5 shadow-lg ${mobileWallTab === "gallery" ? "hidden lg:block" : "block"}`}>
               <div className="flex items-center gap-2 text-xs font-serif font-semibold text-[#c5a059]">
                 <BookOpen className="w-4 h-4" />
                 <span>Câu Gốc Tuần Này</span>
@@ -599,7 +651,7 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
           </aside>
 
           {/* ================= RIGHT COLUMN: WALL FEED ================= */}
-          <main className="lg:col-span-8 space-y-5">
+          <main className={`lg:col-span-8 space-y-4 sm:space-y-5 ${mobileWallTab === "feed" ? "block" : "hidden lg:block"}`}>
             {/* Category Filter Bar */}
             <div className="bg-[#14161a] border border-stone-800 rounded-xl p-3 shadow-md flex items-center gap-2 overflow-x-auto scrollbar-none">
               <Filter className="w-4 h-4 text-stone-500 shrink-0 ml-1" />
@@ -655,9 +707,9 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
                       className="bg-[#14161a] border border-stone-800 rounded-xl overflow-hidden shadow-xl transition-all"
                     >
                       {/* Post Header */}
-                      <div className="p-4 sm:p-5 pb-3 flex items-start justify-between gap-3">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-stone-900 border border-[#c5a059]/40 flex items-center justify-center text-[#c5a059] shrink-0 font-serif font-bold text-xs overflow-hidden">
+                      <div className="p-3.5 sm:p-5 pb-2.5 sm:pb-3 flex items-start justify-between gap-2.5 sm:gap-3">
+                        <div className="flex items-center gap-2.5 sm:gap-3">
+                          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-stone-900 border border-[#c5a059]/40 flex items-center justify-center text-[#c5a059] shrink-0 font-serif font-bold text-xs overflow-hidden">
                             <img
                               src={getChurchAvatar(
                                 post.author?.name || church.name,
@@ -670,7 +722,7 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
                           </div>
 
                           <div>
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-1.5 flex-wrap">
                               <span className="font-serif font-bold text-xs sm:text-sm text-stone-100">
                                 {post.author.name}
                               </span>
@@ -679,7 +731,7 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
                               </span>
                             </div>
 
-                            <p className="text-[11px] text-stone-500 font-sans mt-0.5">
+                            <p className="text-[10px] sm:text-[11px] text-stone-500 font-sans mt-0.5">
                               {new Date(post.createdAt).toLocaleDateString("vi-VN", {
                                 hour: "2-digit",
                                 minute: "2-digit",
@@ -708,13 +760,13 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
                       </div>
 
                       {/* Post Content */}
-                      <div className="px-4 sm:px-5 space-y-3">
+                      <div className="px-3.5 sm:px-5 space-y-2 sm:space-y-3">
                         <h2 className="font-serif text-base sm:text-lg font-bold text-stone-100 leading-snug">
                           {post.title}
                         </h2>
 
                         {post.scriptureVerse && (
-                          <div className="p-3 rounded-lg bg-stone-900/80 border-l-2 border-[#c5a059] text-xs font-serif italic text-stone-300 leading-relaxed">
+                          <div className="p-2.5 sm:p-3 rounded-lg bg-stone-900/80 border-l-2 border-[#c5a059] text-xs font-serif italic text-stone-300 leading-relaxed">
                             <span>&ldquo;{post.scriptureVerse}&rdquo;</span>
                           </div>
                         )}
@@ -735,7 +787,7 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
                               category: badge.label,
                             })
                           }
-                          className="mt-3.5 px-0 sm:px-5 cursor-pointer group"
+                          className="mt-3 px-0 sm:px-5 cursor-pointer group"
                         >
                           <div className="relative w-full max-h-[460px] overflow-hidden sm:rounded-lg border-y sm:border border-stone-800 bg-black">
                             <img
@@ -752,7 +804,7 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
                       )}
 
                       {/* Interaction Counts Bar */}
-                      <div className="px-4 sm:px-5 py-2.5 mt-2 flex items-center justify-between text-[11px] text-stone-400 border-b border-stone-800/80">
+                      <div className="px-3.5 sm:px-5 py-2 sm:py-2.5 mt-2 flex items-center justify-between text-[11px] text-stone-400 border-b border-stone-800/80">
                         <div className="flex items-center gap-1.5 text-[#c5a059]">
                           <span className="w-4 h-4 rounded-full bg-[#c5a059]/20 flex items-center justify-center text-[10px]">
                             🙏
@@ -768,16 +820,16 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
                       </div>
 
                       {/* Action Buttons: Like / Amen & Comment */}
-                      <div className="px-4 sm:px-5 py-1.5 flex items-center justify-around text-xs font-medium text-stone-300 border-b border-stone-800">
+                      <div className="px-2 sm:px-5 py-1 flex items-center justify-around text-xs font-medium text-stone-300 border-b border-stone-800">
                         <button
                           onClick={() => handleLike(post._id)}
-                          className={`flex-1 py-2 flex items-center justify-center gap-1.5 rounded-lg transition-colors cursor-pointer ${hasLiked
+                          className={`flex-1 py-2 sm:py-2.5 min-h-[42px] flex items-center justify-center gap-1.5 rounded-lg transition-colors cursor-pointer ${hasLiked
                               ? "text-[#c5a059] bg-[#c5a059]/10 font-bold"
                               : "hover:bg-stone-850 hover:text-stone-100"
                             }`}
                         >
                           <span className="text-sm">🙏</span>
-                          <span>{hasLiked ? "Đã Amen" : "Hiệp Ý (Amen)"}</span>
+                          <span>{hasLiked ? "Đã Amen" : "Hiệp Ý"}</span>
                         </button>
 
                         <button
@@ -787,7 +839,7 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
                               [post._id]: !prev[post._id],
                             }))
                           }
-                          className="flex-1 py-2 flex items-center justify-center gap-1.5 rounded-lg hover:bg-stone-850 hover:text-stone-100 transition-colors cursor-pointer"
+                          className="flex-1 py-2 sm:py-2.5 min-h-[42px] flex items-center justify-center gap-1.5 rounded-lg hover:bg-stone-850 hover:text-stone-100 transition-colors cursor-pointer"
                         >
                           <MessageCircle className="w-4 h-4 text-stone-400" />
                           <span>Bình luận</span>
@@ -800,7 +852,7 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
                             );
                             alert("Đã sao chép liên kết bài viết!");
                           }}
-                          className="flex-1 py-2 flex items-center justify-center gap-1.5 rounded-lg hover:bg-stone-850 hover:text-stone-100 transition-colors cursor-pointer"
+                          className="flex-1 py-2 sm:py-2.5 min-h-[42px] flex items-center justify-center gap-1.5 rounded-lg hover:bg-stone-850 hover:text-stone-100 transition-colors cursor-pointer"
                         >
                           <Share2 className="w-4 h-4 text-stone-400" />
                           <span>Chia sẻ</span>
@@ -808,7 +860,7 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
                       </div>
 
                       {/* Comments Section */}
-                      <div className="p-4 sm:p-5 bg-[#0f1115]/50 space-y-3">
+                      <div className="p-3 sm:p-5 bg-[#0f1115]/50 space-y-2.5 sm:space-y-3">
                         {/* Existing Comments */}
                         {post.comments && post.comments.length > 0 && (
                           <div className="space-y-2.5">
