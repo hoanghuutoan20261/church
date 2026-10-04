@@ -16,7 +16,13 @@ export async function GET(req: NextRequest) {
 
     await connectDB();
 
-    const posts = await Post.find({ churchSlug: authUser.churchSlug })
+    const churchSlugParam = req.nextUrl.searchParams.get("churchSlug");
+    const targetSlug =
+      authUser.role === "superadmin" && churchSlugParam
+        ? churchSlugParam.toLowerCase().trim()
+        : authUser.churchSlug;
+
+    const posts = await Post.find(targetSlug ? { churchSlug: targetSlug } : {})
       .sort({ isPinned: -1, createdAt: -1 })
       .lean();
 
@@ -56,10 +62,12 @@ export async function DELETE(req: NextRequest) {
 
     await connectDB();
 
-    const post = await Post.findOne({
-      _id: postId,
-      churchSlug: authUser.churchSlug,
-    });
+    const postQuery =
+      authUser.role === "superadmin"
+        ? { _id: postId }
+        : { _id: postId, churchSlug: authUser.churchSlug };
+
+    const post = await Post.findOne(postQuery);
 
     if (!post) {
       return NextResponse.json(
@@ -114,8 +122,13 @@ export async function PATCH(req: NextRequest) {
     if (scriptureVerse !== undefined) updateFields.scriptureVerse = scriptureVerse.trim();
     if (imageUrl !== undefined) updateFields.imageUrl = imageUrl.trim();
 
+    const updateQuery =
+      authUser.role === "superadmin"
+        ? { _id: postId }
+        : { _id: postId, churchSlug: authUser.churchSlug };
+
     const updatedPost = await Post.findOneAndUpdate(
-      { _id: postId, churchSlug: authUser.churchSlug },
+      updateQuery,
       { $set: updateFields },
       { new: true }
     );

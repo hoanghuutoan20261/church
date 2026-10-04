@@ -85,6 +85,7 @@ interface WorshipContextType {
   setSelectedTranslation: (t: string) => void;
   activeView: "sanctuary" | "wall";
   setActiveView: (view: "sanctuary" | "wall") => void;
+  updateChurch: (updated: Partial<CurrentChurchInfo>) => void;
 }
 
 const WorshipContext = createContext<WorshipContextType | undefined>(undefined);
@@ -98,7 +99,34 @@ export function WorshipProvider({
   initialChurch?: CurrentChurchInfo;
   initialView?: "sanctuary" | "wall";
 }) {
-  const church = initialChurch || defaultChurchInfo;
+  const [church, setChurch] = useState<CurrentChurchInfo>(
+    initialChurch || defaultChurchInfo
+  );
+
+  useEffect(() => {
+    if (initialChurch) {
+      setChurch(initialChurch);
+    }
+  }, [initialChurch]);
+
+  const updateChurch = (updated: Partial<CurrentChurchInfo>) => {
+    setChurch((prev) => ({
+      ...prev,
+      ...updated,
+      profileConfig: {
+        ...prev.profileConfig,
+        ...(updated.profileConfig || {}),
+      },
+      bankingConfig: (updated.bankingConfig || prev.bankingConfig)
+        ? {
+            bankName: updated.bankingConfig?.bankName || prev.bankingConfig?.bankName || "",
+            accountNumber: updated.bankingConfig?.accountNumber || prev.bankingConfig?.accountNumber || "",
+            accountHolder: updated.bankingConfig?.accountHolder || prev.bankingConfig?.accountHolder || "",
+            branch: updated.bankingConfig?.branch || prev.bankingConfig?.branch || "",
+          }
+        : undefined,
+    }));
+  };
   const [activeView, setActiveView] = useState<"sanctuary" | "wall">(initialView);
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [fontSize, setFontSizeState] = useState<FontSizeOption>("normal");
@@ -270,6 +298,7 @@ export function WorshipProvider({
         setSelectedTranslation,
         activeView,
         setActiveView,
+        updateChurch,
       }}
     >
       {children}

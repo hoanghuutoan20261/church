@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { CurrentChurchInfo, useWorship } from "@/context/WorshipContext";
 import { getChurchAvatar } from "@/lib/churchAvatar";
 import {
@@ -32,6 +33,13 @@ import {
   Image as ImageIcon,
   Newspaper,
   Info,
+  Settings,
+  Edit3,
+  Trash2,
+  Plus,
+  Shield,
+  Save,
+  AlertCircle,
 } from "lucide-react";
 
 interface CommentItem {
@@ -112,11 +120,100 @@ const CHURCH_GALLERY_PHOTOS = [
   },
 ];
 
+const CHRISTIAN_IMAGE_COLLECTION = [
+  {
+    name: "Tiệc Thánh Thiêng Liêng",
+    category: "Tiệc Thánh",
+    icon: "🍞",
+    url: "https://images.unsplash.com/photo-1544427920-c49ccfb85579?auto=format&fit=crop&w=1200&q=80",
+  },
+  {
+    name: "Kinh Thánh Nền Tảng",
+    category: "Lời Chúa",
+    icon: "📖",
+    url: "https://images.unsplash.com/photo-1504052434569-70ad5836ab65?auto=format&fit=crop&w=1200&q=80",
+  },
+  {
+    name: "Thập Tự Giá & Bình Minh",
+    category: "Đức Tin",
+    icon: "✝️",
+    url: "https://images.unsplash.com/photo-1519817650390-64a93db51149?auto=format&fit=crop&w=1200&q=80",
+  },
+  {
+    name: "Thánh Đường Uy Nghiêm",
+    category: "Thánh Đường",
+    icon: "⛪",
+    url: "https://images.unsplash.com/photo-1438232992991-995b7058bbb3?auto=format&fit=crop&w=1200&q=80",
+  },
+  {
+    name: "Ban Hát Lễ Ngợi Khen",
+    category: "Ngợi Khen",
+    icon: "🎵",
+    url: "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=1200&q=80",
+  },
+  {
+    name: "Thanh Niên Hiệp Một",
+    category: "Thông Công",
+    icon: "🤝",
+    url: "https://images.unsplash.com/photo-1511632765486-a01980e01a18?auto=format&fit=crop&w=1200&q=80",
+  },
+  {
+    name: "Trường Chúa Nhật Thiếu Nhi",
+    category: "Thiếu Nhi",
+    icon: "👶",
+    url: "https://images.unsplash.com/photo-1485546246426-74dc88dec4d9?auto=format&fit=crop&w=1200&q=80",
+  },
+  {
+    name: "Cầu Nguyện & Tĩnh Nguyện",
+    category: "Tâm Linh",
+    icon: "🙏",
+    url: "https://images.unsplash.com/photo-1445445290350-18a3b86e0b5b?auto=format&fit=crop&w=1200&q=80",
+  },
+];
+
+const CHRISTIAN_COVERS_SAMPLE = [
+  {
+    name: "Thánh Đường Uy Nghiêm",
+    url: "https://images.unsplash.com/photo-1438232992991-995b7058bbb3?auto=format&fit=crop&w=1600&q=80",
+  },
+  {
+    name: "Thập Tự Giá Bình Minh",
+    url: "https://images.unsplash.com/photo-1519817650390-64a93db51149?auto=format&fit=crop&w=1600&q=80",
+  },
+  {
+    name: "Hội Thánh Thờ Phượng",
+    url: "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=1600&q=80",
+  },
+  {
+    name: "Đỉnh Núi Ánh Sáng",
+    url: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1600&q=80",
+  },
+];
+
+const CHRISTIAN_AVATARS_SAMPLE = [
+  {
+    name: "Thập Tự Giá Vàng",
+    url: "https://images.unsplash.com/photo-1548625361-16eb16428c0c?auto=format&fit=crop&w=400&q=80",
+  },
+  {
+    name: "Kinh Thánh Soi Đường",
+    url: "https://images.unsplash.com/photo-1504052434569-70ad5836ab65?auto=format&fit=crop&w=400&q=80",
+  },
+  {
+    name: "Ánh Nến Bình An",
+    url: "https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&w=400&q=80",
+  },
+  {
+    name: "Bánh & Chén Tiệc Thánh",
+    url: "https://images.unsplash.com/photo-1544427920-c49ccfb85579?auto=format&fit=crop&w=400&q=80",
+  },
+];
+
 export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
   onGoToSanctuary,
   isLive,
 }) => {
-  const { church, openModal } = useWorship();
+  const { church, openModal, updateChurch } = useWorship();
   const [posts, setPosts] = useState<WallPost[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [activeCategory, setActiveCategory] = useState<string>("all");
@@ -130,6 +227,58 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
     category?: string;
   } | null>(null);
 
+  // Admin Session State
+  const [adminSession, setAdminSession] = useState<{
+    id: string;
+    fullName: string;
+    email: string;
+    role: string;
+    churchSlug?: string;
+    isSuperAdmin?: boolean;
+  } | null>(null);
+  const [isAuthorizedAdmin, setIsAuthorizedAdmin] = useState<boolean>(false);
+
+  // Post Creator State (Admin directly publishes to wall)
+  const [showPostComposer, setShowPostComposer] = useState<boolean>(false);
+  const [newPostCategory, setNewPostCategory] = useState<
+    "announcement" | "scripture" | "devotion" | "sermon" | "fellowship"
+  >("announcement");
+  const [newPostTitle, setNewPostTitle] = useState<string>("");
+  const [newPostScripture, setNewPostScripture] = useState<string>("");
+  const [newPostContent, setNewPostContent] = useState<string>("");
+  const [newPostImageUrl, setNewPostImageUrl] = useState<string>("");
+  const [newPostVideoUrl, setNewPostVideoUrl] = useState<string>("");
+  const [newPostIsPinned, setNewPostIsPinned] = useState<boolean>(false);
+  const [isSubmittingPost, setIsSubmittingPost] = useState<boolean>(false);
+  const [showImagePicker, setShowImagePicker] = useState<boolean>(false);
+
+  // Edit Post State
+  const [editingPost, setEditingPost] = useState<WallPost | null>(null);
+  const [isSubmittingEdit, setIsSubmittingEdit] = useState<boolean>(false);
+
+  // Edit Church Profile Modal State
+  const [showEditProfileModal, setShowEditProfileModal] = useState<boolean>(false);
+  const [editProfileTab, setEditProfileTab] = useState<"appearance" | "info" | "banking">("appearance");
+  const [isSavingProfile, setIsSavingProfile] = useState<boolean>(false);
+  const [profileSuccessMsg, setProfileSuccessMsg] = useState<string>("");
+  const [profileFormData, setProfileFormData] = useState({
+    coverImageUrl: church.profileConfig?.coverImageUrl || "",
+    avatarUrl: church.profileConfig?.avatarUrl || "",
+    slogan: church.profileConfig?.slogan || "",
+    name: church.name || "",
+    denomination: church.denomination || "",
+    about: church.profileConfig?.about || "",
+    leadPastor: church.profileConfig?.leadPastor || "",
+    liveSchedule: church.liveSchedule || "",
+    address: church.address || "",
+    contactPhone: church.profileConfig?.contactPhone || "",
+    contactEmail: church.profileConfig?.contactEmail || "",
+    bankName: church.bankingConfig?.bankName || "MB Bank",
+    accountNumber: church.bankingConfig?.accountNumber || "",
+    accountHolder: church.bankingConfig?.accountHolder || "",
+    branch: church.bankingConfig?.branch || "",
+  });
+
   // Comment input per post
   const [commentInputs, setCommentInputs] = useState<
     Record<string, { authorName: string; text: string }>
@@ -137,6 +286,264 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
   const [submittingComment, setSubmittingComment] = useState<Record<string, boolean>>({});
   const [expandedComments, setExpandedComments] = useState<Record<string, boolean>>({});
   const [likedPosts, setLikedPosts] = useState<Record<string, boolean>>({});
+
+  // Check if current logged-in user is an Admin of this church or SuperAdmin
+  useEffect(() => {
+    let isCancelled = false;
+    async function checkAdminAuth() {
+      try {
+        const res = await fetch("/api/auth/me");
+        if (res.ok) {
+          const json = await res.json();
+          if (json.success && json.data && !isCancelled) {
+            const user = json.data.user;
+            const isSuper = Boolean(json.data.isSuperAdmin || user.role === "superadmin");
+            const userChurchSlug = (user.churchSlug || json.data.church?.slug || "").toLowerCase().trim();
+            const currentSlug = (church.slug || "").toLowerCase().trim();
+            const authorized = isSuper || (userChurchSlug && userChurchSlug === currentSlug);
+
+            if (authorized) {
+              setAdminSession({ ...user, isSuperAdmin: isSuper });
+              setIsAuthorizedAdmin(true);
+            }
+          }
+        }
+      } catch (err) {
+        // Guest viewer
+      }
+    }
+
+    checkAdminAuth();
+    return () => {
+      isCancelled = true;
+    };
+  }, [church.slug]);
+
+  const openProfileModal = () => {
+    setProfileFormData({
+      coverImageUrl: church.profileConfig?.coverImageUrl || "",
+      avatarUrl: church.profileConfig?.avatarUrl || "",
+      slogan: church.profileConfig?.slogan || "",
+      name: church.name || "",
+      denomination: church.denomination || "",
+      about: church.profileConfig?.about || "",
+      leadPastor: church.profileConfig?.leadPastor || "",
+      liveSchedule: church.liveSchedule || "",
+      address: church.address || "",
+      contactPhone: church.profileConfig?.contactPhone || "",
+      contactEmail: church.profileConfig?.contactEmail || "",
+      bankName: church.bankingConfig?.bankName || "MB Bank",
+      accountNumber: church.bankingConfig?.accountNumber || "",
+      accountHolder: church.bankingConfig?.accountHolder || "",
+      branch: church.bankingConfig?.branch || "",
+    });
+    setProfileSuccessMsg("");
+    setShowEditProfileModal(true);
+  };
+
+  const handleCreatePost = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPostContent.trim()) {
+      alert("Vui lòng nhập nội dung bài viết.");
+      return;
+    }
+
+    setIsSubmittingPost(true);
+    try {
+      const res = await fetch("/api/posts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          churchSlug: church.slug,
+          title: newPostTitle.trim(),
+          category: newPostCategory,
+          scriptureVerse: newPostScripture.trim(),
+          content: newPostContent.trim(),
+          imageUrl: newPostImageUrl.trim(),
+          videoUrl: newPostVideoUrl.trim(),
+          isPinned: newPostIsPinned,
+          authorName:
+            adminSession?.fullName ||
+            church.profileConfig?.leadPastor ||
+            church.name,
+          authorRole: adminSession?.isSuperAdmin
+            ? "Tổng Quản Trị Hệ Thống"
+            : church.profileConfig?.leadPastor
+            ? "Mục sư Quản Nhiệm"
+            : "Ban Quản Trị Mục Vụ",
+        }),
+      });
+
+      const json = await res.json();
+      if (json.success && json.data) {
+        setPosts((prev) => [json.data, ...prev]);
+        setShowPostComposer(false);
+        setNewPostTitle("");
+        setNewPostScripture("");
+        setNewPostContent("");
+        setNewPostImageUrl("");
+        setNewPostVideoUrl("");
+        setNewPostIsPinned(false);
+        setShowImagePicker(false);
+      } else {
+        alert(json.message || "Lỗi khi đăng bài viết.");
+      }
+    } catch (err: any) {
+      alert("Lỗi kết nối máy chủ: " + err.message);
+    } finally {
+      setIsSubmittingPost(false);
+    }
+  };
+
+  const handleTogglePin = async (postId: string, currentPinned: boolean) => {
+    try {
+      const res = await fetch("/api/admin/posts", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ postId, isPinned: !currentPinned }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setPosts((prev) =>
+          prev.map((p) =>
+            p._id === postId ? { ...p, isPinned: !currentPinned } : p
+          )
+        );
+      } else {
+        alert(json.message || "Lỗi khi đổi trạng thái ghim");
+      }
+    } catch (err: any) {
+      alert("Lỗi: " + err.message);
+    }
+  };
+
+  const handleDeletePost = async (postId: string) => {
+    if (!confirm("Quý vị có chắc chắn muốn xóa bài viết này khỏi Tường Hội Thánh không?")) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/admin/posts?id=${postId}`, {
+        method: "DELETE",
+      });
+      const json = await res.json();
+      if (json.success) {
+        setPosts((prev) => prev.filter((p) => p._id !== postId));
+      } else {
+        alert(json.message || "Không thể xóa bài viết");
+      }
+    } catch (err: any) {
+      alert("Lỗi: " + err.message);
+    }
+  };
+
+  const handleSaveEditPost = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingPost) return;
+
+    setIsSubmittingEdit(true);
+    try {
+      const res = await fetch("/api/admin/posts", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          postId: editingPost._id,
+          title: editingPost.title,
+          category: editingPost.category,
+          scriptureVerse: editingPost.scriptureVerse,
+          content: editingPost.content,
+          imageUrl: editingPost.imageUrl,
+          isPinned: editingPost.isPinned,
+        }),
+      });
+
+      const json = await res.json();
+      if (json.success) {
+        setPosts((prev) =>
+          prev.map((p) => (p._id === editingPost._id ? { ...p, ...editingPost } : p))
+        );
+        setEditingPost(null);
+      } else {
+        alert(json.message || "Lỗi khi cập nhật bài viết");
+      }
+    } catch (err: any) {
+      alert("Lỗi kết nối: " + err.message);
+    } finally {
+      setIsSubmittingEdit(false);
+    }
+  };
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingProfile(true);
+    setProfileSuccessMsg("");
+
+    try {
+      const res = await fetch("/api/admin/church", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          churchSlug: church.slug,
+          name: profileFormData.name.trim(),
+          denomination: profileFormData.denomination.trim(),
+          address: profileFormData.address.trim(),
+          liveSchedule: profileFormData.liveSchedule.trim(),
+          profileConfig: {
+            coverImageUrl: profileFormData.coverImageUrl.trim(),
+            avatarUrl: profileFormData.avatarUrl.trim(),
+            slogan: profileFormData.slogan.trim(),
+            about: profileFormData.about.trim(),
+            leadPastor: profileFormData.leadPastor.trim(),
+            contactPhone: profileFormData.contactPhone.trim(),
+            contactEmail: profileFormData.contactEmail.trim(),
+          },
+          bankingConfig: {
+            bankName: profileFormData.bankName.trim(),
+            accountNumber: profileFormData.accountNumber.trim(),
+            accountHolder: profileFormData.accountHolder.trim(),
+            branch: profileFormData.branch.trim(),
+          },
+        }),
+      });
+
+      const json = await res.json();
+      if (json.success && json.data) {
+        updateChurch({
+          name: profileFormData.name.trim(),
+          denomination: profileFormData.denomination.trim(),
+          address: profileFormData.address.trim(),
+          liveSchedule: profileFormData.liveSchedule.trim(),
+          profileConfig: {
+            ...church.profileConfig,
+            coverImageUrl: profileFormData.coverImageUrl.trim(),
+            avatarUrl: profileFormData.avatarUrl.trim(),
+            slogan: profileFormData.slogan.trim(),
+            about: profileFormData.about.trim(),
+            leadPastor: profileFormData.leadPastor.trim(),
+            contactPhone: profileFormData.contactPhone.trim(),
+            contactEmail: profileFormData.contactEmail.trim(),
+          },
+          bankingConfig: {
+            bankName: profileFormData.bankName.trim(),
+            accountNumber: profileFormData.accountNumber.trim(),
+            accountHolder: profileFormData.accountHolder.trim(),
+            branch: profileFormData.branch.trim(),
+          },
+        });
+        setProfileSuccessMsg("Đã lưu cập nhật thông tin Tường thành công!");
+        setTimeout(() => {
+          setShowEditProfileModal(false);
+          setProfileSuccessMsg("");
+        }, 1000);
+      } else {
+        alert(json.error || json.message || "Lỗi khi lưu thông tin");
+      }
+    } catch (err: any) {
+      alert("Lỗi kết nối máy chủ: " + err.message);
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
 
   // Lightbox keyboard navigation (Escape to close) & scroll lock
   useEffect(() => {
@@ -273,6 +680,52 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
 
   return (
     <div className="min-h-screen bg-[#0f1115] text-stone-200 pb-20 selection:bg-[#c5a059]/30">
+      {/* 0. Dedicated Admin Ribbon if authorized */}
+      {isAuthorizedAdmin && (
+        <div className="bg-gradient-to-r from-amber-950/90 via-stone-900 to-amber-950/90 border-b border-gold-400/40 py-2.5 px-4 text-xs shadow-xl flex flex-wrap items-center justify-between gap-2.5 z-20 sticky top-0 sm:static">
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-gold-400 animate-pulse shrink-0" />
+            <span className="font-serif font-bold text-gold-300">
+              Chế Độ Quản Trị ({adminSession?.fullName || "Mục Vụ"}):
+            </span>
+            <span className="text-stone-300 hidden sm:inline text-[11px]">
+              Quý vị có quyền đăng bài trực tiếp và chỉnh sửa toàn bộ thông tin Tường Hội Thánh này.
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                setMobileWallTab("feed");
+                setShowPostComposer(true);
+                window.scrollTo({ top: 380, behavior: "smooth" });
+              }}
+              className="px-2.5 sm:px-3 py-1.5 rounded-lg bg-[#c5a059] hover:bg-[#d6b068] text-stone-950 font-serif font-bold text-xs flex items-center gap-1.5 shadow transition-all cursor-pointer"
+            >
+              <Edit3 className="w-3.5 h-3.5" />
+              <span>Đăng Bài Mới</span>
+            </button>
+
+            <button
+              onClick={openProfileModal}
+              className="px-2.5 sm:px-3 py-1.5 rounded-lg bg-stone-850 hover:bg-stone-800 text-stone-200 border border-stone-700 text-xs font-serif flex items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <Settings className="w-3.5 h-3.5 text-[#c5a059]" />
+              <span>Sửa Thông Tin Tường</span>
+            </button>
+
+            <Link
+              href="/admin"
+              className="px-2.5 sm:px-3 py-1.5 rounded-lg bg-stone-850 hover:bg-stone-800 text-stone-300 border border-stone-700 text-xs font-serif flex items-center gap-1.5 transition-colors"
+              title="Vào Trang Quản Trị Toàn Diện"
+            >
+              <Shield className="w-3.5 h-3.5 text-stone-400" />
+              <span className="hidden sm:inline">Admin Panel</span>
+            </Link>
+          </div>
+        </div>
+      )}
+
       {/* 1. Sticky On-Air Alert Banner if currently Live */}
       {isLive && (
         <div className="bg-gradient-to-r from-red-950 via-stone-900 to-red-950 border-b border-red-500/50 py-3 px-4 sm:px-6 sticky top-0 z-30 shadow-2xl flex items-center justify-between gap-3">
@@ -305,13 +758,26 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
       <div className="max-w-6xl mx-auto px-0 sm:px-4 pt-0 sm:pt-4">
         <div className="bg-[#14161a] border-b sm:border border-stone-800 sm:rounded-2xl overflow-hidden shadow-2xl">
           {/* Panoramic Cover Image */}
-          <div className="relative w-full h-48 sm:h-72 md:h-80 bg-stone-900 overflow-hidden">
+          <div className="relative w-full h-48 sm:h-72 md:h-80 bg-stone-900 overflow-hidden group">
             <img
               src={coverUrl}
               alt="Ảnh bìa Hội Thánh"
               className="w-full h-full object-cover brightness-[0.75]"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-[#14161a] via-[#14161a]/30 to-transparent" />
+            
+            {/* Quick edit cover button for admin */}
+            {isAuthorizedAdmin && (
+              <button
+                onClick={openProfileModal}
+                className="absolute top-4 left-4 bg-black/75 hover:bg-black/90 text-stone-200 border border-white/20 px-3 py-1.5 rounded-full text-xs font-serif flex items-center gap-1.5 shadow-lg backdrop-blur-md cursor-pointer transition-all hover:scale-105 z-10"
+                title="Thay đổi ảnh bìa và thông tin Tường"
+              >
+                <Camera className="w-3.5 h-3.5 text-[#c5a059]" />
+                <span>Đổi Ảnh Bìa / Thông Tin</span>
+              </button>
+            )}
+
             <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md border border-white/10 px-3 py-1 rounded-full text-[11px] text-stone-300 font-serif flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-emerald-400" />
               <span>Trang Mục Vụ Chính Thức</span>
@@ -323,12 +789,22 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
             <div className="flex flex-col sm:flex-row items-center sm:items-end justify-between gap-4 -mt-16 sm:-mt-20 mb-5 text-center sm:text-left">
               {/* Avatar + Basic Names */}
               <div className="flex flex-col sm:flex-row items-center sm:items-end gap-4">
-                <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-full bg-[#14161a] border-4 border-[#14161a] ring-2 ring-[#c5a059]/60 shadow-2xl flex items-center justify-center text-[#c5a059] shrink-0 overflow-hidden relative">
+                <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-full bg-[#14161a] border-4 border-[#14161a] ring-2 ring-[#c5a059]/60 shadow-2xl flex items-center justify-center text-[#c5a059] shrink-0 overflow-hidden relative group">
                   <img
                     src={getChurchAvatar(church.name, church.slug, church.profileConfig?.avatarUrl)}
                     alt={church.name}
                     className="w-full h-full object-cover"
                   />
+                  {isAuthorizedAdmin && (
+                    <button
+                      onClick={openProfileModal}
+                      className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-white transition-opacity cursor-pointer"
+                      title="Đổi ảnh đại diện Hội Thánh"
+                    >
+                      <Camera className="w-5 h-5 text-[#c5a059]" />
+                      <span className="text-[10px] font-serif mt-1">Đổi Avatar</span>
+                    </button>
+                  )}
                 </div>
 
                 <div className="space-y-1">
@@ -403,6 +879,17 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
                     )}
                   </button>
                 </div>
+
+                {isAuthorizedAdmin && (
+                  <button
+                    onClick={openProfileModal}
+                    className="w-full sm:w-auto px-3.5 py-2.5 rounded-xl bg-gold-400/20 hover:bg-gold-400/30 text-gold-300 border border-gold-400/50 text-xs font-serif font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                    title="Chỉnh sửa toàn bộ thông tin Tường Hội Thánh"
+                  >
+                    <Settings className="w-4 h-4 text-gold-400" />
+                    <span>Sửa Thông Tin Tường</span>
+                  </button>
+                )}
               </div>
             </div>
 
@@ -652,6 +1139,293 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
 
           {/* ================= RIGHT COLUMN: WALL FEED ================= */}
           <main className={`lg:col-span-8 space-y-4 sm:space-y-5 ${mobileWallTab === "feed" ? "block" : "hidden lg:block"}`}>
+            {/* Admin Post Composer Box (Facebook-style) */}
+            {isAuthorizedAdmin && (
+              <div className="bg-[#14161a] border border-[#c5a059]/40 rounded-xl p-3.5 sm:p-4 shadow-xl space-y-3">
+                {/* Collapsed / Quick Header */}
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-[#1c1f26] border border-[#c5a059]/60 shrink-0 overflow-hidden">
+                    <img
+                      src={getChurchAvatar(church.name, church.slug, church.profileConfig?.avatarUrl)}
+                      alt={church.name}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+
+                  {!showPostComposer ? (
+                    <button
+                      type="button"
+                      onClick={() => setShowPostComposer(true)}
+                      className="flex-1 text-left bg-stone-900/90 hover:bg-stone-850 border border-stone-800 hover:border-[#c5a059]/50 rounded-xl px-4 py-2.5 text-xs sm:text-sm text-stone-400 transition-all cursor-pointer shadow-inner flex items-center justify-between"
+                    >
+                      <span>Mục sư / Ban Quản Trị, quý vị muốn chia sẻ điều gì hôm nay?</span>
+                      <Edit3 className="w-4 h-4 text-[#c5a059] shrink-0 ml-2" />
+                    </button>
+                  ) : (
+                    <div className="flex-1 flex items-center justify-between">
+                      <div className="text-xs font-serif font-bold text-stone-200 flex items-center gap-1.5">
+                        <Edit3 className="w-3.5 h-3.5 text-[#c5a059]" />
+                        <span>Tạo Bài Viết Mục Vụ Mới</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowPostComposer(false)}
+                        className="text-stone-400 hover:text-stone-200 p-1 rounded-lg hover:bg-stone-850 transition-colors cursor-pointer"
+                        title="Thu gọn"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Quick Action Buttons when collapsed */}
+                {!showPostComposer && (
+                  <div className="pt-2 border-t border-stone-800/80 flex items-center justify-between gap-2 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNewPostCategory("announcement");
+                        setShowPostComposer(true);
+                      }}
+                      className="flex-1 py-1.5 px-2 rounded-lg bg-stone-900/60 hover:bg-stone-850 border border-stone-800 text-stone-300 font-serif flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Thông Báo</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNewPostCategory("scripture");
+                        setShowPostComposer(true);
+                      }}
+                      className="flex-1 py-1.5 px-2 rounded-lg bg-stone-900/60 hover:bg-stone-850 border border-stone-800 text-stone-300 font-serif flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <BookOpen className="w-3.5 h-3.5 text-blue-400" />
+                      <span>Lời Chúa</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNewPostCategory("devotion");
+                        setShowPostComposer(true);
+                      }}
+                      className="flex-1 py-1.5 px-2 rounded-lg bg-stone-900/60 hover:bg-stone-850 border border-stone-800 text-stone-300 font-serif flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <HeartHandshake className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Tĩnh Nguyện</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* Expanded Form */}
+                {showPostComposer && (
+                  <form onSubmit={handleCreatePost} className="space-y-3 pt-1 border-t border-stone-800">
+                    {/* Category Pills */}
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-serif font-bold text-stone-300">
+                        Chuyên mục bài viết
+                      </label>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {[
+                          { id: "announcement", label: "Thông Báo" },
+                          { id: "scripture", label: "Lời Chúa" },
+                          { id: "devotion", label: "Tĩnh Nguyện" },
+                          { id: "sermon", label: "Bài Giảng" },
+                          { id: "fellowship", label: "Sinh Hoạt / Thông Công" },
+                        ].map((cat) => (
+                          <button
+                            type="button"
+                            key={cat.id}
+                            onClick={() => setNewPostCategory(cat.id as any)}
+                            className={`px-2.5 py-1 rounded-lg text-xs font-serif transition-colors cursor-pointer ${
+                              newPostCategory === cat.id
+                                ? "bg-[#c5a059] text-stone-950 font-bold shadow"
+                                : "bg-stone-900 text-stone-400 hover:text-stone-200 border border-stone-800"
+                            }`}
+                          >
+                            {cat.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Title */}
+                    <div>
+                      <input
+                        type="text"
+                        placeholder="Tiêu đề bài viết (ví dụ: Thông báo Lễ Phục Sinh, Sứ điệp Đức Tin)..."
+                        value={newPostTitle}
+                        onChange={(e) => setNewPostTitle(e.target.value)}
+                        className="w-full bg-stone-900/90 border border-stone-800 focus:border-[#c5a059] rounded-xl px-3.5 py-2 text-xs sm:text-sm text-stone-100 placeholder-stone-500 focus:outline-none transition-colors"
+                      />
+                    </div>
+
+                    {/* Scripture Verse (Optional) */}
+                    <div>
+                      <input
+                        type="text"
+                        placeholder="Câu gốc Kinh Thánh (ví dụ: Giăng 3:16, Thi Thiên 23:1) - Tuỳ chọn"
+                        value={newPostScripture}
+                        onChange={(e) => setNewPostScripture(e.target.value)}
+                        className="w-full bg-stone-900/90 border border-stone-800 focus:border-[#c5a059] rounded-xl px-3.5 py-2 text-xs text-stone-200 placeholder-stone-500 focus:outline-none font-serif italic"
+                      />
+                    </div>
+
+                    {/* Content Textarea */}
+                    <div>
+                      <textarea
+                        rows={4}
+                        required
+                        placeholder="Nội dung tâm tình, thông báo hoặc sứ điệp của Hội Thánh..."
+                        value={newPostContent}
+                        onChange={(e) => setNewPostContent(e.target.value)}
+                        className="w-full bg-stone-900/90 border border-stone-800 focus:border-[#c5a059] rounded-xl p-3.5 text-xs sm:text-sm text-stone-100 placeholder-stone-500 focus:outline-none leading-relaxed transition-colors resize-y"
+                      />
+                    </div>
+
+                    {/* Image Attachment & Curated Picker */}
+                    <div className="space-y-2 bg-stone-900/50 p-3 rounded-xl border border-stone-800/80">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[11px] font-serif font-bold text-stone-300 flex items-center gap-1.5">
+                          <ImageIcon className="w-3.5 h-3.5 text-[#c5a059]" />
+                          <span>Hình ảnh đính kèm (URL hoặc chọn từ thư viện Cơ Đốc)</span>
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setShowImagePicker(!showImagePicker)}
+                          className="text-[11px] text-[#c5a059] hover:underline font-serif cursor-pointer"
+                        >
+                          {showImagePicker ? "Đóng thư viện mẫu" : "⚡ Chọn ảnh đẹp có sẵn"}
+                        </button>
+                      </div>
+
+                      <input
+                        type="url"
+                        placeholder="https://images.unsplash.com/... (Dán liên kết ảnh)"
+                        value={newPostImageUrl}
+                        onChange={(e) => setNewPostImageUrl(e.target.value)}
+                        className="w-full bg-stone-900 border border-stone-800 focus:border-[#c5a059] rounded-lg px-3 py-1.5 text-xs text-stone-200 placeholder-stone-500 focus:outline-none"
+                      />
+
+                      {/* Curated Christian Images Grid */}
+                      {showImagePicker && (
+                        <div className="space-y-1.5 pt-1">
+                          <p className="text-[10px] text-stone-400">
+                            Chạm vào ảnh để tự động áp dụng làm hình ảnh bài viết:
+                          </p>
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 max-h-48 overflow-y-auto pr-1">
+                            {CHRISTIAN_IMAGE_COLLECTION.map((item, idx) => (
+                              <div
+                                key={idx}
+                                onClick={() => {
+                                  setNewPostImageUrl(item.url);
+                                  setShowImagePicker(false);
+                                }}
+                                className={`relative rounded-lg overflow-hidden border cursor-pointer group transition-all aspect-video ${
+                                  newPostImageUrl === item.url
+                                    ? "border-[#c5a059] ring-2 ring-[#c5a059]/50"
+                                    : "border-stone-800 hover:border-stone-600"
+                                }`}
+                              >
+                                <img
+                                  src={item.url}
+                                  alt={item.name}
+                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end p-1">
+                                  <span className="text-[9px] text-white line-clamp-1 font-serif">
+                                    {item.name}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Image Preview if provided */}
+                      {newPostImageUrl && (
+                        <div className="relative w-full h-36 rounded-lg overflow-hidden border border-stone-700 bg-stone-950 mt-2">
+                          <img
+                            src={newPostImageUrl}
+                            alt="Xem trước ảnh bài viết"
+                            className="w-full h-full object-cover"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setNewPostImageUrl("")}
+                            className="absolute top-2 right-2 p-1 rounded-full bg-black/70 hover:bg-black text-white cursor-pointer"
+                            title="Gỡ ảnh"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Video / Livestream Link (Optional) */}
+                    <div>
+                      <input
+                        type="url"
+                        placeholder="Link Video YouTube / Facebook (nếu có bài giảng / clip sinh hoạt)"
+                        value={newPostVideoUrl}
+                        onChange={(e) => setNewPostVideoUrl(e.target.value)}
+                        className="w-full bg-stone-900/90 border border-stone-800 focus:border-[#c5a059] rounded-xl px-3.5 py-2 text-xs text-stone-200 placeholder-stone-500 focus:outline-none"
+                      />
+                    </div>
+
+                    {/* Pin Checkbox & Submit */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+                      <label className="flex items-center gap-2 text-xs text-stone-300 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={newPostIsPinned}
+                          onChange={(e) => setNewPostIsPinned(e.target.checked)}
+                          className="rounded border-stone-700 text-[#c5a059] focus:ring-[#c5a059] bg-stone-900"
+                        />
+                        <span className="flex items-center gap-1 font-serif">
+                          <Pin className="w-3 h-3 text-amber-400 rotate-45" />
+                          <span>Ghim bài viết này lên đầu bảng tin</span>
+                        </span>
+                      </label>
+
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowPostComposer(false);
+                            setShowImagePicker(false);
+                          }}
+                          className="px-3 py-2 rounded-xl text-stone-400 hover:text-stone-200 text-xs font-serif transition-colors cursor-pointer"
+                        >
+                          Huỷ
+                        </button>
+
+                        <button
+                          type="submit"
+                          disabled={isSubmittingPost || !newPostContent.trim()}
+                          className="px-5 py-2 rounded-xl bg-[#c5a059] hover:bg-[#d6b068] disabled:opacity-50 text-stone-950 font-serif font-bold text-xs sm:text-sm shadow flex items-center gap-1.5 transition-all cursor-pointer"
+                        >
+                          {isSubmittingPost ? (
+                            <>
+                              <div className="w-3.5 h-3.5 border-2 border-stone-950 border-t-transparent rounded-full animate-spin" />
+                              <span>Đang đăng...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Send className="w-3.5 h-3.5" />
+                              <span>Đăng Bài Ngay</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </form>
+                )}
+              </div>
+            )}
+
             {/* Category Filter Bar */}
             <div className="bg-[#14161a] border border-stone-800 rounded-xl p-3 shadow-md flex items-center gap-2 overflow-x-auto scrollbar-none">
               <Filter className="w-4 h-4 text-stone-500 shrink-0 ml-1" />
@@ -743,7 +1517,7 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5 sm:gap-2">
                           {post.isPinned && (
                             <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[10px] font-serif font-bold">
                               <Pin className="w-3 h-3 rotate-45" />
@@ -756,6 +1530,42 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
                           >
                             {badge.label}
                           </span>
+
+                          {/* Admin Post Actions */}
+                          {isAuthorizedAdmin && (
+                            <div className="flex items-center gap-1 ml-1 border-l border-stone-800 pl-1.5">
+                              <button
+                                type="button"
+                                onClick={() => handleTogglePin(post._id, Boolean(post.isPinned))}
+                                title={post.isPinned ? "Bỏ ghim bài viết" : "Ghim bài viết lên đầu"}
+                                className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+                                  post.isPinned
+                                    ? "bg-amber-500/20 border-amber-500/40 text-amber-300 hover:bg-amber-500/30"
+                                    : "bg-stone-850 border-stone-700 text-stone-400 hover:text-amber-300 hover:border-amber-500/40"
+                                }`}
+                              >
+                                <Pin className="w-3.5 h-3.5 rotate-45" />
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => setEditingPost(post)}
+                                title="Chỉnh sửa bài viết này"
+                                className="p-1.5 rounded-lg bg-stone-850 border border-stone-700 text-stone-400 hover:text-[#c5a059] hover:border-[#c5a059]/40 transition-colors cursor-pointer"
+                              >
+                                <Edit3 className="w-3.5 h-3.5" />
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => handleDeletePost(post._id)}
+                                title="Xóa bài viết này khỏi Tường"
+                                className="p-1.5 rounded-lg bg-stone-850 border border-stone-700 text-stone-400 hover:text-red-400 hover:border-red-500/40 transition-colors cursor-pointer"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </div>
 
@@ -959,6 +1769,684 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
           </main>
         </div>
       </div>
+
+      {/* 4. Edit Post Modal */}
+      {editingPost && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 animate-fadeIn"
+          onClick={() => setEditingPost(null)}
+        >
+          <div
+            className="bg-[#14161a] border border-stone-800 rounded-2xl max-w-2xl w-full p-4 sm:p-6 space-y-4 shadow-2xl relative max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-stone-800 pb-3">
+              <h3 className="font-serif text-base sm:text-lg font-bold text-stone-100 flex items-center gap-2">
+                <Edit3 className="w-5 h-5 text-[#c5a059]" />
+                <span>Chỉnh Sửa Bài Viết</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setEditingPost(null)}
+                className="text-stone-400 hover:text-stone-200 p-1.5 rounded-lg hover:bg-stone-800 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditPost} className="space-y-3.5">
+              {/* Category */}
+              <div className="space-y-1">
+                <label className="text-xs font-serif font-bold text-stone-300">
+                  Chuyên mục
+                </label>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {[
+                    { id: "announcement", label: "Thông Báo" },
+                    { id: "scripture", label: "Lời Chúa" },
+                    { id: "devotion", label: "Tĩnh Nguyện" },
+                    { id: "sermon", label: "Bài Giảng" },
+                    { id: "fellowship", label: "Sinh Hoạt / Thông Công" },
+                  ].map((cat) => (
+                    <button
+                      type="button"
+                      key={cat.id}
+                      onClick={() =>
+                        setEditingPost((prev) => (prev ? { ...prev, category: cat.id as any } : null))
+                      }
+                      className={`px-2.5 py-1 rounded-lg text-xs font-serif transition-colors cursor-pointer ${
+                        editingPost.category === cat.id
+                          ? "bg-[#c5a059] text-stone-950 font-bold shadow"
+                          : "bg-stone-900 text-stone-400 hover:text-stone-200 border border-stone-800"
+                      }`}
+                    >
+                      {cat.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Title */}
+              <div className="space-y-1">
+                <label className="text-xs font-serif font-bold text-stone-300">
+                  Tiêu đề bài viết
+                </label>
+                <input
+                  type="text"
+                  value={editingPost.title}
+                  onChange={(e) =>
+                    setEditingPost((prev) => (prev ? { ...prev, title: e.target.value } : null))
+                  }
+                  className="w-full bg-stone-900 border border-stone-800 focus:border-[#c5a059] rounded-xl px-3.5 py-2 text-xs sm:text-sm text-stone-100 placeholder-stone-500 focus:outline-none"
+                />
+              </div>
+
+              {/* Scripture Verse */}
+              <div className="space-y-1">
+                <label className="text-xs font-serif font-bold text-stone-300">
+                  Câu gốc Kinh Thánh (Tuỳ chọn)
+                </label>
+                <input
+                  type="text"
+                  value={editingPost.scriptureVerse || ""}
+                  onChange={(e) =>
+                    setEditingPost((prev) =>
+                      prev ? { ...prev, scriptureVerse: e.target.value } : null
+                    )
+                  }
+                  className="w-full bg-stone-900 border border-stone-800 focus:border-[#c5a059] rounded-xl px-3.5 py-2 text-xs text-stone-200 focus:outline-none font-serif italic"
+                />
+              </div>
+
+              {/* Content */}
+              <div className="space-y-1">
+                <label className="text-xs font-serif font-bold text-stone-300">
+                  Nội dung bài viết *
+                </label>
+                <textarea
+                  rows={5}
+                  required
+                  value={editingPost.content}
+                  onChange={(e) =>
+                    setEditingPost((prev) => (prev ? { ...prev, content: e.target.value } : null))
+                  }
+                  className="w-full bg-stone-900 border border-stone-800 focus:border-[#c5a059] rounded-xl p-3.5 text-xs sm:text-sm text-stone-100 focus:outline-none leading-relaxed resize-y"
+                />
+              </div>
+
+              {/* Image URL */}
+              <div className="space-y-1">
+                <label className="text-xs font-serif font-bold text-stone-300">
+                  Liên kết hình ảnh (URL)
+                </label>
+                <input
+                  type="url"
+                  placeholder="https://..."
+                  value={editingPost.imageUrl || ""}
+                  onChange={(e) =>
+                    setEditingPost((prev) =>
+                      prev ? { ...prev, imageUrl: e.target.value } : null
+                    )
+                  }
+                  className="w-full bg-stone-900 border border-stone-800 focus:border-[#c5a059] rounded-lg px-3 py-1.5 text-xs text-stone-200 focus:outline-none"
+                />
+                {editingPost.imageUrl && (
+                  <div className="relative w-full h-32 rounded-lg overflow-hidden border border-stone-700 bg-stone-950 mt-1.5">
+                    <img
+                      src={editingPost.imageUrl}
+                      alt="Preview"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Pin */}
+              <label className="flex items-center gap-2 text-xs text-stone-300 cursor-pointer select-none pt-1">
+                <input
+                  type="checkbox"
+                  checked={Boolean(editingPost.isPinned)}
+                  onChange={(e) =>
+                    setEditingPost((prev) =>
+                      prev ? { ...prev, isPinned: e.target.checked } : null
+                    )
+                  }
+                  className="rounded border-stone-700 text-[#c5a059] focus:ring-[#c5a059] bg-stone-900"
+                />
+                <span className="flex items-center gap-1 font-serif">
+                  <Pin className="w-3 h-3 text-amber-400 rotate-45" />
+                  <span>Ghim bài viết này lên đầu bảng tin</span>
+                </span>
+              </label>
+
+              {/* Actions */}
+              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-stone-800">
+                <button
+                  type="button"
+                  onClick={() => setEditingPost(null)}
+                  className="px-4 py-2 rounded-xl text-stone-400 hover:text-stone-200 text-xs font-serif transition-colors cursor-pointer"
+                >
+                  Huỷ bỏ
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingEdit || !editingPost.content.trim()}
+                  className="px-5 py-2 rounded-xl bg-[#c5a059] hover:bg-[#d6b068] disabled:opacity-50 text-stone-950 font-serif font-bold text-xs sm:text-sm shadow flex items-center gap-1.5 transition-all cursor-pointer"
+                >
+                  {isSubmittingEdit ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-stone-950 border-t-transparent rounded-full animate-spin" />
+                      <span>Đang lưu...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-3.5 h-3.5" />
+                      <span>Lưu Thay Đổi</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 5. Edit Church Profile Modal */}
+      {showEditProfileModal && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 animate-fadeIn"
+          onClick={() => setShowEditProfileModal(false)}
+        >
+          <div
+            className="bg-[#14161a] border border-stone-800 rounded-2xl max-w-3xl w-full p-4 sm:p-6 space-y-4 shadow-2xl relative max-h-[92vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-stone-800 pb-3 shrink-0">
+              <div className="flex items-center gap-2">
+                <Settings className="w-5 h-5 text-[#c5a059]" />
+                <div>
+                  <h3 className="font-serif text-base sm:text-lg font-bold text-stone-100">
+                    Chỉnh Sửa Thông Tin Tường Hội Thánh
+                  </h3>
+                  <p className="text-[11px] text-stone-400">
+                    Cập nhật hình ảnh, thông điệp, liên hệ và tài khoản dâng hiến
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowEditProfileModal(false)}
+                className="text-stone-400 hover:text-stone-200 p-1.5 rounded-lg hover:bg-stone-800 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Success Message Banner */}
+            {profileSuccessMsg && (
+              <div className="bg-emerald-950/80 border border-emerald-500/40 rounded-xl p-3 text-xs text-emerald-300 font-serif flex items-center gap-2 animate-fadeIn shrink-0">
+                <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>{profileSuccessMsg}</span>
+              </div>
+            )}
+
+            {/* Tab Switcher */}
+            <div className="flex items-center gap-1.5 bg-stone-900 p-1 rounded-xl border border-stone-800 shrink-0">
+              <button
+                type="button"
+                onClick={() => setEditProfileTab("appearance")}
+                className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-serif transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${
+                  editProfileTab === "appearance"
+                    ? "bg-[#c5a059] text-stone-950 font-bold shadow"
+                    : "text-stone-400 hover:text-stone-200"
+                }`}
+              >
+                <Camera className="w-3.5 h-3.5" />
+                <span>Giao Diện & Châm Ngôn</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setEditProfileTab("info")}
+                className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-serif transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${
+                  editProfileTab === "info"
+                    ? "bg-[#c5a059] text-stone-950 font-bold shadow"
+                    : "text-stone-400 hover:text-stone-200"
+                }`}
+              >
+                <Info className="w-3.5 h-3.5" />
+                <span>Thông Tin & Liên Hệ</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setEditProfileTab("banking")}
+                className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-serif transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${
+                  editProfileTab === "banking"
+                    ? "bg-[#c5a059] text-stone-950 font-bold shadow"
+                    : "text-stone-400 hover:text-stone-200"
+                }`}
+              >
+                <CreditCard className="w-3.5 h-3.5" />
+                <span>Dâng Hiến (VietQR)</span>
+              </button>
+            </div>
+
+            {/* Scrollable Form Body */}
+            <form onSubmit={handleSaveProfile} className="space-y-4 overflow-y-auto flex-1 pr-1">
+              {/* Tab 1: Appearance */}
+              {editProfileTab === "appearance" && (
+                <div className="space-y-4 animate-fadeIn">
+                  {/* Cover Photo */}
+                  <div className="space-y-2 bg-stone-900/60 p-3.5 rounded-xl border border-stone-800">
+                    <label className="text-xs font-serif font-bold text-stone-200 flex items-center justify-between">
+                      <span>Ảnh Bìa Tường (Cover Image URL)</span>
+                      <span className="text-[10px] text-stone-400 font-normal">Kích thước chuẩn: 1200x400</span>
+                    </label>
+                    <input
+                      type="url"
+                      placeholder="https://images.unsplash.com/... (Dán link ảnh bìa)"
+                      value={profileFormData.coverImageUrl}
+                      onChange={(e) =>
+                        setProfileFormData((prev) => ({ ...prev, coverImageUrl: e.target.value }))
+                      }
+                      className="w-full bg-stone-900 border border-stone-800 focus:border-[#c5a059] rounded-lg px-3 py-2 text-xs text-stone-200 focus:outline-none"
+                    />
+
+                    {/* Quick Christian Cover Samples */}
+                    <div className="space-y-1.5 pt-1">
+                      <p className="text-[10px] text-[#c5a059] font-serif">
+                        ⚡ Hoặc chọn nhanh ảnh bìa Cơ Đốc nghệ thuật cao:
+                      </p>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        {CHRISTIAN_COVERS_SAMPLE.map((cov, idx) => (
+                          <div
+                            key={idx}
+                            onClick={() =>
+                              setProfileFormData((prev) => ({ ...prev, coverImageUrl: cov.url }))
+                            }
+                            className={`relative h-16 rounded-lg overflow-hidden border cursor-pointer group transition-all ${
+                              profileFormData.coverImageUrl === cov.url
+                                ? "border-[#c5a059] ring-2 ring-[#c5a059]/50"
+                                : "border-stone-800 hover:border-stone-600"
+                            }`}
+                          >
+                            <img
+                              src={cov.url}
+                              alt={cov.name}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end p-1">
+                              <span className="text-[9px] text-white line-clamp-1 font-serif">
+                                {cov.name}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {profileFormData.coverImageUrl && (
+                      <div className="relative w-full h-24 rounded-lg overflow-hidden border border-stone-700 bg-stone-950 mt-1">
+                        <img
+                          src={profileFormData.coverImageUrl}
+                          alt="Cover Preview"
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Avatar Photo */}
+                  <div className="space-y-2 bg-stone-900/60 p-3.5 rounded-xl border border-stone-800">
+                    <label className="text-xs font-serif font-bold text-stone-200 flex items-center justify-between">
+                      <span>Ảnh Đại Diện Hội Thánh (Avatar URL)</span>
+                      <span className="text-[10px] text-stone-400 font-normal">Kích thước chuẩn: Hình vuông / Tròn</span>
+                    </label>
+                    <input
+                      type="url"
+                      placeholder="https://... (Dán link ảnh đại diện)"
+                      value={profileFormData.avatarUrl}
+                      onChange={(e) =>
+                        setProfileFormData((prev) => ({ ...prev, avatarUrl: e.target.value }))
+                      }
+                      className="w-full bg-stone-900 border border-stone-800 focus:border-[#c5a059] rounded-lg px-3 py-2 text-xs text-stone-200 focus:outline-none"
+                    />
+
+                    {/* Quick Christian Avatar Samples */}
+                    <div className="space-y-1.5 pt-1">
+                      <p className="text-[10px] text-[#c5a059] font-serif">
+                        ⚡ Hoặc chọn nhanh biểu trưng Hội Thánh mẫu:
+                      </p>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        {CHRISTIAN_AVATARS_SAMPLE.map((av, idx) => (
+                          <div
+                            key={idx}
+                            onClick={() =>
+                              setProfileFormData((prev) => ({ ...prev, avatarUrl: av.url }))
+                            }
+                            className={`flex items-center gap-2 p-1.5 rounded-lg border cursor-pointer group transition-all ${
+                              profileFormData.avatarUrl === av.url
+                                ? "border-[#c5a059] bg-[#c5a059]/10"
+                                : "border-stone-800 hover:border-stone-700 bg-stone-900"
+                            }`}
+                          >
+                            <img
+                              src={av.url}
+                              alt={av.name}
+                              className="w-8 h-8 rounded-full object-cover shrink-0"
+                            />
+                            <span className="text-[10px] text-stone-300 font-serif line-clamp-1">
+                              {av.name}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Slogan */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-serif font-bold text-stone-200">
+                      Châm ngôn / Tiêu ngữ Hội Thánh (Slogan)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ví dụ: Hiệp Một — Yêu Thương — Phụng Sự"
+                      value={profileFormData.slogan}
+                      onChange={(e) =>
+                        setProfileFormData((prev) => ({ ...prev, slogan: e.target.value }))
+                      }
+                      className="w-full bg-stone-900 border border-stone-800 focus:border-[#c5a059] rounded-xl px-3.5 py-2 text-xs sm:text-sm text-stone-100 placeholder-stone-500 focus:outline-none font-serif"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Tab 2: Info */}
+              {editProfileTab === "info" && (
+                <div className="space-y-3.5 animate-fadeIn">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-xs font-serif font-bold text-stone-200">
+                        Tên Hội Thánh *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={profileFormData.name}
+                        onChange={(e) =>
+                          setProfileFormData((prev) => ({ ...prev, name: e.target.value }))
+                        }
+                        className="w-full bg-stone-900 border border-stone-800 focus:border-[#c5a059] rounded-xl px-3 py-2 text-xs text-stone-100 focus:outline-none"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-serif font-bold text-stone-200">
+                        Giáo hạt / Hệ phái
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Hội Thánh Tin Lành Việt Nam..."
+                        value={profileFormData.denomination}
+                        onChange={(e) =>
+                          setProfileFormData((prev) => ({ ...prev, denomination: e.target.value }))
+                        }
+                        className="w-full bg-stone-900 border border-stone-800 focus:border-[#c5a059] rounded-xl px-3 py-2 text-xs text-stone-100 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-xs font-serif font-bold text-stone-200">
+                        Mục sư Quản Nhiệm
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Mục sư..."
+                        value={profileFormData.leadPastor}
+                        onChange={(e) =>
+                          setProfileFormData((prev) => ({ ...prev, leadPastor: e.target.value }))
+                        }
+                        className="w-full bg-stone-900 border border-stone-800 focus:border-[#c5a059] rounded-xl px-3 py-2 text-xs text-stone-100 focus:outline-none"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-serif font-bold text-stone-200">
+                        Lịch nhóm thờ phượng trực tiếp
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Chúa Nhật, 09:00 & 19:30"
+                        value={profileFormData.liveSchedule}
+                        onChange={(e) =>
+                          setProfileFormData((prev) => ({ ...prev, liveSchedule: e.target.value }))
+                        }
+                        className="w-full bg-stone-900 border border-stone-800 focus:border-[#c5a059] rounded-xl px-3 py-2 text-xs text-stone-100 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-serif font-bold text-stone-200">
+                      Địa chỉ Nhà Thờ / Điểm Nhóm
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành..."
+                      value={profileFormData.address}
+                      onChange={(e) =>
+                        setProfileFormData((prev) => ({ ...prev, address: e.target.value }))
+                      }
+                      className="w-full bg-stone-900 border border-stone-800 focus:border-[#c5a059] rounded-xl px-3 py-2 text-xs text-stone-100 focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-xs font-serif font-bold text-stone-200">
+                        Số điện thoại văn phòng
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="028... hoặc 090..."
+                        value={profileFormData.contactPhone}
+                        onChange={(e) =>
+                          setProfileFormData((prev) => ({ ...prev, contactPhone: e.target.value }))
+                        }
+                        className="w-full bg-stone-900 border border-stone-800 focus:border-[#c5a059] rounded-xl px-3 py-2 text-xs text-stone-100 focus:outline-none"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-serif font-bold text-stone-200">
+                        Email văn phòng
+                      </label>
+                      <input
+                        type="email"
+                        placeholder="vanphong@hoithanh.org"
+                        value={profileFormData.contactEmail}
+                        onChange={(e) =>
+                          setProfileFormData((prev) => ({ ...prev, contactEmail: e.target.value }))
+                        }
+                        className="w-full bg-stone-900 border border-stone-800 focus:border-[#c5a059] rounded-xl px-3 py-2 text-xs text-stone-100 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-serif font-bold text-stone-200">
+                      Giới thiệu sơ lược về Hội Thánh (About)
+                    </label>
+                    <textarea
+                      rows={4}
+                      placeholder="Giới thiệu về lịch sử, khải tượng, và các thánh vụ trọng tâm..."
+                      value={profileFormData.about}
+                      onChange={(e) =>
+                        setProfileFormData((prev) => ({ ...prev, about: e.target.value }))
+                      }
+                      className="w-full bg-stone-900 border border-stone-800 focus:border-[#c5a059] rounded-xl p-3 text-xs text-stone-100 focus:outline-none leading-relaxed resize-y"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Tab 3: Banking */}
+              {editProfileTab === "banking" && (
+                <div className="space-y-4 animate-fadeIn">
+                  <div className="bg-stone-900/60 p-3.5 rounded-xl border border-stone-800 space-y-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-xs font-serif font-bold text-stone-200">
+                          Tên ngân hàng
+                        </label>
+                        <select
+                          value={profileFormData.bankName}
+                          onChange={(e) =>
+                            setProfileFormData((prev) => ({ ...prev, bankName: e.target.value }))
+                          }
+                          className="w-full bg-stone-900 border border-stone-800 focus:border-[#c5a059] rounded-xl px-3 py-2 text-xs text-stone-100 focus:outline-none"
+                        >
+                          <option value="MB Bank">MB Bank (Quân Đội)</option>
+                          <option value="Vietcombank">Vietcombank</option>
+                          <option value="Techcombank">Techcombank</option>
+                          <option value="ACB">ACB (Á Châu)</option>
+                          <option value="BIDV">BIDV</option>
+                          <option value="VietinBank">VietinBank</option>
+                          <option value="Agribank">Agribank</option>
+                          <option value="VPBank">VPBank</option>
+                          <option value="TPBank">TPBank</option>
+                          <option value="Sacombank">Sacombank</option>
+                          <option value="VIB">VIB</option>
+                          <option value="SHB">SHB</option>
+                          <option value="HDBank">HDBank</option>
+                          <option value="MSB">MSB</option>
+                          <option value="OCB">OCB</option>
+                          <option value="SeABank">SeABank</option>
+                        </select>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-xs font-serif font-bold text-stone-200">
+                          Số tài khoản ngân hàng *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="Ví dụ: 0386888999"
+                          value={profileFormData.accountNumber}
+                          onChange={(e) =>
+                            setProfileFormData((prev) => ({ ...prev, accountNumber: e.target.value }))
+                          }
+                          className="w-full bg-stone-900 border border-stone-800 focus:border-[#c5a059] rounded-xl px-3 py-2 text-xs font-mono font-bold text-[#c5a059] focus:outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-xs font-serif font-bold text-stone-200">
+                          Tên chủ tài khoản (In hoa không dấu) *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="Ví dụ: HOI THANH TIN LANH"
+                          value={profileFormData.accountHolder}
+                          onChange={(e) =>
+                            setProfileFormData((prev) => ({
+                              ...prev,
+                              accountHolder: e.target.value.toUpperCase(),
+                            }))
+                          }
+                          className="w-full bg-stone-900 border border-stone-800 focus:border-[#c5a059] rounded-xl px-3 py-2 text-xs uppercase text-stone-100 focus:outline-none"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-xs font-serif font-bold text-stone-200">
+                          Chi nhánh (Tuỳ chọn)
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Ví dụ: Chi nhánh TP.HCM"
+                          value={profileFormData.branch}
+                          onChange={(e) =>
+                            setProfileFormData((prev) => ({ ...prev, branch: e.target.value }))
+                          }
+                          className="w-full bg-stone-900 border border-stone-800 focus:border-[#c5a059] rounded-xl px-3 py-2 text-xs text-stone-100 focus:outline-none"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Live VietQR Preview */}
+                  {profileFormData.accountNumber && (
+                    <div className="p-3 bg-stone-900/90 rounded-xl border border-stone-800 flex items-center gap-3">
+                      <div className="w-16 h-16 bg-white p-1 rounded-lg shrink-0 border border-stone-700 shadow flex items-center justify-center">
+                        <img
+                          src={`https://img.vietqr.io/image/${profileFormData.bankName.replace(/\s+/g, "")}-${profileFormData.accountNumber}-compact2.png?amount=0&addInfo=DangHien%20${church.slug}&accountName=${encodeURIComponent(profileFormData.accountHolder || "HOI THANH")}`}
+                          alt="VietQR Preview"
+                          className="w-full h-full object-contain"
+                        />
+                      </div>
+                      <div className="text-xs space-y-0.5 min-w-0">
+                        <p className="text-[11px] font-serif font-bold text-[#c5a059]">
+                          Xem trước mã VietQR tự động sinh:
+                        </p>
+                        <p className="text-stone-300 font-mono text-[11px]">
+                          {profileFormData.bankName} • {profileFormData.accountNumber}
+                        </p>
+                        <p className="text-stone-400 text-[10px] uppercase truncate">
+                          {profileFormData.accountHolder}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Form Bottom Action */}
+              <div className="flex items-center justify-between gap-3 pt-3 border-t border-stone-800 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setShowEditProfileModal(false)}
+                  className="px-4 py-2 rounded-xl text-stone-400 hover:text-stone-200 text-xs font-serif transition-colors cursor-pointer"
+                >
+                  Đóng
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={isSavingProfile}
+                  className="px-5 py-2.5 rounded-xl bg-[#c5a059] hover:bg-[#d6b068] disabled:opacity-50 text-stone-950 font-serif font-bold text-xs sm:text-sm shadow flex items-center gap-1.5 transition-all cursor-pointer"
+                >
+                  {isSavingProfile ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-stone-950 border-t-transparent rounded-full animate-spin" />
+                      <span>Đang lưu...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4" />
+                      <span>Lưu Cập Nhật Tường</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Fullscreen Lightbox Modal */}
       {selectedLightboxImage && (

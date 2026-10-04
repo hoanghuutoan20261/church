@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   try {
-    const authSession = await getAuthUser();
+    const authSession = await getAuthUser(req);
     if (!authSession) {
       return NextResponse.json(
         { success: false, error: "Yêu cầu đăng nhập quản trị" },
@@ -16,7 +16,18 @@ export async function GET(req: NextRequest) {
     }
 
     await connectDB();
-    const church = await Church.findById(authSession.churchId);
+    const targetSlug = req.nextUrl.searchParams.get("slug");
+    let church = null;
+    if (authSession.role === "superadmin" && targetSlug) {
+      church = await Church.findOne({ slug: targetSlug.toLowerCase().trim() });
+    }
+    if (!church && authSession.churchId) {
+      church = await Church.findById(authSession.churchId);
+    }
+    if (!church && authSession.churchSlug) {
+      church = await Church.findOne({ slug: authSession.churchSlug.toLowerCase().trim() });
+    }
+
     if (!church) {
       return NextResponse.json(
         { success: false, error: "Không tìm thấy Hội Thánh tương ứng" },
@@ -39,7 +50,7 @@ export async function GET(req: NextRequest) {
 
 export async function PUT(req: NextRequest) {
   try {
-    const authSession = await getAuthUser();
+    const authSession = await getAuthUser(req);
     if (!authSession) {
       return NextResponse.json(
         { success: false, error: "Yêu cầu đăng nhập quản trị" },
@@ -58,9 +69,30 @@ export async function PUT(req: NextRequest) {
       currentService,
       bankingConfig,
       themeConfig,
+      churchSlug,
+      churchId,
     } = body;
 
-    const church = await Church.findById(authSession.churchId);
+    let church = null;
+    if (authSession.role === "superadmin") {
+      const targetSlug = churchSlug || req.nextUrl.searchParams.get("slug");
+      const targetId = churchId || body._id || body.id;
+      if (targetSlug) {
+        church = await Church.findOne({ slug: targetSlug.toLowerCase().trim() });
+      } else if (targetId) {
+        church = await Church.findById(targetId);
+      }
+      if (!church && authSession.churchId) {
+        church = await Church.findById(authSession.churchId);
+      }
+    } else {
+      if (authSession.churchId) {
+        church = await Church.findById(authSession.churchId);
+      } else if (authSession.churchSlug) {
+        church = await Church.findOne({ slug: authSession.churchSlug.toLowerCase().trim() });
+      }
+    }
+
     if (!church) {
       return NextResponse.json(
         { success: false, error: "Không tìm thấy Hội Thánh tương ứng" },
