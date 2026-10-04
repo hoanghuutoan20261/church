@@ -15,6 +15,7 @@ import {
   Edit3,
   Check,
 } from "lucide-react";
+import { AmenIcon } from "@/components/common/AmenIcon";
 
 export const CommunityChatTab: React.FC = () => {
   const { church, messages, addMessage } = useWorship();
@@ -179,11 +180,12 @@ export const CommunityChatTab: React.FC = () => {
                 <p
                   className={`text-xs sm:text-sm leading-relaxed ${
                     msg.isAmenOnly
-                      ? "font-serif italic font-medium text-gold-300"
+                      ? "font-serif italic font-medium text-gold-300 flex items-center gap-1.5"
                       : "text-sanctuary-200 font-sans"
                   }`}
                 >
-                  {msg.text}
+                  {msg.isAmenOnly && <AmenIcon className="w-3.5 h-3.5 text-gold-400 shrink-0" filled />}
+                  <span>{msg.text.replace(/🙏/g, "").trim()}</span>
                 </p>
               </div>
             );
@@ -198,18 +200,19 @@ export const CommunityChatTab: React.FC = () => {
             Hiệp ý:
           </span>
           {[
-            "Amen! 🙏",
-            "Tạ ơn Chúa",
-            "Ha-lê-lu-gia",
-            "Xin Chúa thăm viếng",
-            "Chúa ban phước",
+            { label: "Amen!", text: "Amen!", isAmen: true },
+            { label: "Tạ ơn Chúa", text: "Tạ ơn Chúa", isAmen: false },
+            { label: "Ha-lê-lu-gia", text: "Ha-lê-lu-gia", isAmen: false },
+            { label: "Xin Chúa thăm viếng", text: "Xin Chúa thăm viếng", isAmen: false },
+            { label: "Chúa ban phước", text: "Chúa ban phước", isAmen: false },
           ].map((chip) => (
             <button
-              key={chip}
-              onClick={() => handleQuickReaction(chip)}
-              className="shrink-0 px-2.5 py-1 rounded bg-sanctuary-850 hover:bg-gold-400/15 text-sanctuary-200 hover:text-gold-300 border border-white/[0.08] hover:border-gold-400/40 text-[11px] transition-all font-serif cursor-pointer"
+              key={chip.label}
+              onClick={() => handleQuickReaction(chip.text)}
+              className="shrink-0 flex items-center gap-1 px-2.5 py-1 rounded bg-sanctuary-850 hover:bg-gold-400/15 text-sanctuary-200 hover:text-gold-300 border border-white/[0.08] hover:border-gold-400/40 text-[11px] transition-all font-serif cursor-pointer"
             >
-              {chip}
+              {chip.isAmen && <AmenIcon className="w-3 h-3 text-gold-400" filled />}
+              <span>{chip.label}</span>
             </button>
           ))}
         </div>

@@ -6,6 +6,8 @@ import Link from "next/link";
 import { CurrentChurchInfo, useWorship } from "@/context/WorshipContext";
 import { getChurchAvatar } from "@/lib/churchAvatar";
 import { ImageUploadBox } from "@/components/common/ImageUploadBox";
+import { AmenIcon } from "@/components/common/AmenIcon";
+import { getChurchGoogleMapsUrl } from "@/lib/mapUtils";
 import {
   Church as ChurchIcon,
   Radio,
@@ -167,7 +169,7 @@ const CHRISTIAN_IMAGE_COLLECTION = [
   {
     name: "Cầu Nguyện & Tĩnh Nguyện",
     category: "Tâm Linh",
-    icon: "🙏",
+    icon: "✝️",
     url: "https://images.unsplash.com/photo-1445445290350-18a3b86e0b5b?auto=format&fit=crop&w=1200&q=80",
   },
 ];
@@ -280,6 +282,7 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
       description?: string;
     }[];
     address: string;
+    googleMapUrl?: string;
     contactPhone: string;
     contactEmail: string;
     bankName: string;
@@ -308,6 +311,7 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
           },
         ],
     address: church.address || "",
+    googleMapUrl: church.profileConfig?.googleMapUrl || "",
     contactPhone: church.profileConfig?.contactPhone || "",
     contactEmail: church.profileConfig?.contactEmail || "",
     bankName: church.bankingConfig?.bankName || "MB Bank",
@@ -379,6 +383,7 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
             },
           ],
       address: church.address || "",
+      googleMapUrl: church.profileConfig?.googleMapUrl || "",
       contactPhone: church.profileConfig?.contactPhone || "",
       contactEmail: church.profileConfig?.contactEmail || "",
       bankName: church.bankingConfig?.bankName || "MB Bank",
@@ -552,6 +557,7 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
             leadPastor: profileFormData.leadPastor.trim(),
             contactPhone: profileFormData.contactPhone.trim(),
             contactEmail: profileFormData.contactEmail.trim(),
+            googleMapUrl: profileFormData.googleMapUrl?.trim() || "",
           },
           bankingConfig: {
             bankName: profileFormData.bankName.trim(),
@@ -579,6 +585,7 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
             leadPastor: profileFormData.leadPastor.trim(),
             contactPhone: profileFormData.contactPhone.trim(),
             contactEmail: profileFormData.contactEmail.trim(),
+            googleMapUrl: profileFormData.googleMapUrl?.trim() || "",
           },
           bankingConfig: {
             bankName: profileFormData.bankName.trim(),
@@ -792,7 +799,7 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
               <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500" />
             </span>
             <div>
-              <p className="text-xs sm:text-sm font-serif font-bold text-red-200 flex items-center gap-2">
+              <p className="text-[10px] sm:text-sm font-serif font-bold text-red-200 flex items-center gap-2">
                 <span>HỘI THÁNH ĐANG PHÁT SÓNG TRỰC TIẾP BUỔI THỜ PHƯỢNG</span>
               </p>
               <p className="text-[11px] text-stone-300 hidden sm:block">
@@ -881,10 +888,17 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
                     {church.denomination || "Hội Thánh Tin Lành Việt Nam"}
                   </p>
 
-                  <p className="text-xs text-stone-400 flex items-center justify-center sm:justify-start gap-1">
-                    <MapPin className="w-3.5 h-3.5 text-stone-500 shrink-0" />
-                    <span>{church.address || "Việt Nam"}</span>
-                  </p>
+                  <a
+                    href={getChurchGoogleMapsUrl(church.address, church.name, church.profileConfig?.googleMapUrl)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-stone-400 hover:text-gold-300 flex items-center justify-center sm:justify-start gap-1 transition-colors group cursor-pointer"
+                    title="Mở vị trí và chỉ đường trên Google Maps"
+                  >
+                    <MapPin className="w-3.5 h-3.5 text-[#c5a059] shrink-0 group-hover:scale-110 transition-transform" />
+                    <span className="group-hover:underline underline-offset-2">{church.address || "Việt Nam"}</span>
+                    <ExternalLink className="w-3 h-3 text-stone-500 group-hover:text-gold-400 opacity-60 group-hover:opacity-100 shrink-0" />
+                  </a>
                 </div>
               </div>
 
@@ -974,8 +988,8 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
           <button
             onClick={() => setMobileWallTab("feed")}
             className={`flex-1 py-2 px-2 rounded-lg text-xs font-serif font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer ${mobileWallTab === "feed"
-                ? "bg-[#c5a059] text-stone-950 font-bold shadow"
-                : "text-stone-400 hover:text-stone-200"
+              ? "bg-[#c5a059] text-stone-950 font-bold shadow"
+              : "text-stone-400 hover:text-stone-200"
               }`}
           >
             <Newspaper className="w-3.5 h-3.5 shrink-0" />
@@ -985,8 +999,8 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
           <button
             onClick={() => setMobileWallTab("about")}
             className={`flex-1 py-2 px-2 rounded-lg text-xs font-serif font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer ${mobileWallTab === "about"
-                ? "bg-[#c5a059] text-stone-950 font-bold shadow"
-                : "text-stone-400 hover:text-stone-200"
+              ? "bg-[#c5a059] text-stone-950 font-bold shadow"
+              : "text-stone-400 hover:text-stone-200"
               }`}
           >
             <Info className="w-3.5 h-3.5 shrink-0" />
@@ -996,8 +1010,8 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
           <button
             onClick={() => setMobileWallTab("gallery")}
             className={`flex-1 py-2 px-2 rounded-lg text-xs font-serif font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer ${mobileWallTab === "gallery"
-                ? "bg-[#c5a059] text-stone-950 font-bold shadow"
-                : "text-stone-400 hover:text-stone-200"
+              ? "bg-[#c5a059] text-stone-950 font-bold shadow"
+              : "text-stone-400 hover:text-stone-200"
               }`}
           >
             <Camera className="w-3.5 h-3.5 shrink-0" />
@@ -1092,12 +1106,19 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
                 </div>
 
                 <div className="flex items-start gap-2.5">
-                  <MapPin className="w-4 h-4 text-stone-500 shrink-0 mt-0.5" />
+                  <MapPin className="w-4 h-4 text-[#c5a059] shrink-0 mt-0.5" />
                   <div>
                     <span className="font-medium text-stone-200">Địa chỉ:</span>
-                    <p className="text-stone-400 mt-0.5">
-                      {church.address || "Việt Nam"}
-                    </p>
+                    <a
+                      href={getChurchGoogleMapsUrl(church.address, church.name, church.profileConfig?.googleMapUrl)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-stone-300 hover:text-gold-300 mt-0.5 flex items-center gap-1 group text-xs transition-colors"
+                      title="Mở trên Google Maps & Dẫn đường"
+                    >
+                      <span className="group-hover:underline underline-offset-2">{church.address || "Việt Nam"}</span>
+                      <ExternalLink className="w-3 h-3 text-stone-500 group-hover:text-gold-400 shrink-0" />
+                    </a>
                   </div>
                 </div>
 
@@ -1339,8 +1360,8 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
                             key={cat.id}
                             onClick={() => setNewPostCategory(cat.id as any)}
                             className={`px-2.5 py-1 rounded-lg text-xs font-serif transition-colors cursor-pointer ${newPostCategory === cat.id
-                                ? "bg-[#c5a059] text-stone-950 font-bold shadow"
-                                : "bg-stone-900 text-stone-400 hover:text-stone-200 border border-stone-800"
+                              ? "bg-[#c5a059] text-stone-950 font-bold shadow"
+                              : "bg-stone-900 text-stone-400 hover:text-stone-200 border border-stone-800"
                               }`}
                           >
                             {cat.label}
@@ -1392,7 +1413,6 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
                         type="post"
                         aspectRatio="post"
                         presetSamples={CHRISTIAN_IMAGE_COLLECTION}
-                        helperText="Ảnh được nén WebP tự động lưu vào ổ cứng VPS, tối ưu tải trang và tiết kiệm dung lượng."
                       />
                     </div>
 
@@ -1571,8 +1591,8 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
                                 onClick={() => handleTogglePin(post._id, Boolean(post.isPinned))}
                                 title={post.isPinned ? "Bỏ ghim bài viết" : "Ghim bài viết lên đầu"}
                                 className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${post.isPinned
-                                    ? "bg-amber-500/20 border-amber-500/40 text-amber-300 hover:bg-amber-500/30"
-                                    : "bg-stone-850 border-stone-700 text-stone-400 hover:text-amber-300 hover:border-amber-500/40"
+                                  ? "bg-amber-500/20 border-amber-500/40 text-amber-300 hover:bg-amber-500/30"
+                                  : "bg-stone-850 border-stone-700 text-stone-400 hover:text-amber-300 hover:border-amber-500/40"
                                   }`}
                               >
                                 <Pin className="w-3.5 h-3.5 rotate-45" />
@@ -1647,8 +1667,8 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
                       {/* Interaction Counts Bar */}
                       <div className="px-3.5 sm:px-5 py-2 sm:py-2.5 mt-2 flex items-center justify-between text-[11px] text-stone-400 border-b border-stone-800/80">
                         <div className="flex items-center gap-1.5 text-[#c5a059]">
-                          <span className="w-4 h-4 rounded-full bg-[#c5a059]/20 flex items-center justify-center text-[10px]">
-                            🙏
+                          <span className="w-5 h-5 rounded-full bg-[#c5a059]/20 border border-[#c5a059]/30 flex items-center justify-center p-0.5 shadow-sm">
+                            <AmenIcon className="w-3.5 h-3.5 text-[#c5a059]" filled />
                           </span>
                           <span>
                             <strong>{post.likesCount}</strong> người hiệp ý Amen
@@ -1664,13 +1684,16 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
                       <div className="px-2 sm:px-5 py-1 flex items-center justify-around text-xs font-medium text-stone-300 border-b border-stone-800">
                         <button
                           onClick={() => handleLike(post._id)}
-                          className={`flex-1 py-2 sm:py-2.5 min-h-[42px] flex items-center justify-center gap-1.5 rounded-lg transition-colors cursor-pointer ${hasLiked
-                            ? "text-[#c5a059] bg-[#c5a059]/10 font-bold"
+                          className={`flex-1 py-2 sm:py-2.5 min-h-[42px] flex items-center justify-center gap-1.5 rounded-lg transition-all cursor-pointer ${hasLiked
+                            ? "text-[#c5a059] bg-[#c5a059]/10 font-bold shadow-sm"
                             : "hover:bg-stone-850 hover:text-stone-100"
                             }`}
                         >
-                          <span className="text-sm">🙏</span>
-                          <span>{hasLiked ? "Đã Amen" : "Hiệp Ý"}</span>
+                          <AmenIcon
+                            className={`w-4 h-4 transition-transform duration-200 ${hasLiked ? "scale-110" : ""}`}
+                            filled={hasLiked}
+                          />
+                          <span>{hasLiked ? "Đã Amen" : "Hiệp Ý Amen"}</span>
                         </button>
 
                         <button
@@ -1848,8 +1871,8 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
                         setEditingPost((prev) => (prev ? { ...prev, category: cat.id as any } : null))
                       }
                       className={`px-2.5 py-1 rounded-lg text-xs font-serif transition-colors cursor-pointer ${editingPost.category === cat.id
-                          ? "bg-[#c5a059] text-stone-950 font-bold shadow"
-                          : "bg-stone-900 text-stone-400 hover:text-stone-200 border border-stone-800"
+                        ? "bg-[#c5a059] text-stone-950 font-bold shadow"
+                        : "bg-stone-900 text-stone-400 hover:text-stone-200 border border-stone-800"
                         }`}
                     >
                       {cat.label}
@@ -2019,8 +2042,8 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
                 type="button"
                 onClick={() => setEditProfileTab("appearance")}
                 className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-serif transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${editProfileTab === "appearance"
-                    ? "bg-[#c5a059] text-stone-950 font-bold shadow"
-                    : "text-stone-400 hover:text-stone-200"
+                  ? "bg-[#c5a059] text-stone-950 font-bold shadow"
+                  : "text-stone-400 hover:text-stone-200"
                   }`}
               >
                 <Camera className="w-3.5 h-3.5" />
@@ -2031,8 +2054,8 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
                 type="button"
                 onClick={() => setEditProfileTab("info")}
                 className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-serif transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${editProfileTab === "info"
-                    ? "bg-[#c5a059] text-stone-950 font-bold shadow"
-                    : "text-stone-400 hover:text-stone-200"
+                  ? "bg-[#c5a059] text-stone-950 font-bold shadow"
+                  : "text-stone-400 hover:text-stone-200"
                   }`}
               >
                 <Info className="w-3.5 h-3.5" />
@@ -2043,8 +2066,8 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
                 type="button"
                 onClick={() => setEditProfileTab("banking")}
                 className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-serif transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${editProfileTab === "banking"
-                    ? "bg-[#c5a059] text-stone-950 font-bold shadow"
-                    : "text-stone-400 hover:text-stone-200"
+                  ? "bg-[#c5a059] text-stone-950 font-bold shadow"
+                  : "text-stone-400 hover:text-stone-200"
                   }`}
               >
                 <CreditCard className="w-3.5 h-3.5" />
@@ -2060,7 +2083,7 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
                   {/* Cover Photo Upload */}
                   <div className="bg-stone-900/60 p-3.5 rounded-xl border border-stone-800">
                     <ImageUploadBox
-                      label="Ảnh Bìa Tường (Cover Image - Tải ảnh lên VPS)"
+                      label="Ảnh Bìa"
                       value={profileFormData.coverImageUrl}
                       onChange={(url) =>
                         setProfileFormData((prev) => ({ ...prev, coverImageUrl: url }))
@@ -2068,14 +2091,13 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
                       type="cover"
                       aspectRatio="cover"
                       presetSamples={CHRISTIAN_COVERS_SAMPLE}
-                      helperText="Ảnh được nén chuẩn WebP và lưu trực tiếp trên ổ cứng VPS. Tỷ lệ khuyến nghị 1200x400 hoặc 1920x800."
                     />
                   </div>
 
                   {/* Avatar Photo Upload */}
                   <div className="bg-stone-900/60 p-3.5 rounded-xl border border-stone-800">
                     <ImageUploadBox
-                      label="Ảnh Đại Diện Hội Thánh (Avatar / Logo - Tải ảnh lên VPS)"
+                      label="Ảnh Đại Diện Hội Thánh"
                       value={profileFormData.avatarUrl}
                       onChange={(url) =>
                         setProfileFormData((prev) => ({ ...prev, avatarUrl: url }))
@@ -2083,7 +2105,6 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
                       type="avatar"
                       aspectRatio="square"
                       presetSamples={CHRISTIAN_AVATARS_SAMPLE}
-                      helperText="Tải lên ảnh logo vuông hoặc tròn. Tự động tối ưu WebP siêu nhẹ."
                     />
                   </div>
 
@@ -2326,10 +2347,24 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
                     </div>
                   </div>
 
-                  <div className="space-y-1">
-                    <label className="text-xs font-serif font-bold text-stone-200">
-                      Địa chỉ Nhà Thờ / Điểm Nhóm
-                    </label>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-serif font-bold text-stone-200">
+                        Địa chỉ Nhà Thờ / Điểm Nhóm
+                      </label>
+                      {profileFormData.address && (
+                        <a
+                          href={getChurchGoogleMapsUrl(profileFormData.address, profileFormData.name, profileFormData.googleMapUrl)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[11px] text-[#c5a059] hover:underline flex items-center gap-1 cursor-pointer"
+                        >
+                          <MapPin className="w-3 h-3" />
+                          <span>Xem thử trên Google Maps</span>
+                          <ExternalLink className="w-2.5 h-2.5" />
+                        </a>
+                      )}
+                    </div>
                     <input
                       type="text"
                       placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành..."
@@ -2338,6 +2373,22 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
                         setProfileFormData((prev) => ({ ...prev, address: e.target.value }))
                       }
                       className="w-full bg-stone-900 border border-stone-800 focus:border-[#c5a059] rounded-xl px-3 py-2 text-xs text-stone-100 focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-serif font-bold text-stone-200 flex items-center justify-between">
+                      <span>Link Google Maps ghim vị trí (Tùy chọn)</span>
+                      <span className="text-[10px] text-stone-500 font-sans font-normal">Để trống hệ thống sẽ tự động tìm theo địa chỉ</span>
+                    </label>
+                    <input
+                      type="url"
+                      placeholder="https://maps.app.goo.gl/... hoặc https://goo.gl/maps/..."
+                      value={profileFormData.googleMapUrl}
+                      onChange={(e) =>
+                        setProfileFormData((prev) => ({ ...prev, googleMapUrl: e.target.value }))
+                      }
+                      className="w-full bg-stone-900 border border-stone-800 focus:border-[#c5a059] rounded-xl px-3 py-2 text-xs text-stone-100 focus:outline-none placeholder:text-stone-600"
                     />
                   </div>
 

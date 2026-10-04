@@ -152,6 +152,8 @@ export async function PUT(req: NextRequest) {
         contactEmail:
           body.profileConfig.contactEmail ?? church.profileConfig?.contactEmail,
         slogan: body.profileConfig.slogan ?? church.profileConfig?.slogan,
+        googleMapUrl:
+          body.profileConfig.googleMapUrl ?? church.profileConfig?.googleMapUrl ?? "",
       };
     }
 

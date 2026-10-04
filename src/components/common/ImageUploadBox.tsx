@@ -110,10 +110,10 @@ export const ImageUploadBox: React.FC<ImageUploadBoxProps> = ({
     aspectRatio === "square"
       ? "aspect-square max-w-[160px] mx-auto"
       : aspectRatio === "cover"
-      ? "aspect-[16/6] w-full"
-      : aspectRatio === "post"
-      ? "aspect-[16/9] w-full"
-      : "h-36 w-full";
+        ? "aspect-[16/6] w-full"
+        : aspectRatio === "post"
+          ? "aspect-[16/9] w-full"
+          : "h-36 w-full";
 
   return (
     <div className="space-y-2">
@@ -156,11 +156,10 @@ export const ImageUploadBox: React.FC<ImageUploadBoxProps> = ({
           onDragLeave={() => setIsDragOver(false)}
           onDrop={handleDrop}
           onClick={() => !isUploading && fileInputRef.current?.click()}
-          className={`relative border-2 border-dashed rounded-xl p-4 sm:p-5 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2 ${
-            isDragOver
+          className={`relative border-2 border-dashed rounded-xl p-4 sm:p-5 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2 ${isDragOver
               ? "border-[#c5a059] bg-[#c5a059]/10"
               : "border-stone-700 hover:border-[#c5a059]/70 bg-stone-900/60 hover:bg-stone-900"
-          }`}
+            }`}
         >
           {isUploading ? (
             <div className="py-3 flex flex-col items-center gap-2 text-stone-300">
@@ -181,9 +180,7 @@ export const ImageUploadBox: React.FC<ImageUploadBoxProps> = ({
                 <p className="text-xs font-serif font-bold text-stone-200">
                   Bấm để tải ảnh lên <span className="font-normal text-stone-400">hoặc kéo thả vào đây</span>
                 </p>
-                <p className="text-[10px] text-stone-400">
-                  Lưu trực tiếp vào VPS • Tự động nén WebP giảm 80-95% dung lượng
-                </p>
+
               </div>
             </>
           )}
@@ -271,11 +268,10 @@ export const ImageUploadBox: React.FC<ImageUploadBoxProps> = ({
                   setShowPresets(false);
                   setUploadStats(null);
                 }}
-                className={`relative rounded-lg overflow-hidden border cursor-pointer group transition-all aspect-video ${
-                  value === ps.url
+                className={`relative rounded-lg overflow-hidden border cursor-pointer group transition-all aspect-video ${value === ps.url
                     ? "border-[#c5a059] ring-2 ring-[#c5a059]/50"
                     : "border-stone-800 hover:border-stone-600"
-                }`}
+                  }`}
               >
                 <img
                   src={ps.url}

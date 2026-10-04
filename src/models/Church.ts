@@ -30,6 +30,7 @@ export interface IProfileConfig {
   contactPhone?: string;
   contactEmail?: string;
   slogan?: string;
+  googleMapUrl?: string;
 }
 
 export interface ILiveLyrics {
@@ -177,6 +178,10 @@ const ChurchSchema = new Schema<IChurch>(
       slogan: {
         type: String,
         default: "Hiệp Một — Yêu Thương — Phụng Sự",
+      },
+      googleMapUrl: {
+        type: String,
+        default: "",
       },
     },
     currentService: {

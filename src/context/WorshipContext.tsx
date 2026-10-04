@@ -39,6 +39,7 @@ export interface CurrentChurchInfo {
     contactPhone?: string;
     contactEmail?: string;
     slogan?: string;
+    googleMapUrl?: string;
   };
   liveSchedule?: string;
   worshipSchedules?: {

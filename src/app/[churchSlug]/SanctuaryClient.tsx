@@ -16,7 +16,8 @@ import { ChurchWallView } from "@/components/wall/ChurchWallView";
 import { CommunityChatTab } from "@/components/sidebar/CommunityChatTab";
 import { ScriptureNotesTab } from "@/components/sidebar/ScriptureNotesTab";
 import { PrivatePrayerTab } from "@/components/sidebar/PrivatePrayerTab";
-import { EyeOff, BookOpen, User, MapPin, MessageSquare, Lock, Info } from "lucide-react";
+import { EyeOff, BookOpen, User, MapPin, MessageSquare, Lock, Info, ExternalLink } from "lucide-react";
+import { getChurchGoogleMapsUrl } from "@/lib/mapUtils";
 import { useState, useEffect } from "react";
 
 function WorshipSanctuaryScreen() {
@@ -68,10 +69,18 @@ function WorshipSanctuaryScreen() {
               {church.denomination || "Hội Thánh Tin Lành"}
             </span>
             {church.address && (
-              <span className="text-xs text-sanctuary-400 flex items-center gap-1 font-sans">
-                • <MapPin className="w-3 h-3 text-sanctuary-500 shrink-0" />
-                <span className="truncate max-w-[260px] sm:max-w-[320px]">{church.address}</span>
-              </span>
+              <a
+                href={getChurchGoogleMapsUrl(church.address, church.name, church.profileConfig?.googleMapUrl)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-sanctuary-400 hover:text-gold-300 flex items-center gap-1 font-sans transition-colors group cursor-pointer"
+                title="Mở Google Maps và chỉ đường tới Hội Thánh"
+              >
+                <span>•</span>
+                <MapPin className="w-3 h-3 text-gold-400 shrink-0 group-hover:scale-110 transition-transform" />
+                <span className="truncate max-w-[260px] sm:max-w-[320px] group-hover:underline underline-offset-2">{church.address}</span>
+                <ExternalLink className="w-2.5 h-2.5 text-sanctuary-500 group-hover:text-gold-400 shrink-0 opacity-70" />
+              </a>
             )}
           </div>
           <h2 className="font-serif text-base sm:text-xl font-bold text-sanctuary-100">

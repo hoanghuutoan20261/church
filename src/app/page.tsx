@@ -49,8 +49,11 @@ import {
   ChevronRight,
   LogOut,
   Trash2,
+  ExternalLink,
 } from "lucide-react";
 import { ImageUploadBox } from "@/components/common/ImageUploadBox";
+import { AmenIcon } from "@/components/common/AmenIcon";
+import { getChurchGoogleMapsUrl } from "@/lib/mapUtils";
 
 interface ChurchItem {
   _id: string;
@@ -75,6 +78,7 @@ interface ChurchItem {
     slogan?: string;
     about?: string;
     leadPastor?: string;
+    googleMapUrl?: string;
   };
   currentService?: {
     title: string;
@@ -286,7 +290,7 @@ const PROTESTANT_ILLUSTRATIONS = [
   {
     name: "Hiệp Nguyện",
     category: "Cầu Nguyện",
-    icon: "🙏",
+    icon: "✝️",
     url: "https://images.unsplash.com/photo-1469571486292-0ba58a3f068b?auto=format&fit=crop&w=1200&q=80",
   },
 ];
@@ -1078,10 +1082,10 @@ export default function ChurchDirectoryPage() {
                     {currentUser.role === "superadmin"
                       ? "👑 Tổng Quản Trị Hệ Thống"
                       : currentUser.role === "pastor"
-                      ? "Mục Sư Quản Nhiệm"
-                      : currentUser.role === "tech_leader"
-                      ? "Ban Kỹ Thuật Hội Thánh"
-                      : "Ban Quản Trị Mục Vụ"}
+                        ? "Mục Sư Quản Nhiệm"
+                        : currentUser.role === "tech_leader"
+                          ? "Ban Kỹ Thuật Hội Thánh"
+                          : "Ban Quản Trị Mục Vụ"}
                   </span>
                   {churchDisplayName && (
                     <span className="text-[10px] text-sanctuary-400 font-sans block truncate mt-0.5" title={churchDisplayName}>
@@ -1342,35 +1346,83 @@ export default function ChurchDirectoryPage() {
               {currentUser && (currentUser.role === "pastor" || currentUser.role === "admin" || currentUser.role === "superadmin") ? (
                 /* OFFICIAL CHURCH PUBLISHER BAR (DÀNH CHO MỤC SƯ & QUẢN TRỊ VIÊN) */
                 <div className="bg-sanctuary-900 border border-gold-400/40 rounded-2xl p-3.5 sm:p-4 shadow-md space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-full bg-gold-400 text-sanctuary-950 flex items-center justify-center font-bold text-xs shadow-sm">
+                  {/* Row 1: Author Profile Header (Full-width, never squished) */}
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                      <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-gold-500 to-amber-300 text-sanctuary-950 flex items-center justify-center font-bold text-sm shadow-candle shrink-0">
                         {currentUser.role === "superadmin" ? "👑" : "⛪"}
                       </div>
-                      <div>
-                        <span className="font-serif font-bold text-xs text-white block">
-                          {currentUser.fullName} ({currentUser.role === "superadmin" ? "Tổng Quản Trị" : "Mục Sư Quản Nhiệm"})
-                        </span>
-                        <span className="text-[10px] text-gold-400 font-serif">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-serif font-bold text-xs sm:text-sm text-white truncate">
+                            {currentUser.fullName}
+                          </span>
+                          <span className="px-2 py-0.5 rounded-full text-[9px] font-serif bg-gold-400/15 text-gold-300 border border-gold-400/30 whitespace-nowrap">
+                            {currentUser.role === "superadmin" ? "Tổng Quản Trị" : "Mục Sư Quản Nhiệm"}
+                          </span>
+                        </div>
+                        <span className="text-[11px] text-sanctuary-300 font-sans truncate block mt-0.5">
                           {currentUser.role === "superadmin"
                             ? "Đăng thông báo mục vụ cho toàn mạng lưới Hội Thánh"
                             : `Đại diện ${churchDisplayName}`}
                         </span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+
+                    {/* Desktop "Soạn bài viết đầy đủ" shortcut button */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPastorPostForm({
+                          title: "",
+                          content: composerText,
+                          category: composerCategory,
+                          scriptureVerse: "",
+                          imageUrl: "",
+                          videoUrl: "",
+                          churchSlug: currentUser.churchSlug || churches[0]?.slug || "",
+                        });
+                        setShowPastorPostModal(true);
+                      }}
+                      className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-sanctuary-850 hover:bg-sanctuary-800 text-gold-300 border border-gold-400/30 text-xs font-serif transition-colors cursor-pointer whitespace-nowrap shrink-0 shadow-sm"
+                      title="Mở bảng soạn bài viết đầy đủ (tiêu đề, câu gốc, hình ảnh, bài giảng)"
+                    >
+                      <span>Soạn Chi Tiết</span>
+                    </button>
+                  </div>
+
+                  {/* Row 2: Text Input for quick thought / scripture */}
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={composerText}
+                      onChange={(e) => setComposerText(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handlePublishPost();
+                      }}
+                      placeholder="Mục sư ơi, quý vị muốn chia sẻ sứ điệp hoặc thông báo gì hôm nay?"
+                      className="w-full bg-sanctuary-850/90 border border-white/[0.08] focus:border-gold-400/60 rounded-xl px-4 py-2.5 text-xs sm:text-sm text-white placeholder-sanctuary-500 focus:outline-none transition-colors shadow-inner"
+                    />
+                  </div>
+
+                  {/* Row 3: Action Toolbar (Category select, Mobile "Soạn chi tiết", and "Đăng Tin" button) */}
+                  <div className="pt-2 border-t border-white/[0.06] flex items-center justify-between gap-2 flex-wrap">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <select
                         value={composerCategory}
                         onChange={(e) => setComposerCategory(e.target.value)}
-                        className="bg-sanctuary-850 border border-white/10 rounded-lg px-2.5 py-1 text-[11px] text-sanctuary-200 focus:outline-none"
+                        className="bg-sanctuary-850 hover:bg-sanctuary-800 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-sanctuary-200 focus:outline-none cursor-pointer"
                       >
                         <option value="announcement">Thông Báo</option>
-                        <option value="scripture">📖 Lời Chúa</option>
-                        <option value="sermon">🎬 Sứ Điệp</option>
-                        <option value="fellowship">🙏 Làm Chứng</option>
-                        <option value="worship">⛪ Giờ Thờ Phượng</option>
+                        <option value="scripture">Lời Chúa</option>
+                        <option value="sermon">Sứ Điệp</option>
+                        <option value="fellowship">Làm Chứng</option>
+                        <option value="worship">Giờ Thờ Phượng</option>
                       </select>
+
+                      {/* Mobile "Soạn chi tiết" button */}
                       <button
+                        type="button"
                         onClick={() => {
                           setPastorPostForm({
                             title: "",
@@ -1383,31 +1435,20 @@ export default function ChurchDirectoryPage() {
                           });
                           setShowPastorPostModal(true);
                         }}
-                        className="px-2.5 py-1 rounded-lg bg-sanctuary-850 hover:bg-sanctuary-800 text-gold-300 border border-gold-400/30 text-[11px] font-serif transition-colors cursor-pointer"
-                        title="Mở bảng soạn bài viết đầy đủ (tiêu đề, câu gốc, hình ảnh, bài giảng)"
+                        className="sm:hidden flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-sanctuary-850 hover:bg-sanctuary-800 text-gold-300 border border-gold-400/30 text-xs font-serif transition-colors cursor-pointer whitespace-nowrap shrink-0"
                       >
-                        Soạn Chi Tiết
+                        <span>Soạn Chi Tiết</span>
                       </button>
                     </div>
-                  </div>
 
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={composerText}
-                      onChange={(e) => setComposerText(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") handlePublishPost();
-                      }}
-                      placeholder="Viết lời Chúa hoặc thông báo mục vụ cho Hội Thánh..."
-                      className="w-full bg-sanctuary-850 border border-white/[0.06] rounded-full px-4 py-2 text-xs sm:text-sm text-white focus:outline-none focus:border-gold-400"
-                    />
                     <button
+                      type="button"
                       onClick={() => handlePublishPost()}
                       disabled={!composerText.trim() || isPublishingPastorPost}
-                      className="px-4 py-2 rounded-full bg-gold-400 hover:bg-gold-500 disabled:opacity-40 text-sanctuary-950 font-bold text-xs font-serif shrink-0 cursor-pointer shadow-sm transition-all"
+                      className="px-4 sm:px-5 py-1.5 sm:py-2 rounded-xl bg-gradient-to-r from-gold-400 to-amber-400 hover:from-gold-300 hover:to-amber-300 disabled:opacity-40 text-sanctuary-950 font-bold text-xs font-serif shrink-0 cursor-pointer shadow-candle transition-all flex items-center gap-1.5 whitespace-nowrap ml-auto"
                     >
-                      {isPublishingPastorPost ? "Đang Đăng..." : "Đăng Tin"}
+                      <Send className="w-3.5 h-3.5" />
+                      <span>{isPublishingPastorPost ? "Đang Đăng..." : "Đăng Tin"}</span>
                     </button>
                   </div>
                 </div>
@@ -1660,8 +1701,8 @@ export default function ChurchDirectoryPage() {
                         <div className="px-4 py-2 flex items-center justify-between text-xs text-sanctuary-400 border-b border-white/[0.05]">
                           <div className="flex items-center gap-1.5">
                             <div className="flex -space-x-1">
-                              <span className="w-5 h-5 rounded-full bg-gold-500 text-[10px] flex items-center justify-center text-sanctuary-950 font-bold shadow-sm">
-                                🙏
+                              <span className="w-5 h-5 rounded-full bg-gradient-to-tr from-amber-600 to-gold-400 flex items-center justify-center text-sanctuary-950 shadow-sm p-0.5">
+                                <AmenIcon className="w-3.5 h-3.5 text-sanctuary-950" filled={false} />
                               </span>
                               <span className="w-5 h-5 rounded-full bg-red-500 text-[10px] flex items-center justify-center text-white shadow-sm">
                                 ❤️
@@ -1690,12 +1731,15 @@ export default function ChurchDirectoryPage() {
                         <div className="px-1 sm:px-2 py-1 flex items-center justify-around text-[11px] sm:text-xs font-serif">
                           <button
                             onClick={() => handleReaction(post.id, "amen")}
-                            className={`flex-1 flex items-center justify-center gap-1 py-1.5 sm:py-2 px-1 rounded-xl transition-colors font-medium ${userReact === "amen"
-                              ? "text-gold-400 font-bold bg-gold-400/10"
+                            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 sm:py-2 px-1 rounded-xl transition-all font-medium ${userReact === "amen"
+                              ? "text-gold-400 font-bold bg-gold-400/10 shadow-sm"
                               : "text-sanctuary-300 hover:bg-sanctuary-850 hover:text-white"
                               }`}
                           >
-                            <span className="text-sm sm:text-base">🙏</span>
+                            <AmenIcon
+                              className={`w-4 h-4 sm:w-4.5 sm:h-4.5 transition-transform duration-200 ${userReact === "amen" ? "scale-110" : ""}`}
+                              filled={userReact === "amen"}
+                            />
                             <span className="truncate">Amen</span>
                           </button>
 
@@ -1894,10 +1938,17 @@ export default function ChurchDirectoryPage() {
                         <h4 className="font-serif font-bold text-sm text-white truncate">
                           {church.name}
                         </h4>
-                        <span className="text-xs text-sanctuary-400 flex items-center gap-1 mt-0.5 truncate font-sans">
-                          <MapPin className="w-3 h-3 text-gold-400 shrink-0" />
-                          {church.address}
-                        </span>
+                        <a
+                          href={getChurchGoogleMapsUrl(church.address, church.name, church.profileConfig?.googleMapUrl)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-sanctuary-400 hover:text-gold-300 flex items-center gap-1 mt-0.5 truncate font-sans transition-colors group/map"
+                          title="Xem trên Google Maps & Chỉ đường"
+                        >
+                          <MapPin className="w-3 h-3 text-gold-400 shrink-0 group-hover/map:scale-110 transition-transform" />
+                          <span className="truncate group-hover/map:underline underline-offset-2">{church.address}</span>
+                          <ExternalLink className="w-2.5 h-2.5 text-sanctuary-500 group-hover/map:text-gold-400 shrink-0 opacity-70" />
+                        </a>
                       </div>
                     </div>
 
@@ -1982,9 +2033,10 @@ export default function ChurchDirectoryPage() {
                     </span>
                     <button
                       onClick={() => handleReaction(p.id, "amen")}
-                      className="px-3 py-1 rounded-lg bg-gold-400/20 text-gold-300 border border-gold-400/40 text-xs font-serif font-bold"
+                      className="px-3 py-1 rounded-lg bg-gold-400/20 hover:bg-gold-400/30 text-gold-300 border border-gold-400/40 text-xs font-serif font-bold flex items-center gap-1.5 transition-all cursor-pointer"
                     >
-                      🙏 Amen
+                      <AmenIcon className="w-3.5 h-3.5" filled />
+                      <span>Amen</span>
                     </button>
                   </div>
                 </div>

@@ -35,13 +35,16 @@ import {
   Image as ImageIcon,
   Music2,
   Plus,
+  MapPin,
 } from "lucide-react";
 import { HlsPlayer } from "@/components/player/HlsPlayer";
 import { WorshipProvider } from "@/context/WorshipContext";
 import { AdminLyricsPresenter } from "@/components/admin/AdminLyricsPresenter";
 import { getChurchAvatar } from "@/lib/churchAvatar";
 import { ImageUploadBox } from "@/components/common/ImageUploadBox";
+import { AmenIcon } from "@/components/common/AmenIcon";
 import { IWorshipScheduleItem } from "@/models/Church";
+import { getChurchGoogleMapsUrl } from "@/lib/mapUtils";
 
 interface AdminUser {
   id: string;
@@ -82,6 +85,7 @@ interface ChurchConfig {
     contactPhone?: string;
     contactEmail?: string;
     slogan?: string;
+    googleMapUrl?: string;
   };
   themeConfig: {
     accentColor: string;
@@ -170,7 +174,7 @@ const CHRISTIAN_ILLUSTRATIONS_POSTS = [
   {
     name: "Cầu Nguyện",
     category: "Tâm Linh",
-    icon: "🙏",
+    icon: "✝️",
     url: "https://images.unsplash.com/photo-1445445290350-18a3b86e0b5b?auto=format&fit=crop&w=1200&q=80",
   },
   {
@@ -281,6 +285,7 @@ export default function ChurchAdminDashboard() {
     contactPhone: "",
     contactEmail: "",
     slogan: "",
+    googleMapUrl: "",
   });
 
   const [postForm, setPostForm] = useState({
@@ -358,6 +363,7 @@ export default function ChurchAdminDashboard() {
               contactPhone: ch.profileConfig.contactPhone || "",
               contactEmail: ch.profileConfig.contactEmail || "",
               slogan: ch.profileConfig.slogan || "",
+              googleMapUrl: ch.profileConfig.googleMapUrl || "",
             });
           }
 
@@ -1977,8 +1983,8 @@ export default function ChurchAdminDashboard() {
                             </p>
 
                             <div className="flex items-center justify-between text-[11px] text-stone-500 pt-1 border-t border-stone-800/80">
-                              <span className="flex items-center gap-1 text-[#c5a059]">
-                                <span>🙏</span>
+                              <span className="flex items-center gap-1.5 text-[#c5a059]">
+                                <AmenIcon className="w-3.5 h-3.5 text-[#c5a059]" filled />
                                 <span>{post.likesCount || 0} Amen</span>
                               </span>
                               <span>{post.comments?.length || 0} bình luận</span>
@@ -2127,9 +2133,24 @@ export default function ChurchAdminDashboard() {
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-xs text-stone-300 font-medium">
-                        Địa Chỉ Nhà Thờ / Văn Phòng:
-                      </label>
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs text-stone-300 font-medium">
+                          Địa Chỉ Nhà Thờ / Văn Phòng:
+                        </label>
+                        {churchInfoForm.address && (
+                          <a
+                            href={getChurchGoogleMapsUrl(churchInfoForm.address, churchInfoForm.name, profileForm.googleMapUrl)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[11px] text-[#c5a059] hover:underline flex items-center gap-1 cursor-pointer"
+                            title="Mở Google Maps và kiểm tra vị trí"
+                          >
+                            <MapPin className="w-3 h-3" />
+                            <span>Mở Google Maps</span>
+                            <ExternalLink className="w-2.5 h-2.5" />
+                          </a>
+                        )}
+                      </div>
                       <input
                         type="text"
                         value={churchInfoForm.address}
@@ -2376,6 +2397,26 @@ export default function ChurchAdminDashboard() {
                           setProfileForm({ ...profileForm, contactEmail: e.target.value })
                         }
                         placeholder="mucvu@hoithanh.vn"
+                        className="w-full bg-[#14161a] border border-stone-700 rounded-lg px-3.5 py-2.5 text-xs sm:text-sm text-stone-100 focus:outline-none focus:border-[#c5a059]"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs text-stone-300 font-medium">
+                          Link Google Maps Ghim Vị Trí (Tùy Chọn):
+                        </label>
+                        <span className="text-[11px] text-stone-500 font-normal">
+                          Để trống hệ thống sẽ tự động tạo link theo địa chỉ Hội Thánh
+                        </span>
+                      </div>
+                      <input
+                        type="url"
+                        value={profileForm.googleMapUrl}
+                        onChange={(e) =>
+                          setProfileForm({ ...profileForm, googleMapUrl: e.target.value })
+                        }
+                        placeholder="https://maps.app.goo.gl/... hoặc https://goo.gl/maps/..."
                         className="w-full bg-[#14161a] border border-stone-700 rounded-lg px-3.5 py-2.5 text-xs sm:text-sm text-stone-100 focus:outline-none focus:border-[#c5a059]"
                       />
                     </div>

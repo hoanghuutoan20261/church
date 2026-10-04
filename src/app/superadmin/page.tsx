@@ -44,6 +44,7 @@ import {
   Server,
   Filter,
 } from "lucide-react";
+import { AmenIcon } from "@/components/common/AmenIcon";
 
 interface SuperAdminKPIs {
   totalChurches: number;
@@ -1487,7 +1488,10 @@ export default function SuperAdminPage() {
                   {/* Post Stats & Actions */}
                   <div className="pt-2 border-t border-white/[0.06] flex items-center justify-between text-xs text-sanctuary-400">
                     <div className="flex items-center gap-3">
-                      <span>🙏 {post.likesCount || 0} Amen</span>
+                      <span className="flex items-center gap-1.5 text-gold-400">
+                        <AmenIcon className="w-3.5 h-3.5" filled />
+                        <span>{post.likesCount || 0} Amen</span>
+                      </span>
                       <span>💬 {post.comments?.length || 0} bình luận</span>
                     </div>
 
