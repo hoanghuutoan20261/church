@@ -15,6 +15,7 @@ export interface CurrentChurchInfo {
   denomination?: string;
   address?: string;
   streamKey?: string;
+  streamType?: "youtube" | "facebook" | "mediamtx" | "custom_hls";
   streamUrl?: string;
   themeConfig?: { accentColor?: string; logoUrl?: string };
   bankingConfig?: {
@@ -59,6 +60,7 @@ const defaultChurchInfo: CurrentChurchInfo = {
   denomination: "Hội Thánh Tin Lành Việt Nam",
   address: "Phòng Nhóm Trực Tuyến - Thánh Đường Trung Tâm",
   streamKey: "lbs-sunday",
+  streamType: "youtube",
   streamUrl: buildHlsStreamUrl("lbs-sunday"),
   themeConfig: {
     accentColor: "#c5a059",

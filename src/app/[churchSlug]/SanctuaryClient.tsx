@@ -21,7 +21,7 @@ import { getChurchGoogleMapsUrl } from "@/lib/mapUtils";
 import { useState, useEffect } from "react";
 
 function WorshipSanctuaryScreen() {
-  const { church, isFocusMode, toggleFocusMode, activeView, setActiveView } = useWorship();
+  const { church, updateChurch, isFocusMode, toggleFocusMode, activeView, setActiveView } = useWorship();
   const [isLive, setIsLive] = useState<boolean>(
     Boolean(church.currentService?.isLive)
   );
@@ -47,6 +47,12 @@ function WorshipSanctuaryScreen() {
           if (json.success && json.data && !isCancelled) {
             const serverLiveState = Boolean(json.data.currentService?.isLive);
             setIsLive(serverLiveState);
+            if (json.data.streamType || json.data.streamUrl !== undefined) {
+              updateChurch({
+                streamType: json.data.streamType,
+                streamUrl: json.data.streamUrl,
+              });
+            }
           }
         }
       } catch {}
@@ -69,6 +75,12 @@ function WorshipSanctuaryScreen() {
             const status = JSON.parse(e.data);
             if (status && typeof status.isLive === "boolean") {
               setIsLive(status.isLive);
+              if (status.streamType || status.streamUrl !== undefined) {
+                updateChurch({
+                  streamType: status.streamType,
+                  streamUrl: status.streamUrl,
+                });
+              }
             }
           } catch {}
         });

@@ -64,6 +64,8 @@ export interface IChurch extends Document {
   denomination: string;
   address: string;
   streamKey: string;
+  streamType?: "youtube" | "facebook" | "mediamtx" | "custom_hls";
+  streamUrl?: string;
   themeConfig: IThemeConfig;
   bankingConfig: IBankingConfig;
   profileConfig?: IProfileConfig;
@@ -105,6 +107,16 @@ const ChurchSchema = new Schema<IChurch>(
       type: String,
       required: [true, "Stream key là bắt buộc"],
       unique: true,
+      trim: true,
+    },
+    streamType: {
+      type: String,
+      enum: ["youtube", "facebook", "mediamtx", "custom_hls"],
+      default: "youtube",
+    },
+    streamUrl: {
+      type: String,
+      default: "",
       trim: true,
     },
     themeConfig: {

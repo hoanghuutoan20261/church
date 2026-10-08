@@ -71,6 +71,8 @@ export async function PUT(req: NextRequest) {
       currentService,
       bankingConfig,
       themeConfig,
+      streamType,
+      streamUrl,
       churchSlug,
       churchId,
     } = body;
@@ -181,6 +183,13 @@ export async function PUT(req: NextRequest) {
       };
     }
 
+    if (typeof streamType === "string") {
+      church.streamType = streamType as any;
+    }
+    if (typeof streamUrl === "string") {
+      church.streamUrl = streamUrl.trim();
+    }
+
     await church.save();
 
     // Broadcast live status update to all sanctuary viewers in real time
@@ -193,6 +202,8 @@ export async function PUT(req: NextRequest) {
           viewersCount: church.currentService.viewersCount,
           scriptureReference: church.currentService.scriptureReference,
           welcomeMessage: church.currentService.welcomeMessage,
+          streamType: church.streamType,
+          streamUrl: church.streamUrl,
         });
       } catch (e) {
         console.warn("Lỗi phát sóng trạng thái buổi nhóm trực tiếp:", e);

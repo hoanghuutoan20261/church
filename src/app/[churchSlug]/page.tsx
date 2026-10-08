@@ -98,7 +98,10 @@ export default async function ChurchSanctuaryPage({ params, searchParams }: Page
     denomination: churchDoc.denomination || "Tin Lành Việt Nam",
     address: churchDoc.address || "Việt Nam",
     streamKey: churchDoc.streamKey,
-    streamUrl: buildHlsStreamUrl(churchDoc.streamKey),
+    streamType: (churchDoc as any).streamType || "youtube",
+    streamUrl:
+      (churchDoc as any).streamUrl?.trim() ||
+      buildHlsStreamUrl(churchDoc.streamKey),
     themeConfig: churchDoc.themeConfig,
     bankingConfig: {
       bankName: churchDoc.bankingConfig?.bankName || "MB Bank",
