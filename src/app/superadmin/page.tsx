@@ -45,6 +45,7 @@ import {
   Filter,
 } from "lucide-react";
 import { AmenIcon } from "@/components/common/AmenIcon";
+import { buildHlsStreamUrl } from "@/lib/streamConfig";
 
 interface SuperAdminKPIs {
   totalChurches: number;
@@ -1652,7 +1653,7 @@ export default function SuperAdminPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {churches.map((church) => {
                 const isLive = Boolean(church.currentService?.isLive ?? church.isLive);
-                const hlsUrl = `http://169.58.235.90:8080/live/${church.streamKey}.m3u8`;
+                const hlsUrl = buildHlsStreamUrl(church.streamKey);
 
                 return (
                   <div

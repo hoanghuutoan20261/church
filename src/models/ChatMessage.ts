@@ -57,6 +57,9 @@ const ChatMessageSchema = new Schema<IChatMessage>(
   }
 );
 
+// Compound index for fast chronological message querying per church
+ChatMessageSchema.index({ churchSlug: 1, createdAt: 1 });
+
 export const ChatMessage: Model<IChatMessage> =
   mongoose.models.ChatMessage ||
   mongoose.model<IChatMessage>("ChatMessage", ChatMessageSchema);

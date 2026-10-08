@@ -21,6 +21,7 @@ import {
   Sparkles,
   Tv,
   Check,
+  Copy,
   AlertCircle,
   Plus,
   RefreshCw,
@@ -533,6 +534,26 @@ export const AdminLyricsPresenter: React.FC<AdminLyricsPresenterProps> = ({
     );
   };
 
+  // Open Popout OBS Transparent Overlay Window
+  const handleOpenObsWindow = () => {
+    window.open(
+      `/projector/${churchSlug}?mode=obs`,
+      "ChurchObsWindow",
+      "width=1920,height=1080,menubar=no,toolbar=no,location=no,status=no"
+    );
+  };
+
+  // Copy OBS Studio Browser Source URL
+  const handleCopyObsLink = () => {
+    if (typeof window !== "undefined") {
+      const url = `${window.location.origin}/projector/${churchSlug}?mode=obs`;
+      navigator.clipboard.writeText(url).then(() => {
+        setSaveMessage("Đã copy link OBS Browser Source (Nền trong suốt)!");
+        setTimeout(() => setSaveMessage(""), 2800);
+      });
+    }
+  };
+
   // Keyboard Shortcuts Listener
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -939,8 +960,29 @@ export const AdminLyricsPresenter: React.FC<AdminLyricsPresenterProps> = ({
             title="Mở cửa sổ trình chiếu độc lập để kéo sang máy chiếu số 2 / màn hình LED"
           >
             <Tv className="w-3.5 h-3.5 text-[#c5a059]" />
-            <span>Màn Chiếu Sân Khấu</span>
+            <span className="hidden sm:inline">Màn Chiếu Sân Khấu</span>
             <ExternalLink className="w-3 h-3 text-stone-400" />
+          </button>
+
+          {/* Popout OBS Transparent Lower-Third Overlay Button */}
+          <button
+            onClick={handleOpenObsWindow}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-stone-850 hover:bg-stone-800 text-amber-300 hover:text-amber-200 border border-amber-500/30 hover:border-amber-400/60 text-xs font-serif font-medium transition-all shadow-sm cursor-pointer"
+            title="Mở cửa sổ đồ họa chữ trong suốt (Lower-Third) dành cho Livestream OBS Studio"
+          >
+            <Radio className="w-3.5 h-3.5 text-amber-400" />
+            <span className="hidden sm:inline">OBS Lower-Third</span>
+            <ExternalLink className="w-3 h-3 text-stone-400" />
+          </button>
+
+          {/* Copy OBS Browser Source Link Button */}
+          <button
+            onClick={handleCopyObsLink}
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-stone-850 hover:bg-stone-800 text-stone-300 hover:text-white border border-white/10 hover:border-stone-600 text-xs font-serif transition-all shadow-sm cursor-pointer"
+            title="Sao chép đường dẫn Browser Source dán vào OBS Studio"
+          >
+            <Copy className="w-3 h-3 text-[#c5a059]" />
+            <span className="text-[11px]">Copy OBS</span>
           </button>
 
           {/* Quick Jump to Chorus Button (Hymn only) */}

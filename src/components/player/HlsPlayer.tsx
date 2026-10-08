@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { useWorship } from "@/context/WorshipContext";
 import { worshipData } from "@/data/worshipServiceData";
+import { buildHlsStreamUrl } from "@/lib/streamConfig";
 
 interface HlsPlayerProps {
   streamUrl?: string;
@@ -43,7 +44,7 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
     streamUrl ||
     church?.streamUrl ||
     (church?.streamKey
-      ? `http://169.58.235.90:8080/live/${church.streamKey}.m3u8`
+      ? buildHlsStreamUrl(church.streamKey)
       : worshipData.streamUrl);
 
   const [activeUrl, setActiveUrl] = useState<string>(effectiveStreamUrl);
@@ -73,12 +74,14 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
   } | null>(null);
   const [showLyricsSubtitle, setShowLyricsSubtitle] = useState<boolean>(true);
 
-  // Poll live lyrics for the current church
+  // Real-time live lyrics / subtitle synchronization via Server-Sent Events (SSE)
   useEffect(() => {
     const slug = church?.slug;
     if (!slug) return;
 
     let isMounted = true;
+
+    // Initial load: fetch current live lyrics state from MongoDB
     const fetchLyrics = async () => {
       try {
         const res = await fetch(`/api/lyrics?slug=${encodeURIComponent(slug)}`, {
@@ -94,10 +97,49 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
     };
 
     fetchLyrics();
-    const interval = setInterval(fetchLyrics, 2500);
+
+    let eventSource: EventSource | null = null;
+    let fallbackPollTimer: NodeJS.Timeout | null = null;
+
+    if (typeof window !== "undefined" && "EventSource" in window) {
+      try {
+        eventSource = new EventSource(
+          `/api/realtime?churchSlug=${encodeURIComponent(slug)}&channel=lyrics`
+        );
+
+        eventSource.addEventListener("lyrics", (e: MessageEvent) => {
+          if (!isMounted) return;
+          try {
+            const data = JSON.parse(e.data);
+            if (data) {
+              setLiveLyrics(data);
+            }
+          } catch {}
+        });
+
+        eventSource.onopen = () => {
+          if (fallbackPollTimer) {
+            clearInterval(fallbackPollTimer);
+            fallbackPollTimer = null;
+          }
+        };
+
+        eventSource.onerror = () => {
+          if (!fallbackPollTimer && isMounted) {
+            fallbackPollTimer = setInterval(fetchLyrics, 10000);
+          }
+        };
+      } catch {
+        fallbackPollTimer = setInterval(fetchLyrics, 8000);
+      }
+    } else {
+      fallbackPollTimer = setInterval(fetchLyrics, 5000);
+    }
+
     return () => {
       isMounted = false;
-      clearInterval(interval);
+      if (eventSource) eventSource.close();
+      if (fallbackPollTimer) clearInterval(fallbackPollTimer);
     };
   }, [church?.slug]);
 

@@ -2,14 +2,33 @@ import { NextRequest, NextResponse } from "next/server";
 import path from "path";
 import fs from "fs/promises";
 import sharp from "sharp";
+import { getAuthUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB limit
+
 export async function POST(req: NextRequest) {
   try {
+    // Require authenticated user (pastor, admin, tech_leader, superadmin, or registered member)
+    const authSession = await getAuthUser(req);
+    if (!authSession) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Yêu cầu đăng nhập tài khoản để tải tệp tin lên hệ thống.",
+          code: "UNAUTHORIZED",
+        },
+        { status: 401 }
+      );
+    }
+
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
-    const type = (formData.get("type") as string) || "general"; // "avatar" | "cover" | "post" | "general"
+    const rawType = (formData.get("type") as string) || "general";
+    const type = ["avatar", "cover", "post", "general"].includes(rawType)
+      ? rawType
+      : "general";
 
     if (!file) {
       return NextResponse.json(
@@ -18,10 +37,21 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Check File Size
+    if (file.size > MAX_FILE_SIZE) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: `Kích thước tệp tin vượt quá giới hạn cho phép (${Math.round(MAX_FILE_SIZE / (1024 * 1024))}MB).`,
+        },
+        { status: 400 }
+      );
+    }
+
     // Check MIME type
     if (!file.type.startsWith("image/")) {
       return NextResponse.json(
-        { success: false, message: "Tệp tin tải lên phải là hình ảnh (JPEG, PNG, WebP, GIF...)." },
+        { success: false, message: "Tệp tin tải lên phải là hình ảnh hợp lệ (JPEG, PNG, WebP, GIF...)." },
         { status: 400 }
       );
     }
@@ -66,7 +96,7 @@ export async function POST(req: NextRequest) {
       processedBuffer = await sharpInstance
         .webp({ quality: 80, effort: 4 })
         .toBuffer();
-    } catch (sharpErr) {
+    } catch {
       // Fallback if sharp transformation fails for any reason
       processedBuffer = rawBuffer;
     }

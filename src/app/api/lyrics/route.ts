@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongoose";
 import { Church } from "@/models/Church";
 import { getAuthUser } from "@/lib/auth";
+import { realtimeHub } from "@/lib/realtimeHub";
 
 export const dynamic = "force-dynamic";
 
@@ -121,6 +122,13 @@ export async function POST(req: NextRequest) {
     };
 
     await church.save();
+
+    // Broadcast live lyrics projection update via SSE to all projectors and sanctuary viewers instantly
+    try {
+      realtimeHub.emitLyrics(church.slug, church.liveLyrics);
+    } catch (e) {
+      console.warn("Lỗi phát sóng lời bài hát thời gian thực:", e);
+    }
 
     return NextResponse.json({
       success: true,

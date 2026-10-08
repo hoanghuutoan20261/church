@@ -6,6 +6,7 @@ import { Church } from "@/models/Church";
 import { SanctuaryClient } from "./SanctuaryClient";
 import { CurrentChurchInfo } from "@/context/WorshipContext";
 import { ArrowLeft, Church as ChurchIcon, HelpCircle } from "lucide-react";
+import { buildHlsStreamUrl } from "@/lib/streamConfig";
 
 interface PageProps {
   params: {
@@ -97,7 +98,7 @@ export default async function ChurchSanctuaryPage({ params, searchParams }: Page
     denomination: churchDoc.denomination || "Tin Lành Việt Nam",
     address: churchDoc.address || "Việt Nam",
     streamKey: churchDoc.streamKey,
-    streamUrl: `http://169.58.235.90:8080/live/${churchDoc.streamKey}.m3u8`,
+    streamUrl: buildHlsStreamUrl(churchDoc.streamKey),
     themeConfig: churchDoc.themeConfig,
     bankingConfig: {
       bankName: churchDoc.bankingConfig?.bankName || "MB Bank",

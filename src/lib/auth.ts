@@ -3,9 +3,14 @@ import jwt from "jsonwebtoken";
 import { NextResponse, NextRequest } from "next/server";
 import { UserRole } from "@/models/User";
 
-const JWT_SECRET =
-  process.env.JWT_SECRET ||
-  "church-online-vietnam-sanctuary-reverent-secret-key-2026";
+const JWT_SECRET = process.env.JWT_SECRET || "church-online-vietnam-sanctuary-reverent-secret-key-2026";
+
+if (!process.env.JWT_SECRET && process.env.NODE_ENV === "production") {
+  console.warn(
+    "⚠️ [CẢNH BÁO BẢO MẬT] Biến môi trường JWT_SECRET chưa được thiết lập! Vui lòng định cấu hình JWT_SECRET trong môi trường production để bảo vệ token xác thực."
+  );
+}
+
 export const AUTH_COOKIE_NAME = "church_auth_token";
 
 export interface AuthTokenPayload {

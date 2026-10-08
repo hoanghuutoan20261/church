@@ -32,12 +32,12 @@ function WorshipSanctuaryScreen() {
     window.scrollTo(0, 0);
   }, []);
 
-  // Periodic polling for live broadcast state from Church Admin
+  // Real-time synchronization of live broadcast status via Server-Sent Events (SSE)
   useEffect(() => {
     if (!church?.slug) return;
     let isCancelled = false;
 
-    const pollLiveStatus = async () => {
+    const fetchLiveStatus = async () => {
       try {
         const res = await fetch(
           `/api/churches?slug=${encodeURIComponent(church.slug)}`
@@ -52,10 +52,50 @@ function WorshipSanctuaryScreen() {
       } catch {}
     };
 
-    const interval = setInterval(pollLiveStatus, 3500);
+    fetchLiveStatus();
+
+    let eventSource: EventSource | null = null;
+    let fallbackPollTimer: NodeJS.Timeout | null = null;
+
+    if (typeof window !== "undefined" && "EventSource" in window) {
+      try {
+        eventSource = new EventSource(
+          `/api/realtime?churchSlug=${encodeURIComponent(church.slug)}&channel=status`
+        );
+
+        eventSource.addEventListener("status", (e: MessageEvent) => {
+          if (isCancelled) return;
+          try {
+            const status = JSON.parse(e.data);
+            if (status && typeof status.isLive === "boolean") {
+              setIsLive(status.isLive);
+            }
+          } catch {}
+        });
+
+        eventSource.onopen = () => {
+          if (fallbackPollTimer) {
+            clearInterval(fallbackPollTimer);
+            fallbackPollTimer = null;
+          }
+        };
+
+        eventSource.onerror = () => {
+          if (!fallbackPollTimer && !isCancelled) {
+            fallbackPollTimer = setInterval(fetchLiveStatus, 15000);
+          }
+        };
+      } catch {
+        fallbackPollTimer = setInterval(fetchLiveStatus, 15000);
+      }
+    } else {
+      fallbackPollTimer = setInterval(fetchLiveStatus, 10000);
+    }
+
     return () => {
       isCancelled = true;
-      clearInterval(interval);
+      if (eventSource) eventSource.close();
+      if (fallbackPollTimer) clearInterval(fallbackPollTimer);
     };
   }, [church?.slug]);
 

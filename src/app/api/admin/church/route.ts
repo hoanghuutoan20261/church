@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongoose";
 import { Church } from "@/models/Church";
 import { getAuthUser } from "@/lib/auth";
+import { realtimeHub } from "@/lib/realtimeHub";
 
 export const dynamic = "force-dynamic";
 
@@ -181,6 +182,22 @@ export async function PUT(req: NextRequest) {
     }
 
     await church.save();
+
+    // Broadcast live status update to all sanctuary viewers in real time
+    if (church.currentService) {
+      try {
+        realtimeHub.emitStatus(church.slug, {
+          isLive: Boolean(church.currentService.isLive),
+          title: church.currentService.title,
+          speaker: church.currentService.speaker,
+          viewersCount: church.currentService.viewersCount,
+          scriptureReference: church.currentService.scriptureReference,
+          welcomeMessage: church.currentService.welcomeMessage,
+        });
+      } catch (e) {
+        console.warn("Lỗi phát sóng trạng thái buổi nhóm trực tiếp:", e);
+      }
+    }
 
     return NextResponse.json({
       success: true,

@@ -2011,7 +2011,7 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
                 <Settings className="w-5 h-5 text-[#c5a059]" />
                 <div>
                   <h3 className="font-serif text-base sm:text-lg font-bold text-stone-100">
-                    Chỉnh Sửa Thông Tin Tường Hội Thánh
+                    Chỉnh Sửa Thông Tin Hội Thánh
                   </h3>
                   <p className="text-[11px] text-stone-400">
                     Cập nhật hình ảnh, thông điệp, liên hệ và tài khoản dâng hiến

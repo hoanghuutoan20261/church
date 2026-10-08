@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongoose";
 import { ChatMessage } from "@/models/ChatMessage";
+import { getAuthUser } from "@/lib/auth";
+import { realtimeHub } from "@/lib/realtimeHub";
+
+export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   try {
@@ -50,19 +54,39 @@ export async function POST(req: NextRequest) {
 
     if (!text || !text.trim()) {
       return NextResponse.json(
-        { error: "Tin nhắn không được để trống" },
+        { success: false, error: "Tin nhắn không được để trống" },
         { status: 400 }
       );
     }
 
     const slug = (churchSlug || "loibansusong").toLowerCase().trim();
 
+    // Prevent Role Impersonation: Only authenticated leaders of this church can send with pastoral badges
+    let verifiedRole: "pastor" | "moderator" | "elder" | "member" = "member";
+    if (role && ["pastor", "moderator", "elder"].includes(role)) {
+      const authSession = await getAuthUser(req);
+      if (
+        authSession &&
+        (authSession.role === "superadmin" ||
+          (authSession.churchSlug === slug && ["pastor", "moderator", "admin"].includes(authSession.role)))
+      ) {
+        verifiedRole = role as "pastor" | "moderator" | "elder";
+      } else {
+        // Demote unverified user to standard member
+        verifiedRole = "member";
+      }
+    }
+
+    const sanitizedSender = sender ? sender.trim().slice(0, 60) : "Tín hữu trực tuyến";
+    const sanitizedLocation = location ? location.trim().slice(0, 60) : "Trực tuyến";
+    const sanitizedText = text.trim().slice(0, 300);
+
     const newRecord = await ChatMessage.create({
       churchSlug: slug,
-      sender: sender ? sender.trim() : "Tín hữu trực tuyến",
-      role: role || "member",
-      location: location || "Trực tuyến",
-      text: text.trim().slice(0, 300),
+      sender: sanitizedSender,
+      role: verifiedRole,
+      location: sanitizedLocation,
+      text: sanitizedText,
       timestamp:
         timestamp ||
         new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }),
@@ -71,28 +95,37 @@ export async function POST(req: NextRequest) {
     });
 
     const idStr = newRecord._id.toString();
+    const payload = {
+      _id: idStr,
+      id: idStr,
+      churchSlug: slug,
+      sender: newRecord.sender,
+      role: newRecord.role,
+      location: newRecord.location,
+      text: newRecord.text,
+      timestamp: newRecord.timestamp,
+      isAmenOnly: newRecord.isAmenOnly,
+      createdAt: newRecord.createdAt,
+    };
+
+    // Broadcast in real-time to all listening sanctuary clients via SSE
+    try {
+      realtimeHub.emitChat(slug, payload);
+    } catch (e) {
+      console.warn("Lỗi phát sóng tin nhắn thời gian thực:", e);
+    }
+
     return NextResponse.json(
       {
         success: true,
-        data: {
-          _id: idStr,
-          id: idStr,
-          churchSlug: slug,
-          sender: newRecord.sender,
-          role: newRecord.role,
-          location: newRecord.location,
-          text: newRecord.text,
-          timestamp: newRecord.timestamp,
-          isAmenOnly: newRecord.isAmenOnly,
-          createdAt: newRecord.createdAt,
-        },
+        data: payload,
       },
       { status: 201 }
     );
   } catch (error: any) {
     console.error("Lỗi gửi tin nhắn:", error);
     return NextResponse.json(
-      { error: "Không thể lưu tin nhắn", details: error.message },
+      { success: false, error: "Không thể lưu tin nhắn", details: error.message },
       { status: 500 }
     );
   }

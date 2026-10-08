@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { ChatMessage, worshipData } from "@/data/worshipServiceData";
+import { buildHlsStreamUrl } from "@/lib/streamConfig";
 
 export type FontSizeOption = "normal" | "large" | "xlarge";
 export type SidebarTab = "chat" | "scripture" | "prayer";
@@ -58,7 +59,7 @@ const defaultChurchInfo: CurrentChurchInfo = {
   denomination: "Hội Thánh Tin Lành Việt Nam",
   address: "Phòng Nhóm Trực Tuyến - Thánh Đường Trung Tâm",
   streamKey: "lbs-sunday",
-  streamUrl: "http://169.58.235.90:8080/live/lbs-sunday.m3u8",
+  streamUrl: buildHlsStreamUrl("lbs-sunday"),
   themeConfig: {
     accentColor: "#c5a059",
     logoUrl: "",
@@ -181,10 +182,12 @@ export function WorshipProvider({
     }
   }, []);
 
-  // Load and sync chat messages scoped to this church from MongoDB
+  // Real-time synchronization of chat messages via Server-Sent Events (SSE)
   useEffect(() => {
     let isCancelled = false;
-    async function loadChat() {
+
+    // Initial load: fetch existing message history from MongoDB
+    async function loadChatHistory() {
       try {
         const res = await fetch(`/api/chat?churchSlug=${encodeURIComponent(church.slug)}`);
         if (res.ok) {
@@ -198,12 +201,74 @@ export function WorshipProvider({
       }
     }
 
-    loadChat();
-    const interval = setInterval(loadChat, 3500);
+    loadChatHistory();
+
+    let eventSource: EventSource | null = null;
+    let fallbackPollTimer: NodeJS.Timeout | null = null;
+
+    if (typeof window !== "undefined" && "EventSource" in window) {
+      try {
+        eventSource = new EventSource(
+          `/api/realtime?churchSlug=${encodeURIComponent(church.slug)}&channel=chat`
+        );
+
+        eventSource.addEventListener("chat", (e: MessageEvent) => {
+          if (isCancelled) return;
+          try {
+            const newMsg = JSON.parse(e.data);
+            if (!newMsg || !newMsg.text) return;
+
+            setMessages((prev) => {
+              // Deduplicate if already present or replace temporary optimistic message
+              const exists = prev.some(
+                (m) =>
+                  m._id === newMsg._id ||
+                  m.id === newMsg.id ||
+                  (m.id.startsWith("temp-") &&
+                    m.text === newMsg.text &&
+                    m.sender === newMsg.sender)
+              );
+              if (exists) {
+                return prev.map((m) =>
+                  m.id.startsWith("temp-") &&
+                  m.text === newMsg.text &&
+                  m.sender === newMsg.sender
+                    ? { ...newMsg, id: newMsg._id || newMsg.id }
+                    : m
+                );
+              }
+              return [...prev, newMsg];
+            });
+          } catch (err) {
+            console.error("Lỗi xử lý tin nhắn thời gian thực SSE:", err);
+          }
+        });
+
+        eventSource.onerror = () => {
+          // If SSE encounters an issue, activate an emergency slow poll (30s)
+          if (!fallbackPollTimer && !isCancelled) {
+            fallbackPollTimer = setInterval(loadChatHistory, 30000);
+          }
+        };
+
+        eventSource.onopen = () => {
+          // When SSE connects, disable polling entirely
+          if (fallbackPollTimer) {
+            clearInterval(fallbackPollTimer);
+            fallbackPollTimer = null;
+          }
+        };
+      } catch {
+        fallbackPollTimer = setInterval(loadChatHistory, 15000);
+      }
+    } else {
+      fallbackPollTimer = setInterval(loadChatHistory, 10000);
+    }
 
     return () => {
       isCancelled = true;
-      clearInterval(interval);
+      if (eventSource) eventSource.close();
+      if (fallbackPollTimer) clearInterval(fallbackPollTimer);
     };
   }, [church.slug]);
 
