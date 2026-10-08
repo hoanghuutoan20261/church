@@ -36,6 +36,8 @@ export interface RealtimeServiceStatus {
   viewersCount?: number;
   scriptureReference?: string;
   welcomeMessage?: string;
+  streamType?: string;
+  streamUrl?: string;
 }
 
 export type RealtimeEventCallback = (data: any) => void;
