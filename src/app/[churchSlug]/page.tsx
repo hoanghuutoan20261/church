@@ -21,6 +21,7 @@ export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const slug = params.churchSlug.toLowerCase().trim();
+  const canonicalUrl = `https://hoithanhvn.com/${slug}`;
 
   try {
     await connectDB();
@@ -32,13 +33,57 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       };
     }
 
+    const title = `${church.name} — Thờ Phượng Trực Tuyến & Lời Chúa`;
+    const description =
+      church.profileConfig?.about ||
+      `Phòng thờ phượng trực tuyến của ${church.name} (${church.denomination || "Tin Lành Việt Nam"}). Tham gia thánh lễ Chúa Nhật, tôn vinh Chúa và hiệp ý cầu nguyện.`;
+    const imageUrl =
+      church.profileConfig?.coverImageUrl ||
+      church.profileConfig?.avatarUrl ||
+      "https://hoithanhvn.com/icon-512x512.png";
+
     return {
-      title: `${church.name} | Thờ Phượng Trực Tuyến`,
-      description: `Phòng thờ phượng trực tuyến chính thức của ${church.name} (${church.denomination}). Tham gia hiệp ý thờ phượng, nghe giảng và dâng lời cầu thay.`,
+      title,
+      description,
+      keywords: [
+        church.name,
+        `hội thánh ${church.name}`,
+        `tin lành ${church.name}`,
+        church.address || "Việt Nam",
+        "thờ phượng trực tuyến",
+        "tin lành việt nam",
+        "bài giảng tin lành",
+        "thánh ca tin lành",
+      ],
+      alternates: {
+        canonical: canonicalUrl,
+      },
+      openGraph: {
+        type: "website",
+        locale: "vi_VN",
+        url: canonicalUrl,
+        siteName: "Hội Thánh Tin Lành Việt Nam",
+        title,
+        description,
+        images: [
+          {
+            url: imageUrl,
+            width: 1200,
+            height: 630,
+            alt: `Hình ảnh ${church.name}`,
+          },
+        ],
+      },
+      twitter: {
+        card: "summary_large_image",
+        title,
+        description,
+        images: [imageUrl],
+      },
     };
   } catch {
     return {
-      title: "Thờ Phượng Trực Tuyến",
+      title: "Thờ Phượng Trực Tuyến | Hội Thánh Tin Lành Việt Nam",
     };
   }
 }
@@ -137,5 +182,57 @@ export default async function ChurchSanctuaryPage({ params, searchParams }: Page
 
   const initialView = searchParams?.view === "wall" ? "wall" : "sanctuary";
 
-  return <SanctuaryClient church={churchData} initialView={initialView} />;
+  const jsonLdChurch = {
+    "@context": "https://schema.org",
+    "@type": "PlaceOfWorship",
+    name: churchDoc.name,
+    description:
+      churchDoc.profileConfig?.about ||
+      `Hội Thánh Tin Lành ${churchDoc.name}. Lễ thờ phượng trực tuyến và thông công Chúa Nhật.`,
+    url: `https://hoithanhvn.com/${churchDoc.slug}`,
+    address: {
+      "@type": "PostalAddress",
+      addressLocality: churchDoc.address || "Việt Nam",
+      addressCountry: "VN",
+    },
+    telephone: churchDoc.profileConfig?.contactPhone || undefined,
+    email: churchDoc.profileConfig?.contactEmail || undefined,
+    image:
+      churchDoc.profileConfig?.coverImageUrl ||
+      churchDoc.profileConfig?.avatarUrl ||
+      undefined,
+  };
+
+  const jsonLdBroadcast = churchDoc.currentService?.isLive
+    ? {
+        "@context": "https://schema.org",
+        "@type": "BroadcastEvent",
+        name:
+          churchDoc.currentService?.title ||
+          `Lễ Thờ Phượng Trực Tuyến — ${churchDoc.name}`,
+        isLiveBroadcast: true,
+        videoFormat: "HD",
+        startDate: new Date().toISOString(),
+        location: {
+          "@type": "VirtualLocation",
+          url: `https://hoithanhvn.com/${churchDoc.slug}`,
+        },
+      }
+    : null;
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdChurch) }}
+      />
+      {jsonLdBroadcast && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdBroadcast) }}
+        />
+      )}
+      <SanctuaryClient church={churchData} initialView={initialView} />
+    </>
+  );
 }
