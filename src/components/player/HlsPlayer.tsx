@@ -407,26 +407,28 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
     const video = videoRef.current;
     if (!video) return;
 
+    const getHlsConfig = () => ({
+      enableWorker: true,
+      lowLatencyMode: false, // Standard live HLS: allows healthy buffer cushion so mobile and other laptops do not stutter
+      backBufferLength: 10,  // Keep 10s of back buffer to avoid frame re-decoding stalls
+      liveSyncDurationCount: 3, // Live playhead ~6s behind encoder for rock-solid stability
+      liveMaxLatencyDurationCount: 8, // Catch up smoothly if drifted
+      maxLiveSyncPlaybackRate: 1.08, // Imperceptible pitch shift for worship music when catching up
+      liveDurationInfinity: true,
+      maxBufferLength: 30, // 30-second forward buffer cushion
+      maxMaxBufferLength: 60,
+      nudgeOffset: 0.2, // Auto-nudge past minor decoding holes
+      nudgeMaxRetry: 8,
+      manifestLoadingTimeOut: 10000,
+      manifestLoadingMaxRetry: 8,
+      levelLoadingTimeOut: 10000,
+      levelLoadingMaxRetry: 8,
+      fragLoadingTimeOut: 10000,
+      fragLoadingMaxRetry: 8,
+    });
+
     if (Hls.isSupported()) {
-      const hls = new Hls({
-        enableWorker: true,
-        lowLatencyMode: true,
-        backBufferLength: 0, // In live broadcast with short windows, don't store expired segments
-        liveSyncDurationCount: 3, // Safe live sync margin
-        liveMaxLatencyDurationCount: 6, // Catch up smoothly
-        maxLiveSyncPlaybackRate: 1.25,
-        liveDurationInfinity: true,
-        maxBufferLength: 20,
-        maxMaxBufferLength: 40,
-        nudgeOffset: 0.2, // Auto-nudge past minor decoding holes
-        nudgeMaxRetry: 5,
-        manifestLoadingTimeOut: 10000,
-        manifestLoadingMaxRetry: 10,
-        levelLoadingTimeOut: 10000,
-        levelLoadingMaxRetry: 10,
-        fragLoadingTimeOut: 10000,
-        fragLoadingMaxRetry: 10,
-      });
+      const hls = new Hls(getHlsConfig());
 
       hlsRef.current = hls;
       hls.loadSource(activeUrl);
@@ -464,62 +466,37 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
       });
 
       hls.on(Hls.Events.ERROR, (event, data) => {
-        // 1. Non-fatal stall / buffer hole errors: immediately jump to live edge
+        // 1. Non-fatal stall / buffer hole errors: let Hls.js handle smoothly
         if (!data.fatal) {
           if (
             data.details === Hls.ErrorDetails.BUFFER_STALLED_ERROR ||
             data.details === Hls.ErrorDetails.BUFFER_NUDGE_ON_STALL ||
             data.details === Hls.ErrorDetails.BUFFER_SEEK_OVER_HOLE
           ) {
-            console.warn("HLS buffer stall / gap detected, auto-resyncing to live edge...");
+            // Ensure loader is running; Hls.js will nudge past any small audio/video timestamp misalignments
             if (hlsRef.current) {
               hlsRef.current.startLoad();
-            }
-            jumpToLive();
-            if (videoRef.current?.paused) {
-              videoRef.current.play().catch(() => {});
             }
           }
           return;
         }
 
-        // 2. Fatal errors
+        // 2. Fatal errors: recover gently without constantly resetting the player
         switch (data.type) {
           case Hls.ErrorTypes.NETWORK_ERROR:
             console.warn("HLS network error (segment/manifest 404), retrying live load...", data.details);
-            setTimeout(() => {
-              if (hlsRef.current) {
-                hlsRef.current.startLoad();
-                jumpToLive();
-              }
-            }, 1000);
+            hls.startLoad();
             break;
           case Hls.ErrorTypes.MEDIA_ERROR:
             console.warn("HLS media decode error, attempting media error recovery...", data.details);
             hls.recoverMediaError();
-            setTimeout(() => {
-              jumpToLive();
-              if (videoRef.current?.paused) {
-                videoRef.current.play().catch(() => {});
-              }
-            }, 500);
             break;
           default:
             console.warn("Fatal unrecoverable HLS error, soft-restarting stream in 1.5s...", data.details);
             hls.destroy();
             setTimeout(() => {
               if (videoRef.current && activeUrl) {
-                const newHls = new Hls({
-                  enableWorker: true,
-                  lowLatencyMode: true,
-                  backBufferLength: 0,
-                  liveSyncDurationCount: 3,
-                  liveMaxLatencyDurationCount: 6,
-                  maxLiveSyncPlaybackRate: 1.25,
-                  liveDurationInfinity: true,
-                  nudgeOffset: 0.2,
-                  nudgeMaxRetry: 5,
-                });
+                const newHls = new Hls(getHlsConfig());
                 hlsRef.current = newHls;
                 newHls.loadSource(activeUrl);
                 newHls.attachMedia(videoRef.current);
@@ -531,9 +508,22 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
     } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
       // Native Safari iOS fallback
       video.src = activeUrl;
-      video.addEventListener("loadedmetadata", () => {
+      const handleLoadedMetadata = () => {
         setHasError(false);
-      });
+        const playPromise = video.play();
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => setIsPlaying(true))
+            .catch(() => {
+              video.muted = true;
+              setIsMuted(true);
+              video.play()
+                .then(() => setIsPlaying(true))
+                .catch(() => {});
+            });
+        }
+      };
+      video.addEventListener("loadedmetadata", handleLoadedMetadata);
       video.addEventListener("error", () => {
         if (activeUrl !== worshipData.streamUrl) {
           video.src = worshipData.streamUrl;
@@ -577,7 +567,7 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
     setIsBehindLive(false);
   }, [activeUrl]);
 
-  // Monitor live distance: if user falls behind (> 12s), auto-resync to live edge so segments don't 404!
+  // Monitor live distance: if user falls behind (> 25s), auto-resync to live edge so segments don't 404!
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
@@ -586,27 +576,27 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
       const hls = hlsRef.current;
       if (hls && typeof hls.liveSyncPosition === "number" && hls.liveSyncPosition > 0) {
         const distance = hls.liveSyncPosition - video.currentTime;
-        setIsBehindLive(distance > 5);
-        if (distance > 12) {
+        setIsBehindLive(distance > 8);
+        if (distance > 25) {
           console.warn(`Lag distance is ${distance.toFixed(1)}s (segments expired). Auto-resyncing to live!`);
           jumpToLive();
         }
       } else if (video.seekable && video.seekable.length > 0) {
         const liveEnd = video.seekable.end(video.seekable.length - 1);
         const distance = liveEnd - video.currentTime;
-        setIsBehindLive(distance > 5);
-        if (distance > 12) {
+        setIsBehindLive(distance > 8);
+        if (distance > 25) {
           jumpToLive();
         }
       }
     };
 
-    const interval = setInterval(checkLiveDistance, 2500);
+    const interval = setInterval(checkLiveDistance, 4000);
     return () => clearInterval(interval);
   }, [jumpToLive]);
 
   // Tab Visibility & Focus Auto-Recovery:
-  // When user returns to tab after switching tabs or minimizing, immediately wake up and jump to live!
+  // When user returns to tab after switching tabs or minimizing, immediately wake up and resync
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
@@ -618,7 +608,13 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
 
         if (hls) {
           hls.startLoad();
-          jumpToLive();
+          // Check if distance has become large while tab was in background
+          if (typeof hls.liveSyncPosition === "number" && hls.liveSyncPosition > 0) {
+            const distance = hls.liveSyncPosition - video.currentTime;
+            if (distance > 15) {
+              jumpToLive();
+            }
+          }
           if (video.paused) {
             video.play().catch(() => {
               // If unmuted autoplay blocked by browser policy, try muted
@@ -648,7 +644,7 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
   }, [jumpToLive]);
 
   // Freeze / Black Screen Watchdog:
-  // Automatically detects if video playback is frozen on black screen while supposedly playing
+  // Automatically detects if video playback is genuinely frozen on black screen for >= 8s
   useEffect(() => {
     let lastTime = 0;
     let freezeCount = 0;
@@ -661,9 +657,9 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
       if (!video.paused && !video.ended) {
         if (video.currentTime === lastTime && video.currentTime > 0) {
           freezeCount++;
-          // Stuck on exact same timestamp for >= 3 seconds
-          if (freezeCount >= 2) {
-            console.warn("Live stream freeze/black screen detected. Auto-recovering...");
+          // Stuck on exact same timestamp for >= 8 seconds (tolerates normal network buffering)
+          if (freezeCount >= 4) {
+            console.warn("Live stream freeze/black screen detected (>8s). Auto-recovering...");
             freezeCount = 0;
             hls.startLoad();
             jumpToLive();
@@ -673,6 +669,8 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
           lastTime = video.currentTime;
           freezeCount = 0;
         }
+      } else {
+        freezeCount = 0;
       }
     }, 2000);
 
@@ -688,7 +686,7 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
       setIsPlaying(true);
       const timePaused = Date.now() - lastPauseTimeRef.current;
       if (lastPauseTimeRef.current > 0 && timePaused > 2000) {
-        if (timePaused > 8000 && hlsRef.current) {
+        if (timePaused > 10000 && hlsRef.current) {
           hlsRef.current.stopLoad();
           hlsRef.current.loadSource(activeUrl);
           hlsRef.current.startLoad();
@@ -716,7 +714,6 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
     const onStalled = () => {
       if (hlsRef.current) {
         hlsRef.current.startLoad();
-        jumpToLive();
       }
     };
 
@@ -956,6 +953,7 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
           poster={isPlaying ? undefined : posterUrl}
           playsInline
           autoPlay
+          preload="auto"
           muted={isAdminPreview || isMuted}
           className="w-full h-full object-contain bg-black cursor-pointer"
           onClick={() => {
