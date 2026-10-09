@@ -60,6 +60,8 @@ interface ChurchConfig {
   denomination: string;
   address: string;
   streamKey: string;
+  streamType?: "youtube" | "facebook" | "mediamtx" | "custom_hls";
+  streamUrl?: string;
   liveSchedule: string;
   worshipSchedules?: IWorshipScheduleItem[];
   currentService: {
@@ -262,6 +264,16 @@ export default function ChurchAdminDashboard() {
     isLive: false,
   });
 
+  const [streamSettingsForm, setStreamSettingsForm] = useState<{
+    streamType: "youtube" | "facebook" | "mediamtx" | "custom_hls";
+    streamUrl: string;
+  }>({
+    streamType: "youtube",
+    streamUrl: "",
+  });
+  const [isSavingStream, setIsSavingStream] = useState(false);
+  const [streamSaveSuccess, setStreamSaveSuccess] = useState("");
+
   const [bankForm, setBankForm] = useState({
     bankName: "MB Bank",
     accountNumber: "",
@@ -344,6 +356,11 @@ export default function ChurchAdminDashboard() {
               isLive: Boolean(ch.currentService.isLive),
             });
           }
+
+          setStreamSettingsForm({
+            streamType: ch.streamType || "youtube",
+            streamUrl: ch.streamUrl || "",
+          });
 
           if (ch.bankingConfig) {
             setBankForm({
@@ -449,21 +466,64 @@ export default function ChurchAdminDashboard() {
     }
   };
 
+  // Save Stream Configuration (Source & URL)
+  const handleSaveStreamSettings = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!church) return;
+    setIsSavingStream(true);
+    setStreamSaveSuccess("");
+    try {
+      const res = await fetch("/api/admin/church", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          churchSlug: church.slug,
+          streamType: streamSettingsForm.streamType,
+          streamUrl: streamSettingsForm.streamUrl.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setChurch((prev) =>
+          prev
+            ? {
+                ...prev,
+                streamType: streamSettingsForm.streamType,
+                streamUrl: streamSettingsForm.streamUrl.trim(),
+              }
+            : null
+        );
+        setStreamSaveSuccess("Đã lưu và đồng bộ cấu hình nguồn phát trực tiếp!");
+        setTimeout(() => setStreamSaveSuccess(""), 4000);
+      } else {
+        alert(data.error || "Không thể lưu cấu hình nguồn phát.");
+      }
+    } catch {
+      alert("Lỗi khi kết nối với máy chủ để lưu cấu hình nguồn phát.");
+    } finally {
+      setIsSavingStream(false);
+    }
+  };
+
   // Toggle Live Broadcast status
   const handleToggleLiveStatus = async (isLive: boolean) => {
+    if (!church) return;
     setServiceForm((prev) => ({ ...prev, isLive }));
     try {
       await fetch("/api/admin/church", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          churchSlug: church.slug,
           currentService: { ...serviceForm, isLive },
+          streamType: streamSettingsForm.streamType,
+          streamUrl: streamSettingsForm.streamUrl.trim(),
         }),
       });
       setSaveSuccess(
         isLive
-          ? "Đã kích hoạt trạng thái: ĐANG PHÁT TRỰC TIẾP"
-          : "Đã chuyển trạng thái: TẠM DỪNG / KẾT THÚC"
+          ? "Đã kích hoạt trạng thái: ĐANG PHÁT TRỰC TIẾP (ON-AIR)"
+          : "Đã chuyển trạng thái: TẠM DỪNG / KẾT THÚC (OFF-AIR)"
       );
       setTimeout(() => setSaveSuccess(""), 3000);
     } catch (err) {
@@ -731,7 +791,11 @@ export default function ChurchAdminDashboard() {
 
   if (!church) return null;
 
-  const rtmpServerUrl = "rtmp://localhost:1935/live";
+  const currentHost =
+    typeof window !== "undefined" && window.location.hostname
+      ? window.location.hostname
+      : "localhost";
+  const rtmpServerUrl = `rtmp://${currentHost}:1935/live`;
 
   return (
     <WorshipProvider initialChurch={church}>
@@ -1071,103 +1135,280 @@ export default function ChurchAdminDashboard() {
 
                       {/* HlsPlayer in Admin Preview Mode */}
                       <div className="rounded-lg overflow-hidden border border-stone-800 bg-black shadow-inner">
-                        <HlsPlayer isAdminPreview={!serviceForm.isLive} />
+                        <HlsPlayer
+                          isAdminPreview={!serviceForm.isLive}
+                          streamUrl={streamSettingsForm.streamUrl || church.streamUrl}
+                        />
                       </div>
 
                       <div className="p-2.5 rounded bg-stone-900/60 border border-stone-800/80 text-[11px] text-stone-400 flex items-start gap-2">
                         <span className="text-[#c5a059] font-bold">💡 Mẹo:</span>
                         <span>
-                          Khởi động OBS và bấm <strong>Start Streaming</strong>. Màn hình phía trên sẽ hiển thị khung hình thực tế. Người xem bên ngoài sẽ <strong>chưa thấy</strong> gì cho tới khi bạn bấm <strong>&apos;Bắt Đầu Phát Sóng (Go Live)&apos;</strong>.
+                          {streamSettingsForm.streamType === "youtube"
+                            ? "Dán link YouTube Live bên dưới và kiểm tra khung xem trước. Bấm 'Bắt Đầu Phát Sóng' để mở thánh đường cho tín hữu."
+                            : streamSettingsForm.streamType === "facebook"
+                            ? "Dán link Facebook Live bên dưới. Bấm 'Bắt Đầu Phát Sóng' để mở thánh đường cho tín hữu."
+                            : "Khởi động OBS và bấm Start Streaming. Màn hình phía trên sẽ hiển thị khung hình thực tế. Người xem bên ngoài sẽ chỉ thấy khi bạn bấm 'Bắt Đầu Phát Sóng (Go Live)'."}
                         </span>
                       </div>
                     </div>
 
-                    {/* OBS Parameters Box */}
+                    {/* Stream Source & Parameters Card */}
                     <div className="bg-[#0f1115] border border-stone-800 rounded-xl p-4 sm:p-5 space-y-4 shadow-lg">
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-serif text-sm font-semibold text-[#c5a059] flex items-center gap-2">
-                          <Shield className="w-4 h-4" />
-                          <span>Thông Số Cấu Hình OBS Studio</span>
-                        </h3>
-                        <span className="text-[11px] text-stone-500 font-mono">
-                          Giao thức: RTMP Ingest
-                        </span>
-                      </div>
-
-                      {/* Server URL field */}
-                      <div className="space-y-1.5">
-                        <label className="text-xs text-stone-400 font-medium">
-                          1. Máy chủ phát sóng (Server):
-                        </label>
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-stone-800/80 pb-3">
                         <div className="flex items-center gap-2">
-                          <input
-                            type="text"
-                            readOnly
-                            value={rtmpServerUrl}
-                            className="flex-1 bg-[#14161a] border border-stone-700 text-stone-200 font-mono text-xs sm:text-sm px-3.5 py-2.5 rounded-md select-all focus:outline-none"
-                          />
-                          <button
-                            onClick={() => copyToClipboard(rtmpServerUrl, "server")}
-                            className="px-3.5 py-2.5 rounded-md bg-stone-800 hover:bg-stone-750 text-stone-200 border border-stone-700 text-xs flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
-                          >
-                            {copiedServer ? (
-                              <>
-                                <Check className="w-4 h-4 text-emerald-400" />
-                                <span className="text-emerald-400">Đã chép</span>
-                              </>
-                            ) : (
-                              <>
-                                <Copy className="w-4 h-4 text-stone-400" />
-                                <span>Sao Chép</span>
-                              </>
-                            )}
-                          </button>
+                          <Radio className="w-4 h-4 text-[#c5a059]" />
+                          <h3 className="font-serif text-sm font-semibold text-[#c5a059]">
+                            Cấu Hình Nguồn Phát Sóng (Stream Source)
+                          </h3>
                         </div>
+                        {streamSaveSuccess && (
+                          <span className="text-xs text-emerald-400 font-serif flex items-center gap-1">
+                            <Check className="w-3.5 h-3.5" />
+                            {streamSaveSuccess}
+                          </span>
+                        )}
                       </div>
 
-                      {/* Stream Key field */}
-                      <div className="space-y-1.5">
-                        <label className="text-xs text-stone-400 font-medium">
-                          2. Khóa luồng phát (Stream Key):
-                        </label>
-                        <div className="flex items-center gap-2">
-                          <div className="relative flex-1">
+                      {/* Source Type Selector Tabs */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setStreamSettingsForm((prev) => ({ ...prev, streamType: "youtube" }))
+                          }
+                          className={`px-3 py-2 rounded-lg text-xs font-serif font-bold flex items-center justify-center gap-1.5 transition-all border cursor-pointer ${
+                            streamSettingsForm.streamType === "youtube"
+                              ? "bg-red-500/20 text-red-300 border-red-500/60 shadow-sm"
+                              : "bg-[#14161a] text-stone-400 border-stone-800 hover:text-stone-200"
+                          }`}
+                        >
+                          <span className="w-2 h-2 rounded-full bg-red-500" />
+                          <span>YouTube Live</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setStreamSettingsForm((prev) => ({ ...prev, streamType: "mediamtx" }))
+                          }
+                          className={`px-3 py-2 rounded-lg text-xs font-serif font-bold flex items-center justify-center gap-1.5 transition-all border cursor-pointer ${
+                            streamSettingsForm.streamType === "mediamtx"
+                              ? "bg-amber-500/20 text-amber-300 border-amber-500/60 shadow-sm"
+                              : "bg-[#14161a] text-stone-400 border-stone-800 hover:text-stone-200"
+                          }`}
+                        >
+                          <Shield className="w-3.5 h-3.5" />
+                          <span>OBS Studio</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setStreamSettingsForm((prev) => ({ ...prev, streamType: "facebook" }))
+                          }
+                          className={`px-3 py-2 rounded-lg text-xs font-serif font-bold flex items-center justify-center gap-1.5 transition-all border cursor-pointer ${
+                            streamSettingsForm.streamType === "facebook"
+                              ? "bg-blue-500/20 text-blue-300 border-blue-500/60 shadow-sm"
+                              : "bg-[#14161a] text-stone-400 border-stone-800 hover:text-stone-200"
+                          }`}
+                        >
+                          <span className="w-2 h-2 rounded-full bg-blue-500" />
+                          <span>Facebook Live</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setStreamSettingsForm((prev) => ({ ...prev, streamType: "custom_hls" }))
+                          }
+                          className={`px-3 py-2 rounded-lg text-xs font-serif font-bold flex items-center justify-center gap-1.5 transition-all border cursor-pointer ${
+                            streamSettingsForm.streamType === "custom_hls"
+                              ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/60 shadow-sm"
+                              : "bg-[#14161a] text-stone-400 border-stone-800 hover:text-stone-200"
+                          }`}
+                        >
+                          <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                          <span>Luồng HLS (.m3u8)</span>
+                        </button>
+                      </div>
+
+                      {/* YouTube Live Configuration */}
+                      {streamSettingsForm.streamType === "youtube" && (
+                        <div className="space-y-3 pt-1">
+                          <div className="space-y-1.5">
+                            <label className="text-xs text-stone-300 font-medium flex items-center justify-between">
+                              <span>Đường dẫn YouTube Live (URL hoặc Video ID):</span>
+                              <span className="text-[11px] text-stone-500">Khuyên dùng cho Hội Thánh</span>
+                            </label>
                             <input
-                              type={showStreamKey ? "text" : "password"}
-                              readOnly
-                              value={church.streamKey}
-                              className="w-full bg-[#14161a] border border-stone-700 text-stone-200 font-mono text-xs sm:text-sm px-3.5 py-2.5 pr-10 rounded-md select-all focus:outline-none"
+                              type="text"
+                              value={streamSettingsForm.streamUrl}
+                              onChange={(e) =>
+                                setStreamSettingsForm((prev) => ({
+                                  ...prev,
+                                  streamUrl: e.target.value,
+                                }))
+                              }
+                              placeholder="https://www.youtube.com/watch?v=... hoặc https://youtu.be/..."
+                              className="w-full bg-[#14161a] border border-stone-700 text-stone-100 font-mono text-xs sm:text-sm px-3.5 py-2.5 rounded-md focus:outline-none focus:border-[#c5a059]"
                             />
-                            <button
-                              type="button"
-                              onClick={() => setShowStreamKey(!showStreamKey)}
-                              className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-300 transition-colors"
-                            >
-                              {showStreamKey ? (
-                                <EyeOff className="w-4 h-4" />
-                              ) : (
-                                <Eye className="w-4 h-4" />
-                              )}
-                            </button>
+                            <p className="text-[11px] text-stone-400 leading-relaxed">
+                              💡 Bạn chỉ cần dán link phát trực tiếp YouTube của Hội Thánh vào đây. Mọi tín hữu và khách khi truy cập phòng nhóm sẽ xem được luồng phát ngay lập tức trên máy tính hoặc điện thoại mà không cần cài đặt thêm phần mềm.
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* OBS Studio Configuration */}
+                      {streamSettingsForm.streamType === "mediamtx" && (
+                        <div className="space-y-3 pt-1">
+                          {/* Server URL field */}
+                          <div className="space-y-1.5">
+                            <label className="text-xs text-stone-400 font-medium">
+                              1. Máy chủ phát sóng (Server):
+                            </label>
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="text"
+                                readOnly
+                                value={rtmpServerUrl}
+                                className="flex-1 bg-[#14161a] border border-stone-700 text-stone-200 font-mono text-xs sm:text-sm px-3.5 py-2.5 rounded-md select-all focus:outline-none"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => copyToClipboard(rtmpServerUrl, "server")}
+                                className="px-3.5 py-2.5 rounded-md bg-stone-800 hover:bg-stone-750 text-stone-200 border border-stone-700 text-xs flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
+                              >
+                                {copiedServer ? (
+                                  <>
+                                    <Check className="w-4 h-4 text-emerald-400" />
+                                    <span className="text-emerald-400">Đã chép</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Copy className="w-4 h-4 text-stone-400" />
+                                    <span>Sao Chép</span>
+                                  </>
+                                )}
+                              </button>
+                            </div>
                           </div>
 
-                          <button
-                            onClick={() => copyToClipboard(church.streamKey, "key")}
-                            className="px-3.5 py-2.5 rounded-md bg-stone-800 hover:bg-stone-750 text-stone-200 border border-stone-700 text-xs flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
-                          >
-                            {copiedKey ? (
-                              <>
-                                <Check className="w-4 h-4 text-emerald-400" />
-                                <span className="text-emerald-400">Đã chép</span>
-                              </>
-                            ) : (
-                              <>
-                                <Copy className="w-4 h-4 text-stone-400" />
-                                <span>Sao Chép</span>
-                              </>
-                            )}
-                          </button>
+                          {/* Stream Key field */}
+                          <div className="space-y-1.5">
+                            <label className="text-xs text-stone-400 font-medium">
+                              2. Khóa luồng phát (Stream Key):
+                            </label>
+                            <div className="flex items-center gap-2">
+                              <div className="relative flex-1">
+                                <input
+                                  type={showStreamKey ? "text" : "password"}
+                                  readOnly
+                                  value={church.streamKey}
+                                  className="w-full bg-[#14161a] border border-stone-700 text-stone-200 font-mono text-xs sm:text-sm px-3.5 py-2.5 pr-10 rounded-md select-all focus:outline-none"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => setShowStreamKey(!showStreamKey)}
+                                  className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-300 transition-colors"
+                                >
+                                  {showStreamKey ? (
+                                    <EyeOff className="w-4 h-4" />
+                                  ) : (
+                                    <Eye className="w-4 h-4" />
+                                  )}
+                                </button>
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={() => copyToClipboard(church.streamKey, "key")}
+                                className="px-3.5 py-2.5 rounded-md bg-stone-800 hover:bg-stone-750 text-stone-200 border border-stone-700 text-xs flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
+                              >
+                                {copiedKey ? (
+                                  <>
+                                    <Check className="w-4 h-4 text-emerald-400" />
+                                    <span className="text-emerald-400">Đã chép</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Copy className="w-4 h-4 text-stone-400" />
+                                    <span>Sao Chép</span>
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                          </div>
                         </div>
+                      )}
+
+                      {/* Facebook Live Configuration */}
+                      {streamSettingsForm.streamType === "facebook" && (
+                        <div className="space-y-3 pt-1">
+                          <div className="space-y-1.5">
+                            <label className="text-xs text-stone-300 font-medium">
+                              Đường dẫn video trực tiếp Facebook:
+                            </label>
+                            <input
+                              type="text"
+                              value={streamSettingsForm.streamUrl}
+                              onChange={(e) =>
+                                setStreamSettingsForm((prev) => ({
+                                  ...prev,
+                                  streamUrl: e.target.value,
+                                }))
+                              }
+                              placeholder="https://www.facebook.com/.../videos/..."
+                              className="w-full bg-[#14161a] border border-stone-700 text-stone-100 font-mono text-xs sm:text-sm px-3.5 py-2.5 rounded-md focus:outline-none focus:border-[#c5a059]"
+                            />
+                            <p className="text-[11px] text-stone-400 leading-relaxed">
+                              💡 Dán liên kết video phát trực tiếp từ Fanpage hoặc Group Facebook của Hội Thánh.
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Custom HLS Configuration */}
+                      {streamSettingsForm.streamType === "custom_hls" && (
+                        <div className="space-y-3 pt-1">
+                          <div className="space-y-1.5">
+                            <label className="text-xs text-stone-300 font-medium">
+                              Đường dẫn luồng HLS (.m3u8):
+                            </label>
+                            <input
+                              type="text"
+                              value={streamSettingsForm.streamUrl}
+                              onChange={(e) =>
+                                setStreamSettingsForm((prev) => ({
+                                  ...prev,
+                                  streamUrl: e.target.value,
+                                }))
+                              }
+                              placeholder="https://server.example.com/live/stream.m3u8"
+                              className="w-full bg-[#14161a] border border-stone-700 text-stone-100 font-mono text-xs sm:text-sm px-3.5 py-2.5 rounded-md focus:outline-none focus:border-[#c5a059]"
+                            />
+                            <p className="text-[11px] text-stone-400 leading-relaxed">
+                              💡 Hỗ trợ mọi luồng phát trực tiếp chuẩn HLS qua giao thức HTTPS/HTTP.
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Action Button: Save Stream Source */}
+                      <div className="pt-2 flex items-center justify-between border-t border-stone-800/80">
+                        <span className="text-[11px] text-stone-500">
+                          Luồng sẽ tự cập nhật cho người xem khi bắt đầu phát sóng.
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleSaveStreamSettings()}
+                          disabled={isSavingStream}
+                          className="px-4 py-2 rounded-lg bg-[#c5a059] hover:bg-[#d6b068] text-stone-950 font-serif font-bold text-xs flex items-center gap-1.5 transition-colors shadow-sm disabled:opacity-50 cursor-pointer"
+                        >
+                          <Save className="w-3.5 h-3.5" />
+                          <span>{isSavingStream ? "Đang lưu..." : "Lưu Cài Đặt Nguồn Phát"}</span>
+                        </button>
                       </div>
                     </div>
                   </div>

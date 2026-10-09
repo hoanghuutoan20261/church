@@ -86,22 +86,28 @@ function WorshipSanctuaryScreen() {
         });
 
         eventSource.onopen = () => {
+          // Keep a gentle 12s safety sync even with active SSE to guarantee live status state
           if (fallbackPollTimer) {
             clearInterval(fallbackPollTimer);
-            fallbackPollTimer = null;
+          }
+          if (!isCancelled) {
+            fallbackPollTimer = setInterval(fetchLiveStatus, 12000);
           }
         };
 
         eventSource.onerror = () => {
-          if (!fallbackPollTimer && !isCancelled) {
-            fallbackPollTimer = setInterval(fetchLiveStatus, 15000);
+          if (fallbackPollTimer) {
+            clearInterval(fallbackPollTimer);
+          }
+          if (!isCancelled) {
+            fallbackPollTimer = setInterval(fetchLiveStatus, 8000);
           }
         };
       } catch {
-        fallbackPollTimer = setInterval(fetchLiveStatus, 15000);
+        fallbackPollTimer = setInterval(fetchLiveStatus, 10000);
       }
     } else {
-      fallbackPollTimer = setInterval(fetchLiveStatus, 10000);
+      fallbackPollTimer = setInterval(fetchLiveStatus, 8000);
     }
 
     return () => {
@@ -109,7 +115,7 @@ function WorshipSanctuaryScreen() {
       if (eventSource) eventSource.close();
       if (fallbackPollTimer) clearInterval(fallbackPollTimer);
     };
-  }, [church?.slug]);
+  }, [church?.slug, updateChurch]);
 
   // Service details & reflection briefing card
   const ServiceDetailsCard = () => (

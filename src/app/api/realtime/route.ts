@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { realtimeHub } from "@/lib/realtimeHub";
+import { connectDB } from "@/lib/mongoose";
+import { Church } from "@/models/Church";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +45,32 @@ export async function GET(req: NextRequest) {
       timestamp: new Date().toISOString(),
     })}\n\n`
   );
+
+  // Send initial church status immediately so client doesn't wait for a new event
+  if (channel === "all" || channel === "status") {
+    connectDB()
+      .then(() => Church.findOne({ slug: churchSlug, isActive: true }).lean())
+      .then((churchDoc: any) => {
+        if (churchDoc && !isClosed) {
+          safeWrite(
+            `event: status\ndata: ${JSON.stringify({
+              isLive: Boolean(churchDoc.currentService?.isLive),
+              title: churchDoc.currentService?.title || "",
+              speaker: churchDoc.currentService?.speaker || "",
+              speakerTitle: churchDoc.currentService?.speakerTitle || "Diễn giả",
+              viewersCount: churchDoc.currentService?.viewersCount || 0,
+              scriptureReference: churchDoc.currentService?.scriptureReference || "",
+              welcomeMessage: churchDoc.currentService?.welcomeMessage || "",
+              streamType: churchDoc.streamType || "youtube",
+              streamUrl: churchDoc.streamUrl || "",
+            })}\n\n`
+          );
+        }
+      })
+      .catch((err) => {
+        console.warn("SSE initial status fetch error:", err);
+      });
+  }
 
   // Set up listeners based on requested channel
   let unsubscribeChat: (() => void) | null = null;

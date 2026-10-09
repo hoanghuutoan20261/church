@@ -21,7 +21,13 @@ import {
 } from "lucide-react";
 import { useWorship } from "@/context/WorshipContext";
 import { worshipData } from "@/data/worshipServiceData";
-import { buildHlsStreamUrl } from "@/lib/streamConfig";
+import {
+  buildHlsStreamUrl,
+  extractYouTubeId,
+  buildYouTubeEmbedUrl,
+  buildFacebookEmbedUrl,
+  detectStreamType,
+} from "@/lib/streamConfig";
 
 interface HlsPlayerProps {
   streamUrl?: string;
@@ -44,10 +50,19 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
     streamUrl ||
     church?.streamUrl ||
     (church?.streamKey
-      ? buildHlsStreamUrl(church.streamKey)
+      ? (church.streamType === "youtube" && extractYouTubeId(church.streamKey)
+          ? church.streamKey
+          : buildHlsStreamUrl(church.streamKey))
       : worshipData.streamUrl);
 
   const [activeUrl, setActiveUrl] = useState<string>(effectiveStreamUrl);
+
+  const detectedType = detectStreamType(activeUrl, church?.streamType);
+  const isYouTube = detectedType === "youtube";
+  const isFacebook = detectedType === "facebook";
+  const isHls = detectedType === "hls";
+  const youtubeVideoId = isYouTube ? extractYouTubeId(activeUrl) : null;
+
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [isLocalStream, setIsLocalStream] = useState<boolean>(false);
   const [isMuted, setIsMuted] = useState<boolean>(false);
@@ -150,7 +165,7 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
 
   const [probeSuccessMessage, setProbeSuccessMessage] = useState<string>("");
 
-  // Helper to resolve candidate local HLS URLs
+  // Helper to resolve candidate local & LAN HLS URLs
   const getCandidateUrls = useCallback(
     (streamKey?: string, slug?: string) => {
       const keys = [
@@ -162,7 +177,14 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
       ].filter(Boolean) as string[];
 
       const urls: string[] = [];
+      const currentHost =
+        typeof window !== "undefined" ? window.location.hostname : "localhost";
+
       for (const k of keys) {
+        if (currentHost && currentHost !== "localhost" && currentHost !== "127.0.0.1") {
+          urls.push(`http://${currentHost}:8888/live/${k}/index.m3u8`);
+          urls.push(`http://${currentHost}:8888/${k}/index.m3u8`);
+        }
         urls.push(`http://localhost:8888/live/${k}/index.m3u8`);
         urls.push(`http://localhost:8888/${k}/index.m3u8`);
       }
@@ -173,7 +195,14 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
 
   const probeLiveHls = async (url: string): Promise<boolean> => {
     try {
-      const res = await fetch(url, { method: "GET", cache: "no-store" });
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 1800);
+      const res = await fetch(url, {
+        method: "GET",
+        cache: "no-store",
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
       if (res.ok) {
         const text = await res.text();
         if (text.includes("#EXTM3U")) {
@@ -184,26 +213,22 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
     return false;
   };
 
-  // Auto probe local OBS stream on mount or when streamKey changes
+  // Auto probe local/LAN OBS stream on mount or when streamKey changes (for HLS mode)
   useEffect(() => {
+    if (isYouTube || isFacebook) return;
     let isCancelled = false;
     async function checkLocal() {
       if (typeof window === "undefined") return;
-      if (
-        window.location.hostname === "localhost" ||
-        window.location.hostname === "127.0.0.1"
-      ) {
-        const candidates = getCandidateUrls(church?.streamKey, church?.slug);
-        for (const url of candidates) {
-          if (isCancelled) return;
-          const isLive = await probeLiveHls(url);
-          if (isLive && !isCancelled) {
-            setActiveUrl(url);
-            setIsLocalStream(true);
-            setHasError(false);
-            setErrorMessage("");
-            return;
-          }
+      const candidates = getCandidateUrls(church?.streamKey, church?.slug);
+      for (const url of candidates) {
+        if (isCancelled) return;
+        const isLive = await probeLiveHls(url);
+        if (isLive && !isCancelled) {
+          setActiveUrl(url);
+          setIsLocalStream(true);
+          setHasError(false);
+          setErrorMessage("");
+          return;
         }
       }
     }
@@ -211,7 +236,7 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
     return () => {
       isCancelled = true;
     };
-  }, [church?.streamKey, church?.slug, getCandidateUrls]);
+  }, [church?.streamKey, church?.slug, getCandidateUrls, isYouTube, isFacebook]);
 
   const handleProbeObs = async () => {
     const candidates = getCandidateUrls(church?.streamKey, church?.slug);
@@ -243,6 +268,16 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
 
   // Initialize HLS Stream
   useEffect(() => {
+    if (isYouTube || isFacebook) {
+      if (hlsRef.current) {
+        hlsRef.current.destroy();
+        hlsRef.current = null;
+      }
+      setIsPlaying(true);
+      setHasError(false);
+      return;
+    }
+
     const video = videoRef.current;
     if (!video) return;
 
@@ -332,7 +367,7 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
         hlsRef.current = null;
       }
     };
-  }, [activeUrl]);
+  }, [activeUrl, isYouTube, isFacebook, isLocalStream]);
 
   // Live synchronization state & pause tracking
   const lastPauseTimeRef = useRef<number>(0);
@@ -506,14 +541,32 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
       onMouseLeave={() => isPlaying && setShowControls(false)}
       className="relative w-full aspect-video bg-sanctuary-950 rounded-lg overflow-hidden border border-white/[0.08] shadow-sanctuary group select-none flex flex-col justify-between"
     >
-      {/* Underlying Video */}
-      <video
-        ref={videoRef}
-        poster={posterUrl}
-        playsInline
-        className="w-full h-full object-contain bg-black cursor-pointer"
-        onClick={togglePlay}
-      />
+      {/* Underlying Video or Embedded Stream (YouTube / Facebook) */}
+      {isYouTube && youtubeVideoId ? (
+        <iframe
+          src={buildYouTubeEmbedUrl(youtubeVideoId, true)}
+          className="w-full h-full border-0 bg-black"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowFullScreen
+          title={`Thờ Phượng Trực Tuyến - ${church?.name || "Hội Thánh"}`}
+        />
+      ) : isFacebook ? (
+        <iframe
+          src={buildFacebookEmbedUrl(activeUrl, true)}
+          className="w-full h-full border-0 bg-black"
+          allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+          allowFullScreen
+          title={`Thờ Phượng Trực Tuyến - ${church?.name || "Hội Thánh"}`}
+        />
+      ) : (
+        <video
+          ref={videoRef}
+          poster={posterUrl}
+          playsInline
+          className="w-full h-full object-contain bg-black cursor-pointer"
+          onClick={togglePlay}
+        />
+      )}
 
       {/* Top Banner Overlay inside Video: Sermon Title & Live Status */}
       <div
@@ -608,8 +661,8 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
         </div>
       )}
 
-      {/* Center Subtle Play Button (Visible on Pause) */}
-      {!isPlaying && (
+      {/* Center Subtle Play Button (Visible on Pause for native HLS video) */}
+      {!isYouTube && !isFacebook && !isPlaying && (
         <div
           onClick={togglePlay}
           className="absolute inset-0 flex items-center justify-center bg-black/35 cursor-pointer z-10"
@@ -702,11 +755,12 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
         )}
 
       {/* Bottom Minimalist Controls Bar */}
-      <div
-        className={`relative z-20 w-full px-4 py-3 bg-gradient-to-t from-black/90 via-black/60 to-transparent transition-opacity duration-300 ${
-          showControls || !isPlaying ? "opacity-100" : "opacity-0"
-        }`}
-      >
+      {!isYouTube && !isFacebook ? (
+        <div
+          className={`relative z-20 w-full px-4 py-3 bg-gradient-to-t from-black/90 via-black/60 to-transparent transition-opacity duration-300 ${
+            showControls || !isPlaying ? "opacity-100" : "opacity-0"
+          }`}
+        >
         <div className="flex items-center justify-between gap-3 text-sanctuary-200">
           {/* Left Controls: Play/Pause, Volume */}
           <div className="flex items-center gap-3">
@@ -901,6 +955,45 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
           </div>
         </div>
       </div>
+      ) : (
+        /* Floating mini-bar for YouTube / Facebook: CC, Focus Mode, Fullscreen */
+        <div className="absolute bottom-3 right-3 z-20 flex items-center gap-2 pointer-events-auto">
+          {liveLyrics?.isEnabled && (
+            <button
+              onClick={() => setShowLyricsSubtitle((prev) => !prev)}
+              className={`flex items-center gap-1 text-xs px-2.5 py-1 rounded border transition-colors shadow-lg ${
+                showLyricsSubtitle
+                  ? "bg-gold-400/30 border-gold-400/70 text-gold-300 font-medium"
+                  : "bg-black/75 border-white/15 text-sanctuary-300 hover:text-white"
+              }`}
+              title="Phụ đề lời bài hát (CC)"
+            >
+              <Music2 className="w-3.5 h-3.5 text-gold-400" />
+              <span className="text-[11px] font-sans">Lời</span>
+            </button>
+          )}
+
+          <button
+            onClick={toggleFocusMode}
+            className={`p-1.5 rounded border transition-colors shadow-lg ${
+              isFocusMode
+                ? "bg-gold-400/30 border-gold-400/70 text-gold-300"
+                : "bg-black/75 border-white/15 text-sanctuary-300 hover:text-gold-300"
+            }`}
+            title="Chế độ chiêm niệm thờ phượng"
+          >
+            {isFocusMode ? <EyeOff className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
+          </button>
+
+          <button
+            onClick={toggleFullscreen}
+            className="p-1.5 rounded bg-black/75 border border-white/15 text-sanctuary-300 hover:text-gold-300 transition-colors shadow-lg"
+            title="Toàn màn hình"
+          >
+            {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+          </button>
+        </div>
+      )}
     </div>
   );
 };

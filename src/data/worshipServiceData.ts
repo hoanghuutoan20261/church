@@ -77,8 +77,8 @@ export const worshipData: WorshipServiceInfo = {
   speakerTitle: "Quản nhiệm Hội Thánh",
   scriptureReference: "Ê-phê-sô 2:8-10",
   currentStage: "Giảng Luận Lời Chúa",
-  // Christian network stream (TBN)
-  streamUrl: "https://d7ge95bb03xsu.cloudfront.net/out/v1/0c95a89614194912834019fc37d741ef/tbn-freecast.m3u8",
+  // Stable test HLS stream that is publicly available
+  streamUrl: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
   fallbackPosterUrl:
     "https://images.unsplash.com/photo-1504052434569-70ad5836ab65?auto=format&fit=crop&w=1920&q=80",
   viewersCount: 1428,
