@@ -44,6 +44,7 @@ import {
   FolderOpen,
   ExternalLink,
   BookmarkCheck,
+  Bookmark,
   ArrowUp,
   ArrowDown,
   Info,
@@ -1401,7 +1402,7 @@ export const AdminLyricsPresenter: React.FC<AdminLyricsPresenterProps> = ({
                   {/* 1-Click Popular Sermon Passages */}
                   <div className="space-y-1.5 pt-1">
                     <span className="text-[11px] text-stone-400 font-serif flex items-center gap-1">
-                      <Sparkles className="w-3 h-3 text-[#c5a059]" />
+                      <Bookmark className="w-3 h-3 text-[#c5a059] fill-[#c5a059]/30 shrink-0" />
                       <span>Câu gốc bài giảng gợi ý:</span>
                     </span>
                     <div className="grid grid-cols-2 gap-1.5 max-h-36 overflow-y-auto pr-0.5">

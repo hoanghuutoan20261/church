@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongoose";
 import { Church } from "@/models/Church";
 import { getChurchAvatar } from "@/lib/churchAvatar";
+import { realtimeHub } from "@/lib/realtimeHub";
 
 export const dynamic = "force-dynamic";
 
@@ -25,10 +26,18 @@ export async function GET(req: NextRequest) {
         );
       }
 
+      const activeViewers = realtimeHub.getViewersCount(church.slug);
+
       return NextResponse.json({
         success: true,
         data: {
           ...church,
+          currentService: church.currentService
+            ? {
+                ...church.currentService,
+                viewersCount: Math.max(1, activeViewers || church.currentService.viewersCount || 1),
+              }
+            : undefined,
           profileConfig: {
             ...church.profileConfig,
             avatarUrl: getChurchAvatar(

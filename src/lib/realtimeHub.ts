@@ -43,10 +43,51 @@ export interface RealtimeServiceStatus {
 export type RealtimeEventCallback = (data: any) => void;
 
 class ChurchRealtimeHub extends EventEmitter {
+  private activeViewers: Map<string, Set<string>> = new Map();
+
   constructor() {
     super();
     // Allow large numbers of concurrent listeners across sanctuary viewers
     this.setMaxListeners(5000);
+  }
+
+  addViewer(churchSlug: string, clientId: string): number {
+    const slug = churchSlug.toLowerCase().trim();
+    if (!this.activeViewers.has(slug)) {
+      this.activeViewers.set(slug, new Set());
+    }
+    this.activeViewers.get(slug)!.add(clientId);
+    const count = this.activeViewers.get(slug)!.size;
+    this.emitViewers(slug, count);
+    return count;
+  }
+
+  removeViewer(churchSlug: string, clientId: string): number {
+    const slug = churchSlug.toLowerCase().trim();
+    if (this.activeViewers.has(slug)) {
+      this.activeViewers.get(slug)!.delete(clientId);
+      const count = this.activeViewers.get(slug)!.size;
+      this.emitViewers(slug, count);
+      return count;
+    }
+    return 0;
+  }
+
+  getViewersCount(churchSlug: string): number {
+    const slug = churchSlug.toLowerCase().trim();
+    return this.activeViewers.get(slug)?.size || 0;
+  }
+
+  emitViewers(churchSlug: string, count: number) {
+    const slug = churchSlug.toLowerCase().trim();
+    this.emit(`viewers:${slug}`, count);
+    this.emit(`all:${slug}`, { type: "viewers", count });
+  }
+
+  onViewers(churchSlug: string, listener: (count: number) => void) {
+    const channel = `viewers:${churchSlug.toLowerCase().trim()}`;
+    this.on(channel, listener);
+    return () => this.off(channel, listener);
   }
 
   emitChat(churchSlug: string, message: RealtimeChatMessage) {

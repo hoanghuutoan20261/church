@@ -96,30 +96,49 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
     referenceTranslation?: string;
   } | null>(null);
   const [showLyricsSubtitle, setShowLyricsSubtitle] = useState<boolean>(true);
+  const [liveViewersCount, setLiveViewersCount] = useState<number>(
+    church?.currentService?.viewersCount || 1
+  );
 
-  // Real-time live lyrics / subtitle synchronization via Server-Sent Events (SSE)
+  // Synchronize when church context updates viewersCount
+  useEffect(() => {
+    if (church?.currentService?.viewersCount && church.currentService.viewersCount > 0) {
+      setLiveViewersCount(church.currentService.viewersCount);
+    }
+  }, [church?.currentService?.viewersCount]);
+
+  // Real-time live lyrics & viewers count synchronization via Server-Sent Events (SSE)
   useEffect(() => {
     const slug = church?.slug;
     if (!slug) return;
 
     let isMounted = true;
 
-    // Initial load: fetch current live lyrics state from MongoDB
-    const fetchLyrics = async () => {
+    // Initial load: fetch current live lyrics state and church info from MongoDB
+    const fetchStatusAndLyrics = async () => {
       try {
-        const res = await fetch(`/api/lyrics?slug=${encodeURIComponent(slug)}`, {
-          cache: "no-store",
-        });
-        if (res.ok) {
-          const data = await res.json();
+        const [lyricsRes, churchRes] = await Promise.all([
+          fetch(`/api/lyrics?slug=${encodeURIComponent(slug)}`, { cache: "no-store" }),
+          fetch(`/api/churches?slug=${encodeURIComponent(slug)}`, { cache: "no-store" }),
+        ]);
+
+        if (lyricsRes.ok) {
+          const data = await lyricsRes.json();
           if (isMounted && data.success && data.liveLyrics) {
             setLiveLyrics(data.liveLyrics);
+          }
+        }
+
+        if (churchRes.ok) {
+          const cData = await churchRes.json();
+          if (isMounted && cData.success && cData.data?.currentService?.viewersCount) {
+            setLiveViewersCount(cData.data.currentService.viewersCount);
           }
         }
       } catch { }
     };
 
-    fetchLyrics();
+    fetchStatusAndLyrics();
 
     let eventSource: EventSource | null = null;
     let fallbackPollTimer: NodeJS.Timeout | null = null;
@@ -127,7 +146,7 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
     if (typeof window !== "undefined" && "EventSource" in window) {
       try {
         eventSource = new EventSource(
-          `/api/realtime?churchSlug=${encodeURIComponent(slug)}&channel=lyrics`
+          `/api/realtime?churchSlug=${encodeURIComponent(slug)}&channel=all`
         );
 
         eventSource.addEventListener("lyrics", (e: MessageEvent) => {
@@ -136,6 +155,26 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
             const data = JSON.parse(e.data);
             if (data) {
               setLiveLyrics(data);
+            }
+          } catch { }
+        });
+
+        eventSource.addEventListener("viewers", (e: MessageEvent) => {
+          if (!isMounted) return;
+          try {
+            const data = JSON.parse(e.data);
+            if (data && typeof data.viewersCount === "number") {
+              setLiveViewersCount(Math.max(1, data.viewersCount));
+            }
+          } catch { }
+        });
+
+        eventSource.addEventListener("status", (e: MessageEvent) => {
+          if (!isMounted) return;
+          try {
+            const data = JSON.parse(e.data);
+            if (data && typeof data.viewersCount === "number" && data.viewersCount > 0) {
+              setLiveViewersCount(Math.max(1, data.viewersCount));
             }
           } catch { }
         });
@@ -149,14 +188,14 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
 
         eventSource.onerror = () => {
           if (!fallbackPollTimer && isMounted) {
-            fallbackPollTimer = setInterval(fetchLyrics, 10000);
+            fallbackPollTimer = setInterval(fetchStatusAndLyrics, 10000);
           }
         };
       } catch {
-        fallbackPollTimer = setInterval(fetchLyrics, 8000);
+        fallbackPollTimer = setInterval(fetchStatusAndLyrics, 8000);
       }
     } else {
-      fallbackPollTimer = setInterval(fetchLyrics, 5000);
+      fallbackPollTimer = setInterval(fetchStatusAndLyrics, 5000);
     }
 
     return () => {
@@ -853,21 +892,25 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
             </button>
           )}
 
-          <div className="hidden md:flex items-center gap-1.5 text-xs text-sanctuary-300 bg-black/50 px-2.5 py-1 rounded border border-white/[0.06]">
-            <Users className="w-3.5 h-3.5 text-sanctuary-400" />
-            <span>{worshipData.viewersCount.toLocaleString("vi-VN")} đang hiệp ý</span>
+          <div className="flex items-center gap-1.5 text-xs text-sanctuary-300 bg-black/50 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded border border-white/[0.06]">
+            <Users className="w-3.5 h-3.5 text-sanctuary-400 shrink-0" />
+            <span className="text-[11px] sm:text-xs">
+              {Math.max(1, liveViewersCount).toLocaleString("vi-VN")} đang hiệp ý
+            </span>
           </div>
         </div>
 
         {/* Sermon Details on Top Right */}
         <div className="text-right pointer-events-none">
           <p className="text-xs text-gold-300/90 font-serif font-medium tracking-wide">
-            {worshipData.speakerTitle}: {worshipData.speaker}
+            {church.currentService?.speakerTitle || worshipData.speakerTitle}:{" "}
+            {church.currentService?.speaker || worshipData.speaker}
           </p>
-          <p className="text-[11px] text-sanctuary-400 font-sans">
-            Kinh Thánh:{" "}
+          <p className="text-[11px] text-sanctuary-400 font-sans flex items-center justify-end gap-1">
+            <BookOpen className="w-3 h-3 text-gold-400/90 shrink-0" />
+            <span>Kinh Thánh: </span>
             <span className="text-sanctuary-200 font-medium">
-              {worshipData.scriptureReference}
+              {church.currentService?.scriptureReference || worshipData.scriptureReference}
             </span>
           </p>
         </div>

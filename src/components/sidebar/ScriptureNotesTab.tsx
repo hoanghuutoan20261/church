@@ -276,7 +276,7 @@ export const ScriptureNotesTab: React.FC = () => {
           className="px-2 py-1 rounded bg-gold-400/15 hover:bg-gold-400/25 border border-gold-400/30 text-[11px] font-serif text-gold-300 flex items-center gap-1 transition-colors cursor-pointer"
           title="Nhảy đến phân đoạn Kinh Thánh của bài giảng hôm nay"
         >
-          <Sparkles className="w-3 h-3 text-gold-400" />
+          <Bookmark className="w-3 h-3 text-gold-400 fill-gold-400/30 shrink-0" />
           <span className="hidden sm:inline">Câu gốc bài giảng</span>
         </button>
       </div>

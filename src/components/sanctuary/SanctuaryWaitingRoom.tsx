@@ -90,7 +90,8 @@ export const SanctuaryWaitingRoom: React.FC = () => {
             <strong className="text-stone-200 font-serif">{speaker}</strong>
           </span>
           <span className="text-stone-600 hidden sm:inline">•</span>
-          <span className="flex items-center gap-1">
+          <span className="flex items-center gap-1.5">
+            <BookOpen className="w-3.5 h-3.5 text-[#c5a059] shrink-0" />
             <span className="text-stone-500">Kinh Thánh:</span>
             <strong className="text-[#c5a059] font-serif">{scripture}</strong>
           </span>

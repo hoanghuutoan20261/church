@@ -36,13 +36,24 @@ export async function GET(req: NextRequest) {
     }
   };
 
+  const clientId = crypto.randomUUID();
+  const currentViewers = realtimeHub.addViewer(churchSlug, clientId);
+
   // Initial connection ready confirmation
   safeWrite(
     `event: ready\ndata: ${JSON.stringify({
       connected: true,
       churchSlug,
       channel,
+      viewersCount: currentViewers,
       timestamp: new Date().toISOString(),
+    })}\n\n`
+  );
+
+  // Send initial viewers count event
+  safeWrite(
+    `event: viewers\ndata: ${JSON.stringify({
+      viewersCount: currentViewers,
     })}\n\n`
   );
 
@@ -58,7 +69,7 @@ export async function GET(req: NextRequest) {
               title: churchDoc.currentService?.title || "",
               speaker: churchDoc.currentService?.speaker || "",
               speakerTitle: churchDoc.currentService?.speakerTitle || "Diễn giả",
-              viewersCount: churchDoc.currentService?.viewersCount || 0,
+              viewersCount: currentViewers,
               scriptureReference: churchDoc.currentService?.scriptureReference || "",
               welcomeMessage: churchDoc.currentService?.welcomeMessage || "",
               streamType: churchDoc.streamType || "youtube",
@@ -76,6 +87,11 @@ export async function GET(req: NextRequest) {
   let unsubscribeChat: (() => void) | null = null;
   let unsubscribeLyrics: (() => void) | null = null;
   let unsubscribeStatus: (() => void) | null = null;
+  let unsubscribeViewers: (() => void) | null = null;
+
+  unsubscribeViewers = realtimeHub.onViewers(churchSlug, (count) => {
+    safeWrite(`event: viewers\ndata: ${JSON.stringify({ viewersCount: count })}\n\n`);
+  });
 
   if (channel === "all" || channel === "chat") {
     unsubscribeChat = realtimeHub.onChat(churchSlug, (message) => {
@@ -108,9 +124,11 @@ export async function GET(req: NextRequest) {
   req.signal.addEventListener("abort", () => {
     isClosed = true;
     clearInterval(heartbeatInterval);
+    realtimeHub.removeViewer(churchSlug, clientId);
     if (unsubscribeChat) unsubscribeChat();
     if (unsubscribeLyrics) unsubscribeLyrics();
     if (unsubscribeStatus) unsubscribeStatus();
+    if (unsubscribeViewers) unsubscribeViewers();
     writer.close().catch(() => {});
   });
 
