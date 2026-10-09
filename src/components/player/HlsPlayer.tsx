@@ -411,11 +411,21 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
       const hls = new Hls({
         enableWorker: true,
         lowLatencyMode: true,
-        backBufferLength: 30,
-        maxLiveSyncPlaybackRate: 1.5,
-        liveSyncDurationCount: 2,
-        liveMaxLatencyDurationCount: 3,
+        backBufferLength: 0, // In live broadcast with short windows, don't store expired segments
+        liveSyncDurationCount: 3, // Safe live sync margin
+        liveMaxLatencyDurationCount: 6, // Catch up smoothly
+        maxLiveSyncPlaybackRate: 1.25,
         liveDurationInfinity: true,
+        maxBufferLength: 20,
+        maxMaxBufferLength: 40,
+        nudgeOffset: 0.2, // Auto-nudge past minor decoding holes
+        nudgeMaxRetry: 5,
+        manifestLoadingTimeOut: 10000,
+        manifestLoadingMaxRetry: 10,
+        levelLoadingTimeOut: 10000,
+        levelLoadingMaxRetry: 10,
+        fragLoadingTimeOut: 10000,
+        fragLoadingMaxRetry: 10,
       });
 
       hlsRef.current = hls;
@@ -454,39 +464,68 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
       });
 
       hls.on(Hls.Events.ERROR, (event, data) => {
-        if (data.fatal) {
-          switch (data.type) {
-            case Hls.ErrorTypes.NETWORK_ERROR:
-              // For OBS live stream, continuously retry loading segments without falling back to test stream
-              if (isLocalStream || isAdminPreview || activeUrl.includes("/live/")) {
-                console.warn("Đang nạp phân đoạn OBS...", activeUrl);
-                setTimeout(() => {
-                  if (hlsRef.current) hlsRef.current.startLoad();
-                }, 1200);
-                break;
-              }
-              // If current stream fails and it wasn't the backup, switch to backup test stream
-              if (activeUrl !== worshipData.streamUrl) {
-                console.warn(
-                  "Luồng phát trực tiếp chưa lên sóng, chuyển đổi dự phòng video kiểm thử:",
-                  activeUrl
-                );
-                setActiveUrl(worshipData.streamUrl);
-                hls.loadSource(worshipData.streamUrl);
-                hls.startLoad();
-                break;
-              }
-              hls.startLoad();
-              break;
-            case Hls.ErrorTypes.MEDIA_ERROR:
-              hls.recoverMediaError();
-              break;
-            default:
-              setHasError(true);
-              setErrorMessage("Đang kết nối lại luồng thờ phượng trực tuyến...");
-              hls.destroy();
-              break;
+        // 1. Non-fatal stall / buffer hole errors: immediately jump to live edge
+        if (!data.fatal) {
+          if (
+            data.details === Hls.ErrorDetails.BUFFER_STALLED_ERROR ||
+            data.details === Hls.ErrorDetails.BUFFER_NUDGE_ON_STALL ||
+            data.details === Hls.ErrorDetails.BUFFER_SEEK_OVER_HOLE
+          ) {
+            console.warn("HLS buffer stall / gap detected, auto-resyncing to live edge...");
+            if (hlsRef.current) {
+              hlsRef.current.startLoad();
+            }
+            jumpToLive();
+            if (videoRef.current?.paused) {
+              videoRef.current.play().catch(() => {});
+            }
           }
+          return;
+        }
+
+        // 2. Fatal errors
+        switch (data.type) {
+          case Hls.ErrorTypes.NETWORK_ERROR:
+            console.warn("HLS network error (segment/manifest 404), retrying live load...", data.details);
+            setTimeout(() => {
+              if (hlsRef.current) {
+                hlsRef.current.startLoad();
+                jumpToLive();
+              }
+            }, 1000);
+            break;
+          case Hls.ErrorTypes.MEDIA_ERROR:
+            console.warn("HLS media decode error, attempting media error recovery...", data.details);
+            hls.recoverMediaError();
+            setTimeout(() => {
+              jumpToLive();
+              if (videoRef.current?.paused) {
+                videoRef.current.play().catch(() => {});
+              }
+            }, 500);
+            break;
+          default:
+            console.warn("Fatal unrecoverable HLS error, soft-restarting stream in 1.5s...", data.details);
+            hls.destroy();
+            setTimeout(() => {
+              if (videoRef.current && activeUrl) {
+                const newHls = new Hls({
+                  enableWorker: true,
+                  lowLatencyMode: true,
+                  backBufferLength: 0,
+                  liveSyncDurationCount: 3,
+                  liveMaxLatencyDurationCount: 6,
+                  maxLiveSyncPlaybackRate: 1.25,
+                  liveDurationInfinity: true,
+                  nudgeOffset: 0.2,
+                  nudgeMaxRetry: 5,
+                });
+                hlsRef.current = newHls;
+                newHls.loadSource(activeUrl);
+                newHls.attachMedia(videoRef.current);
+              }
+            }, 1500);
+            break;
         }
       });
     } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
@@ -527,15 +566,18 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
       } else if (video.seekable && video.seekable.length > 0) {
         const liveEnd = video.seekable.end(video.seekable.length - 1);
         video.currentTime = Math.max(0, liveEnd - 0.5);
+      } else {
+        hls.loadSource(activeUrl);
+        hls.startLoad();
       }
     } else if (video.seekable && video.seekable.length > 0) {
       const liveEnd = video.seekable.end(video.seekable.length - 1);
       video.currentTime = Math.max(0, liveEnd - 0.5);
     }
     setIsBehindLive(false);
-  }, []);
+  }, [activeUrl]);
 
-  // Monitor live distance to detect if user has lagged behind
+  // Monitor live distance: if user falls behind (> 12s), auto-resync to live edge so segments don't 404!
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
@@ -545,25 +587,105 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
       if (hls && typeof hls.liveSyncPosition === "number" && hls.liveSyncPosition > 0) {
         const distance = hls.liveSyncPosition - video.currentTime;
         setIsBehindLive(distance > 5);
+        if (distance > 12) {
+          console.warn(`Lag distance is ${distance.toFixed(1)}s (segments expired). Auto-resyncing to live!`);
+          jumpToLive();
+        }
       } else if (video.seekable && video.seekable.length > 0) {
         const liveEnd = video.seekable.end(video.seekable.length - 1);
         const distance = liveEnd - video.currentTime;
         setIsBehindLive(distance > 5);
+        if (distance > 12) {
+          jumpToLive();
+        }
       }
     };
 
     const interval = setInterval(checkLiveDistance, 2500);
     return () => clearInterval(interval);
-  }, []);
+  }, [jumpToLive]);
 
-  // Video State listeners
+  // Tab Visibility & Focus Auto-Recovery:
+  // When user returns to tab after switching tabs or minimizing, immediately wake up and jump to live!
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        const video = videoRef.current;
+        const hls = hlsRef.current;
+        if (!video) return;
+
+        console.log("Tab returned to foreground! Checking live stream health...");
+
+        if (hls) {
+          hls.startLoad();
+          jumpToLive();
+          if (video.paused) {
+            video.play().catch(() => {
+              // If unmuted autoplay blocked by browser policy, try muted
+              video.muted = true;
+              setIsMuted(true);
+              video.play().catch(() => {});
+            });
+          }
+        } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+          if (video.seekable && video.seekable.length > 0) {
+            video.currentTime = Math.max(0, video.seekable.end(video.seekable.length - 1) - 0.5);
+          }
+          if (video.paused) {
+            video.play().catch(() => {});
+          }
+        }
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleVisibilityChange);
+    };
+  }, [jumpToLive]);
+
+  // Freeze / Black Screen Watchdog:
+  // Automatically detects if video playback is frozen on black screen while supposedly playing
+  useEffect(() => {
+    let lastTime = 0;
+    let freezeCount = 0;
+
+    const watchdog = setInterval(() => {
+      const video = videoRef.current;
+      const hls = hlsRef.current;
+      if (!video || !hls || document.visibilityState !== "visible") return;
+
+      if (!video.paused && !video.ended) {
+        if (video.currentTime === lastTime && video.currentTime > 0) {
+          freezeCount++;
+          // Stuck on exact same timestamp for >= 3 seconds
+          if (freezeCount >= 2) {
+            console.warn("Live stream freeze/black screen detected. Auto-recovering...");
+            freezeCount = 0;
+            hls.startLoad();
+            jumpToLive();
+            video.play().catch(() => {});
+          }
+        } else {
+          lastTime = video.currentTime;
+          freezeCount = 0;
+        }
+      }
+    }, 2000);
+
+    return () => clearInterval(watchdog);
+  }, [jumpToLive]);
+
+  // Video State listeners & buffer stall recovery
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
 
     const onPlay = () => {
       setIsPlaying(true);
-      // If resuming after a pause of more than 2 seconds, auto-jump to live edge!
       const timePaused = Date.now() - lastPauseTimeRef.current;
       if (lastPauseTimeRef.current > 0 && timePaused > 2000) {
         if (timePaused > 8000 && hlsRef.current) {
@@ -585,14 +707,31 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
       setIsMuted(video.muted);
     };
 
+    const onWaiting = () => {
+      if (hlsRef.current) {
+        hlsRef.current.startLoad();
+      }
+    };
+
+    const onStalled = () => {
+      if (hlsRef.current) {
+        hlsRef.current.startLoad();
+        jumpToLive();
+      }
+    };
+
     video.addEventListener("play", onPlay);
     video.addEventListener("pause", onPause);
     video.addEventListener("volumechange", onVolumeChange);
+    video.addEventListener("waiting", onWaiting);
+    video.addEventListener("stalled", onStalled);
 
     return () => {
       video.removeEventListener("play", onPlay);
       video.removeEventListener("pause", onPause);
       video.removeEventListener("volumechange", onVolumeChange);
+      video.removeEventListener("waiting", onWaiting);
+      video.removeEventListener("stalled", onStalled);
     };
   }, [activeUrl, jumpToLive]);
 
