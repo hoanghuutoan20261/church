@@ -5,7 +5,7 @@
  */
 
 export const DEFAULT_STREAM_SERVER_BASE_URL =
-  process.env.NEXT_PUBLIC_STREAM_SERVER_URL || "http://169.58.235.90:8080/live";
+  process.env.NEXT_PUBLIC_STREAM_SERVER_URL || "/live";
 
 /**
  * Extracts a YouTube 11-character video ID from diverse URL formats or bare IDs:
@@ -103,5 +103,5 @@ export function buildHlsStreamUrl(
     process.env.NEXT_PUBLIC_STREAM_SERVER_URL || DEFAULT_STREAM_SERVER_BASE_URL;
   const cleanBase = rawBase.replace(/\/+$/, "");
 
-  return `${cleanBase}/${encodeURIComponent(streamKey.trim())}.m3u8`;
+  return `${cleanBase}/${encodeURIComponent(streamKey.trim())}/index.m3u8`;
 }

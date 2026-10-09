@@ -273,6 +273,7 @@ export default function ChurchAdminDashboard() {
   });
   const [isSavingStream, setIsSavingStream] = useState(false);
   const [streamSaveSuccess, setStreamSaveSuccess] = useState("");
+  const [isProbingObs, setIsProbingObs] = useState(false);
 
   const [bankForm, setBankForm] = useState({
     bankName: "MB Bank",
@@ -502,6 +503,76 @@ export default function ChurchAdminDashboard() {
       alert("Lỗi khi kết nối với máy chủ để lưu cấu hình nguồn phát.");
     } finally {
       setIsSavingStream(false);
+    }
+  };
+
+  // Handle auto-discovered OBS stream URL from player probe
+  const handleObsStreamFound = async (foundUrl: string) => {
+    if (!church || !foundUrl) return;
+    if (streamSettingsForm.streamUrl !== foundUrl) {
+      setStreamSettingsForm((prev) => ({
+        ...prev,
+        streamType: "mediamtx",
+        streamUrl: foundUrl,
+      }));
+      try {
+        await fetch("/api/admin/church", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            churchSlug: church.slug,
+            streamType: "mediamtx",
+            streamUrl: foundUrl,
+          }),
+        });
+        setStreamSaveSuccess("Đã tự động bắt & lưu luồng OBS trực tiếp!");
+        setTimeout(() => setStreamSaveSuccess(""), 4000);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+  };
+
+  // Manually probe and capture OBS stream directly from server or local
+  const handleManualProbeObs = async () => {
+    if (!church) return;
+    setIsProbingObs(true);
+    setStreamSaveSuccess("");
+    try {
+      const res = await fetch(
+        `/api/stream/probe?key=${encodeURIComponent(church.streamKey || "")}&slug=${encodeURIComponent(church.slug || "")}`
+      );
+      const data = await res.json();
+      if (data.isLive && data.streamUrl) {
+        setStreamSettingsForm((prev) => ({
+          ...prev,
+          streamType: "mediamtx",
+          streamUrl: data.streamUrl,
+        }));
+        await fetch("/api/admin/church", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            churchSlug: church.slug,
+            streamType: "mediamtx",
+            streamUrl: data.streamUrl,
+          }),
+        });
+        setStreamSaveSuccess("Đã bắt và lưu thành công luồng OBS trực tiếp!");
+        setTimeout(() => setStreamSaveSuccess(""), 4000);
+      } else {
+        const host =
+          typeof window !== "undefined" && window.location.hostname
+            ? window.location.hostname
+            : "hoithanhvn.com";
+        alert(
+          `Chưa nhận được tín hiệu từ OBS!\n\nXin hãy kiểm tra:\n1. Mở phần mềm OBS Studio -> Cài đặt (Settings) -> Luồng (Stream):\n   - Dịch vụ (Service): Tự chọn... (Custom...)\n   - Máy chủ (Server): rtmp://${host}:1935/live\n   - Khóa luồng (Stream Key): ${church.streamKey}\n2. Bấm 'Bắt đầu phát luồng' (Start Streaming) trong OBS rồi thử lại.`
+        );
+      }
+    } catch {
+      alert("Lỗi khi kết nối tới máy chủ dò luồng.");
+    } finally {
+      setIsProbingObs(false);
     }
   };
 
@@ -1138,6 +1209,7 @@ export default function ChurchAdminDashboard() {
                         <HlsPlayer
                           isAdminPreview={!serviceForm.isLive}
                           streamUrl={streamSettingsForm.streamUrl || church.streamUrl}
+                          onStreamUrlFound={handleObsStreamFound}
                         />
                       </div>
 
@@ -1339,6 +1411,42 @@ export default function ChurchAdminDashboard() {
                                 )}
                               </button>
                             </div>
+                          </div>
+
+                          {/* Live Probe & Sync Button for OBS */}
+                          <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-stone-900/60 p-3 rounded-lg border border-stone-800">
+                            <div className="space-y-0.5">
+                              <p className="text-xs font-semibold text-stone-200 flex items-center gap-1.5">
+                                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                                <span>Kiểm tra & Bắt luồng phát OBS:</span>
+                              </p>
+                              <p className="text-[11px] text-stone-400">
+                                Sau khi bấm Start Streaming trên OBS, bấm nút để hệ thống tự động bắt và lưu luồng.
+                              </p>
+                              {streamSettingsForm.streamUrl && (
+                                <p className="text-[11px] text-emerald-400 font-mono truncate">
+                                  ✓ Đang đồng bộ: {streamSettingsForm.streamUrl}
+                                </p>
+                              )}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={handleManualProbeObs}
+                              disabled={isProbingObs}
+                              className="px-4 py-2.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-stone-950 font-serif font-bold text-xs flex items-center justify-center gap-1.5 transition-colors shadow-md disabled:opacity-50 cursor-pointer shrink-0"
+                            >
+                              {isProbingObs ? (
+                                <>
+                                  <div className="w-3.5 h-3.5 border-2 border-stone-950 border-t-transparent rounded-full animate-spin" />
+                                  <span>Đang kiểm tra luồng...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Radio className="w-3.5 h-3.5" />
+                                  <span>Bắt Luồng OBS & Tự Động Lưu</span>
+                                </>
+                              )}
+                            </button>
                           </div>
                         </div>
                       )}

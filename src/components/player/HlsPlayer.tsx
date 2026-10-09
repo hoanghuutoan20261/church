@@ -33,12 +33,14 @@ interface HlsPlayerProps {
   streamUrl?: string;
   posterUrl?: string;
   isAdminPreview?: boolean;
+  onStreamUrlFound?: (url: string) => void;
 }
 
 export const HlsPlayer: React.FC<HlsPlayerProps> = ({
   streamUrl,
   posterUrl = worshipData.fallbackPosterUrl,
   isAdminPreview = false,
+  onStreamUrlFound,
 }) => {
   const { church, isFocusMode, toggleFocusMode } = useWorship();
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -165,28 +167,51 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
 
   const [probeSuccessMessage, setProbeSuccessMessage] = useState<string>("");
 
-  // Helper to resolve candidate local & LAN HLS URLs
+  // Helper to resolve candidate local, LAN, and HTTPS reverse-proxied HLS URLs
   const getCandidateUrls = useCallback(
     (streamKey?: string, slug?: string) => {
       const keys = [
         streamKey,
         slug,
+        "tinlanhlamson-live",
+        "tinlanhlamson",
         "emmanuel-live",
         "emmanuel",
         "lbs-sunday",
       ].filter(Boolean) as string[];
 
       const urls: string[] = [];
+      const isClient = typeof window !== "undefined";
+      const origin = isClient ? window.location.origin : "";
       const currentHost =
-        typeof window !== "undefined" ? window.location.hostname : "localhost";
+        isClient && window.location.hostname ? window.location.hostname : "localhost";
+      const protocol = isClient ? window.location.protocol : "http:";
 
       for (const k of keys) {
-        if (currentHost && currentHost !== "localhost" && currentHost !== "127.0.0.1") {
-          urls.push(`http://${currentHost}:8888/live/${k}/index.m3u8`);
-          urls.push(`http://${currentHost}:8888/${k}/index.m3u8`);
+        // Priority 1: Current Origin via HTTPS (Standard reverse proxy paths)
+        // Solves Mixed Content blocking on HTTPS production websites
+        if (origin) {
+          urls.push(`${origin}/live/live/${k}/index.m3u8`);
+          urls.push(`${origin}/live/${k}/index.m3u8`);
+          urls.push(`/live/live/${k}/index.m3u8`);
+          urls.push(`/live/${k}/index.m3u8`);
         }
-        urls.push(`http://localhost:8888/live/${k}/index.m3u8`);
-        urls.push(`http://localhost:8888/${k}/index.m3u8`);
+
+        // Priority 2: Direct port 8888 (works on LAN or when accessing direct IP over HTTP)
+        if (currentHost && currentHost !== "localhost" && currentHost !== "127.0.0.1") {
+          urls.push(`${protocol}//${currentHost}:8888/live/${k}/index.m3u8`);
+          urls.push(`${protocol}//${currentHost}:8888/${k}/index.m3u8`);
+          if (protocol === "http:") {
+            urls.push(`http://${currentHost}:8888/live/${k}/index.m3u8`);
+            urls.push(`http://${currentHost}:8888/${k}/index.m3u8`);
+          }
+        }
+
+        // Priority 3: Localhost port 8888 (development mode)
+        if (protocol === "http:" || currentHost === "localhost" || currentHost === "127.0.0.1") {
+          urls.push(`http://localhost:8888/live/${k}/index.m3u8`);
+          urls.push(`http://localhost:8888/${k}/index.m3u8`);
+        }
       }
       return Array.from(new Set(urls));
     },
@@ -196,7 +221,7 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
   const probeLiveHls = async (url: string): Promise<boolean> => {
     try {
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 1800);
+      const timer = setTimeout(() => controller.abort(), 2000);
       const res = await fetch(url, {
         method: "GET",
         cache: "no-store",
@@ -213,12 +238,33 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
     return false;
   };
 
-  // Auto probe local/LAN OBS stream on mount or when streamKey changes (for HLS mode)
+  // Auto probe OBS stream on mount or when streamKey changes (for HLS mode)
   useEffect(() => {
     if (isYouTube || isFacebook) return;
     let isCancelled = false;
     async function checkLocal() {
       if (typeof window === "undefined") return;
+
+      // First check server probe API
+      try {
+        const probeRes = await fetch(
+          `/api/stream/probe?key=${encodeURIComponent(church?.streamKey || "")}&slug=${encodeURIComponent(church?.slug || "")}`,
+          { cache: "no-store", signal: AbortSignal.timeout(2500) }
+        );
+        if (probeRes.ok) {
+          const data = await probeRes.json();
+          if (data.isLive && data.streamUrl && !isCancelled) {
+            setActiveUrl(data.streamUrl);
+            setIsLocalStream(true);
+            setHasError(false);
+            setErrorMessage("");
+            if (onStreamUrlFound) onStreamUrlFound(data.streamUrl);
+            return;
+          }
+        }
+      } catch {}
+
+      // Fallback: probe candidate URLs directly in browser
       const candidates = getCandidateUrls(church?.streamKey, church?.slug);
       for (const url of candidates) {
         if (isCancelled) return;
@@ -228,6 +274,7 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
           setIsLocalStream(true);
           setHasError(false);
           setErrorMessage("");
+          if (onStreamUrlFound) onStreamUrlFound(url);
           return;
         }
       }
@@ -236,9 +283,38 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
     return () => {
       isCancelled = true;
     };
-  }, [church?.streamKey, church?.slug, getCandidateUrls, isYouTube, isFacebook]);
+  }, [church?.streamKey, church?.slug, getCandidateUrls, isYouTube, isFacebook, onStreamUrlFound]);
 
   const handleProbeObs = async () => {
+    // 1. Try server-side probe endpoint first (bypasses browser mixed content / CORS)
+    try {
+      const probeRes = await fetch(
+        `/api/stream/probe?key=${encodeURIComponent(church?.streamKey || "")}&slug=${encodeURIComponent(church?.slug || "")}`,
+        { cache: "no-store", signal: AbortSignal.timeout(3000) }
+      );
+      if (probeRes.ok) {
+        const data = await probeRes.json();
+        if (data.isLive && data.streamUrl) {
+          setActiveUrl(data.streamUrl);
+          setIsLocalStream(true);
+          setHasError(false);
+          setErrorMessage("");
+          if (hlsRef.current) {
+            hlsRef.current.loadSource(data.streamUrl);
+            hlsRef.current.startLoad();
+          }
+          if (videoRef.current) {
+            videoRef.current.play().catch(() => {});
+          }
+          if (onStreamUrlFound) onStreamUrlFound(data.streamUrl);
+          setProbeSuccessMessage("Đã bắt thành công luồng OBS trực tiếp!");
+          setTimeout(() => setProbeSuccessMessage(""), 4000);
+          return;
+        }
+      }
+    } catch {}
+
+    // 2. Direct browser candidates probe
     const candidates = getCandidateUrls(church?.streamKey, church?.slug);
     for (const url of candidates) {
       const isLive = await probeLiveHls(url);
@@ -254,15 +330,20 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
         if (videoRef.current) {
           videoRef.current.play().catch(() => {});
         }
+        if (onStreamUrlFound) onStreamUrlFound(url);
         setProbeSuccessMessage("Đã bắt thành công luồng OBS trực tiếp!");
         setTimeout(() => setProbeSuccessMessage(""), 4000);
         return;
       }
     }
 
-    const key = church?.streamKey || "emmanuel-live";
+    const key = church?.streamKey || "tinlanhlamson-live";
+    const currentHost =
+      typeof window !== "undefined" && window.location.hostname
+        ? window.location.hostname
+        : "hoithanhvn.com";
     alert(
-      `Chưa nhận được tín hiệu từ OBS!\n\nXin hãy kiểm tra:\n1. Mở phần mềm OBS Studio -> Settings -> Stream:\n   - Service: Custom...\n   - Server: rtmp://localhost:1935/live\n   - Stream Key: ${key}\n2. Bấm 'Start Streaming' trong OBS rồi bấm lại nút này.`
+      `Chưa nhận được tín hiệu từ OBS!\n\nXin hãy kiểm tra:\n1. Mở phần mềm OBS Studio -> Cài đặt (Settings) -> Luồng (Stream):\n   - Dịch vụ (Service): Tự chọn... (Custom...)\n   - Máy chủ (Server): rtmp://${currentHost}:1935/live\n   - Khóa luồng (Stream Key): ${key}\n2. Bấm 'Bắt đầu phát luồng' (Start Streaming) trong OBS rồi bấm lại nút này.`
     );
   };
 
