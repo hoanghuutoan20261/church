@@ -48,7 +48,7 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
   const hlsRef = useRef<Hls | null>(null);
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const effectiveStreamUrl =
+  const rawStreamUrl =
     streamUrl ||
     church?.streamUrl ||
     (church?.streamKey
@@ -56,6 +56,11 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
           ? church.streamKey
           : buildHlsStreamUrl(church.streamKey))
       : worshipData.streamUrl);
+
+  // Automatically clean erroneous double "/live/live/" prefix to standard "/live/"
+  const effectiveStreamUrl = rawStreamUrl
+    ? rawStreamUrl.replace(/\/live\/live\//g, "/live/")
+    : "";
 
   const [activeUrl, setActiveUrl] = useState<string>(effectiveStreamUrl);
 
@@ -191,10 +196,10 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
         // Priority 1: Current Origin via HTTPS (Standard reverse proxy paths)
         // Solves Mixed Content blocking on HTTPS production websites
         if (origin) {
-          urls.push(`${origin}/live/live/${k}/index.m3u8`);
           urls.push(`${origin}/live/${k}/index.m3u8`);
-          urls.push(`/live/live/${k}/index.m3u8`);
           urls.push(`/live/${k}/index.m3u8`);
+          urls.push(`${origin}/live/live/${k}/index.m3u8`);
+          urls.push(`/live/live/${k}/index.m3u8`);
         }
 
         // Priority 2: Direct port 8888 (works on LAN or when accessing direct IP over HTTP)
@@ -384,6 +389,21 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
           index,
         }));
         setAvailableQualities(levels);
+        const playPromise = video.play();
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => {
+              setIsPlaying(true);
+            })
+            .catch(() => {
+              // If browser blocked unmuted autoplay, mute and retry
+              video.muted = true;
+              setIsMuted(true);
+              video.play()
+                .then(() => setIsPlaying(true))
+                .catch(() => {});
+            });
+        }
       });
 
       hls.on(Hls.Events.LEVEL_SWITCHED, (event, data) => {
@@ -397,12 +417,12 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
         if (data.fatal) {
           switch (data.type) {
             case Hls.ErrorTypes.NETWORK_ERROR:
-              // If it's local OBS, give it a chance to buffer rather than immediate fallback
-              if (isLocalStream) {
-                console.warn("Đang chờ nạp phân đoạn OBS...", activeUrl);
+              // For OBS live stream, continuously retry loading segments without falling back to test stream
+              if (isLocalStream || isAdminPreview || activeUrl.includes("/live/")) {
+                console.warn("Đang nạp phân đoạn OBS...", activeUrl);
                 setTimeout(() => {
                   if (hlsRef.current) hlsRef.current.startLoad();
-                }, 1000);
+                }, 1200);
                 break;
               }
               // If current stream fails and it wasn't the backup, switch to backup test stream
@@ -642,8 +662,10 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
       ) : (
         <video
           ref={videoRef}
-          poster={posterUrl}
+          poster={isPlaying ? undefined : posterUrl}
           playsInline
+          autoPlay
+          muted={isAdminPreview || isMuted}
           className="w-full h-full object-contain bg-black cursor-pointer"
           onClick={togglePlay}
         />

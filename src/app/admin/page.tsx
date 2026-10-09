@@ -509,11 +509,12 @@ export default function ChurchAdminDashboard() {
   // Handle auto-discovered OBS stream URL from player probe
   const handleObsStreamFound = async (foundUrl: string) => {
     if (!church || !foundUrl) return;
-    if (streamSettingsForm.streamUrl !== foundUrl) {
+    const cleanUrl = foundUrl.replace(/\/live\/live\//g, "/live/");
+    if (streamSettingsForm.streamUrl !== cleanUrl) {
       setStreamSettingsForm((prev) => ({
         ...prev,
         streamType: "mediamtx",
-        streamUrl: foundUrl,
+        streamUrl: cleanUrl,
       }));
       try {
         await fetch("/api/admin/church", {
@@ -522,7 +523,7 @@ export default function ChurchAdminDashboard() {
           body: JSON.stringify({
             churchSlug: church.slug,
             streamType: "mediamtx",
-            streamUrl: foundUrl,
+            streamUrl: cleanUrl,
           }),
         });
         setStreamSaveSuccess("Đã tự động bắt & lưu luồng OBS trực tiếp!");
@@ -544,10 +545,11 @@ export default function ChurchAdminDashboard() {
       );
       const data = await res.json();
       if (data.isLive && data.streamUrl) {
+        const cleanUrl = data.streamUrl.replace(/\/live\/live\//g, "/live/");
         setStreamSettingsForm((prev) => ({
           ...prev,
           streamType: "mediamtx",
-          streamUrl: data.streamUrl,
+          streamUrl: cleanUrl,
         }));
         await fetch("/api/admin/church", {
           method: "PUT",
@@ -555,7 +557,7 @@ export default function ChurchAdminDashboard() {
           body: JSON.stringify({
             churchSlug: church.slug,
             streamType: "mediamtx",
-            streamUrl: data.streamUrl,
+            streamUrl: cleanUrl,
           }),
         });
         setStreamSaveSuccess("Đã bắt và lưu thành công luồng OBS trực tiếp!");

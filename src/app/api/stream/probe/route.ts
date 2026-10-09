@@ -31,22 +31,22 @@ export async function GET(req: NextRequest) {
     const internalCandidates: { internalUrl: string; publicPath: string }[] = [];
 
     for (const k of keys) {
-      // 1. MediaMTX path: live/{key}/index.m3u8
-      // If Nginx has proxy_pass http://127.0.0.1:8888 (no trailing slash) -> public is /live/{key}/index.m3u8
-      // If Nginx has proxy_pass http://127.0.0.1:8888/ (with trailing slash) -> public is /live/live/{key}/index.m3u8
-      internalCandidates.push({
-        internalUrl: `http://127.0.0.1:8888/live/${k}/index.m3u8`,
-        publicPath: `/live/live/${k}/index.m3u8`,
-      });
+      // 1. Standard Nginx reverse proxy path: /live/{k}/index.m3u8 -> MediaMTX: /live/{k}/index.m3u8
       internalCandidates.push({
         internalUrl: `http://127.0.0.1:8888/live/${k}/index.m3u8`,
         publicPath: `/live/${k}/index.m3u8`,
       });
 
-      // 2. MediaMTX path: {key}/index.m3u8 (if streamed without /live in OBS)
+      // 2. Direct MediaMTX path if OBS stream key had no /live prefix
       internalCandidates.push({
         internalUrl: `http://127.0.0.1:8888/${k}/index.m3u8`,
         publicPath: `/live/${k}/index.m3u8`,
+      });
+
+      // 3. Fallback only if Nginx strips /live/ prefix
+      internalCandidates.push({
+        internalUrl: `http://127.0.0.1:8888/live/${k}/index.m3u8`,
+        publicPath: `/live/live/${k}/index.m3u8`,
       });
     }
 
