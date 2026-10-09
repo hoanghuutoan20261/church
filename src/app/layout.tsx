@@ -58,6 +58,9 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "https://hoithanhvn.com",
   },
+  verification: {
+    google: "89DFUjWeaqNRLW9XEm3BPidr3bGwm-KWETr2kF2a4lQ",
+  },
   openGraph: {
     type: "website",
     locale: "vi_VN",
