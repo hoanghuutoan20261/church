@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { HeartHandshake, Sparkles, QrCode, BookOpen, Share2, Check } from "lucide-react";
+import { HeartHandshake, QrCode, BookOpen, Share2, Check } from "lucide-react";
+import { CrossIcon } from "@/components/common/CrossIcon";
 import { useWorship } from "@/context/WorshipContext";
 
 export const QuickActionBar: React.FC = () => {
@@ -37,7 +38,7 @@ export const QuickActionBar: React.FC = () => {
             className="flex items-center justify-center gap-1.5 sm:gap-2 px-2 sm:px-4 py-2 rounded-md bg-sacrament/25 hover:bg-sacrament/40 text-amber-100 border border-sacrament-light/50 transition-all font-serif text-[11px] sm:text-sm font-medium tracking-wide shadow-sm cursor-pointer"
             title="Dành cho thân hữu muốn tìm hiểu hoặc tiếp nhận Chúa Giê-xu"
           >
-            <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-200 shrink-0" />
+            <CrossIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-200 shrink-0" />
             <span className="truncate">Tin Nhận Chúa</span>
           </button>
 

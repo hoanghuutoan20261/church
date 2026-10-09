@@ -2,7 +2,8 @@
 
 import React, { useState } from "react";
 import { useWorship } from "@/context/WorshipContext";
-import { X, Sparkles, Heart, Phone, CheckCircle2, MessageCircle } from "lucide-react";
+import { X, Heart, Phone, CheckCircle2, MessageCircle } from "lucide-react";
+import { CrossIcon } from "@/components/common/CrossIcon";
 
 export const SalvationModal: React.FC = () => {
   const { church, activeModal, closeModal } = useWorship();
@@ -74,7 +75,7 @@ export const SalvationModal: React.FC = () => {
         {/* Modal Header */}
         <div className="text-center space-y-1.5 pt-1">
           <div className="w-10 h-10 rounded-full bg-sacrament/30 border border-sacrament-light/50 mx-auto flex items-center justify-center text-amber-200 mb-2 shadow-sm">
-            <Sparkles className="w-5 h-5" />
+            <CrossIcon className="w-5 h-5" />
           </div>
           <h2
             id="salvation-modal-title"

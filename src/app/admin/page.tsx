@@ -45,6 +45,7 @@ import { ImageUploadBox } from "@/components/common/ImageUploadBox";
 import { AmenIcon } from "@/components/common/AmenIcon";
 import { IWorshipScheduleItem } from "@/models/Church";
 import { getChurchGoogleMapsUrl } from "@/lib/mapUtils";
+import { CrossIcon } from "@/components/common/CrossIcon";
 
 interface AdminUser {
   id: string;
@@ -1015,7 +1016,7 @@ export default function ChurchAdminDashboard() {
                   }`}
               >
                 <div className="flex items-center gap-3">
-                  <Sparkles className="w-4 h-4 shrink-0 text-[#c5a059]" />
+                  <CrossIcon className="w-4 h-4 shrink-0 text-[#c5a059]" />
                   <span>5. Thân Hữu Tiếp Nhận</span>
                 </div>
                 {salvations.filter((s) => s.status === "pending_pastoral_care")
@@ -1910,7 +1911,7 @@ export default function ChurchAdminDashboard() {
                 <div className="border-b border-stone-800 pb-4 flex items-center justify-between">
                   <div>
                     <h2 className="font-serif text-lg font-bold text-stone-100 flex items-center gap-2">
-                      <Sparkles className="w-5 h-5 text-[#c5a059]" />
+                      <CrossIcon className="w-5 h-5 text-[#c5a059]" />
                       <span>Danh Sách Thân Hữu Tiếp Nhận Chúa</span>
                     </h2>
                     <p className="text-xs text-stone-400">
