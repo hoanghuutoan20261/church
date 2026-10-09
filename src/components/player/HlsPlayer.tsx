@@ -53,8 +53,8 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
     church?.streamUrl ||
     (church?.streamKey
       ? (church.streamType === "youtube" && extractYouTubeId(church.streamKey)
-          ? church.streamKey
-          : buildHlsStreamUrl(church.streamKey))
+        ? church.streamKey
+        : buildHlsStreamUrl(church.streamKey))
       : worshipData.streamUrl);
 
   // Automatically clean erroneous double "/live/live/" prefix to standard "/live/"
@@ -76,6 +76,7 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
   const [volume, setVolume] = useState<number>(0.85);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [showControls, setShowControls] = useState<boolean>(true);
+  const showQualityMenuRef = useRef<boolean>(false);
   const [streamQuality, setStreamQuality] = useState<string>("1080p HD");
   const [isLiveBuffer, setIsLiveBuffer] = useState<boolean>(true);
   const [hasError, setHasError] = useState<boolean>(false);
@@ -115,7 +116,7 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
             setLiveLyrics(data.liveLyrics);
           }
         }
-      } catch {}
+      } catch { }
     };
 
     fetchLyrics();
@@ -136,7 +137,7 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
             if (data) {
               setLiveLyrics(data);
             }
-          } catch {}
+          } catch { }
         });
 
         eventSource.onopen = () => {
@@ -239,7 +240,7 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
           return true;
         }
       }
-    } catch {}
+    } catch { }
     return false;
   };
 
@@ -267,7 +268,7 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
             return;
           }
         }
-      } catch {}
+      } catch { }
 
       // Fallback: probe candidate URLs directly in browser
       const candidates = getCandidateUrls(church?.streamKey, church?.slug);
@@ -309,7 +310,7 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
             hlsRef.current.startLoad();
           }
           if (videoRef.current) {
-            videoRef.current.play().catch(() => {});
+            videoRef.current.play().catch(() => { });
           }
           if (onStreamUrlFound) onStreamUrlFound(data.streamUrl);
           setProbeSuccessMessage("Đã bắt thành công luồng OBS trực tiếp!");
@@ -317,7 +318,7 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
           return;
         }
       }
-    } catch {}
+    } catch { }
 
     // 2. Direct browser candidates probe
     const candidates = getCandidateUrls(church?.streamKey, church?.slug);
@@ -333,7 +334,7 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
           hlsRef.current.startLoad();
         }
         if (videoRef.current) {
-          videoRef.current.play().catch(() => {});
+          videoRef.current.play().catch(() => { });
         }
         if (onStreamUrlFound) onStreamUrlFound(url);
         setProbeSuccessMessage("Đã bắt thành công luồng OBS trực tiếp!");
@@ -401,7 +402,7 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
               setIsMuted(true);
               video.play()
                 .then(() => setIsPlaying(true))
-                .catch(() => {});
+                .catch(() => { });
             });
         }
       });
@@ -567,21 +568,51 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
     };
   }, []);
 
-  // Autohide controls on idle
-  const handleMouseMove = useCallback(() => {
+  // Synchronize showQualityMenu state to ref for timer checks
+  useEffect(() => {
+    showQualityMenuRef.current = showQualityMenu;
+  }, [showQualityMenu]);
+
+  // Show controls briefly on initial mount, then auto-hide
+  useEffect(() => {
     setShowControls(true);
+    const initialTimer = setTimeout(() => {
+      setShowControls(false);
+    }, 2500);
+    return () => clearTimeout(initialTimer);
+  }, []);
+
+  const resetControlsTimeout = useCallback(() => {
     if (controlsTimeoutRef.current) {
       clearTimeout(controlsTimeoutRef.current);
     }
     controlsTimeoutRef.current = setTimeout(() => {
-      if (isPlaying) {
+      if (!showQualityMenuRef.current) {
         setShowControls(false);
-        setShowQualityMenu(false);
       }
-    }, 3200);
-  }, [isPlaying]);
+    }, 2800);
+  }, []);
 
-  const togglePlay = () => {
+  const handleMouseEnter = useCallback(() => {
+    setShowControls(true);
+    resetControlsTimeout();
+  }, [resetControlsTimeout]);
+
+  const handleMouseMove = useCallback(() => {
+    setShowControls(true);
+    resetControlsTimeout();
+  }, [resetControlsTimeout]);
+
+  const handleMouseLeave = useCallback(() => {
+    setShowQualityMenu(false);
+    showQualityMenuRef.current = false;
+    setShowControls(false);
+    if (controlsTimeoutRef.current) {
+      clearTimeout(controlsTimeoutRef.current);
+    }
+  }, []);
+
+  const togglePlay = useCallback(() => {
     const video = videoRef.current;
     if (!video) return;
     if (video.paused) {
@@ -602,13 +633,13 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
       lastPauseTimeRef.current = Date.now();
       video.pause();
     }
-  };
+  }, [activeUrl, jumpToLive]);
 
-  const toggleMute = () => {
+  const toggleMute = useCallback(() => {
     const video = videoRef.current;
     if (!video) return;
     video.muted = !video.muted;
-  };
+  }, []);
 
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = parseFloat(e.target.value);
@@ -616,16 +647,93 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
     if (!video) return;
     video.volume = val;
     video.muted = val === 0;
+    setVolume(val);
+    setIsMuted(val === 0);
+    resetControlsTimeout();
   };
 
-  const toggleFullscreen = async () => {
+  const toggleFullscreen = useCallback(async () => {
     if (!containerRef.current) return;
-    if (!document.fullscreenElement) {
-      await containerRef.current.requestFullscreen();
-    } else {
-      await document.exitFullscreen();
-    }
+    try {
+      if (!document.fullscreenElement) {
+        if (containerRef.current.requestFullscreen) {
+          await containerRef.current.requestFullscreen();
+        } else if ((containerRef.current as any).webkitRequestFullscreen) {
+          await (containerRef.current as any).webkitRequestFullscreen();
+        }
+      } else {
+        if (document.exitFullscreen) {
+          await document.exitFullscreen();
+        } else if ((document as any).webkitExitFullscreen) {
+          await (document as any).webkitExitFullscreen();
+        }
+      }
+    } catch { }
+  }, []);
+
+  const handleDoubleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    toggleFullscreen();
   };
+
+  // Keyboard shortcuts (Space/K for Play/Pause, F for Fullscreen, M for Mute, ArrowUp/Down for Volume)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const activeEl = document.activeElement;
+      if (
+        activeEl &&
+        (activeEl.tagName === "INPUT" ||
+          activeEl.tagName === "TEXTAREA" ||
+          (activeEl as HTMLElement).isContentEditable)
+      ) {
+        return;
+      }
+
+      if (e.code === "Space" || e.key === "k" || e.key === "K") {
+        e.preventDefault();
+        togglePlay();
+        setShowControls(true);
+        resetControlsTimeout();
+      } else if (e.key === "f" || e.key === "F") {
+        e.preventDefault();
+        toggleFullscreen();
+      } else if (e.key === "m" || e.key === "M") {
+        e.preventDefault();
+        toggleMute();
+        setShowControls(true);
+        resetControlsTimeout();
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        const video = videoRef.current;
+        if (video) {
+          const newVol = Math.min(1, Math.round((video.volume + 0.1) * 10) / 10);
+          video.volume = newVol;
+          video.muted = false;
+          setVolume(newVol);
+          setIsMuted(false);
+          setShowControls(true);
+          resetControlsTimeout();
+        }
+      } else if (e.key === "ArrowDown") {
+        e.preventDefault();
+        const video = videoRef.current;
+        if (video) {
+          const newVol = Math.max(0, Math.round((video.volume - 0.1) * 10) / 10);
+          video.volume = newVol;
+          video.muted = newVol === 0;
+          setVolume(newVol);
+          setIsMuted(newVol === 0);
+          setShowControls(true);
+          resetControlsTimeout();
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [togglePlay, toggleFullscreen, toggleMute, resetControlsTimeout]);
 
   const handleQualitySelect = (levelIndex: number, label: string) => {
     if (hlsRef.current) {
@@ -633,14 +741,19 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
       setStreamQuality(label);
     }
     setShowQualityMenu(false);
+    resetControlsTimeout();
   };
 
   return (
     <div
       ref={containerRef}
+      onMouseEnter={handleMouseEnter}
       onMouseMove={handleMouseMove}
-      onMouseLeave={() => isPlaying && setShowControls(false)}
-      className="relative w-full aspect-video bg-sanctuary-950 rounded-lg overflow-hidden border border-white/[0.08] shadow-sanctuary group select-none flex flex-col justify-between"
+      onMouseLeave={handleMouseLeave}
+      onDoubleClick={handleDoubleClick}
+      className={`relative w-full aspect-video bg-sanctuary-950 rounded-lg overflow-hidden border border-white/[0.08] shadow-sanctuary group select-none ${
+        !showControls && isPlaying ? "cursor-none" : "cursor-default"
+      }`}
     >
       {/* Underlying Video or Embedded Stream (YouTube / Facebook) */}
       {isYouTube && youtubeVideoId ? (
@@ -667,14 +780,21 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
           autoPlay
           muted={isAdminPreview || isMuted}
           className="w-full h-full object-contain bg-black cursor-pointer"
-          onClick={togglePlay}
+          onClick={() => {
+            togglePlay();
+            setShowControls(true);
+            resetControlsTimeout();
+          }}
         />
       )}
 
       {/* Top Banner Overlay inside Video: Sermon Title & Live Status */}
       <div
-        className={`absolute top-0 left-0 right-0 p-4 sm:p-5 flex items-center justify-between bg-gradient-to-b from-black/85 via-black/40 to-transparent transition-opacity duration-300 pointer-events-none ${
-          showControls || !isPlaying ? "opacity-100" : "opacity-0"
+        onClick={(e) => e.stopPropagation()}
+        className={`absolute top-0 left-0 right-0 p-3 sm:p-5 flex items-center justify-between bg-gradient-to-b from-black/85 via-black/40 to-transparent transition-all duration-300 z-20 ${
+          showControls
+            ? "opacity-100 pointer-events-auto translate-y-0"
+            : "opacity-0 pointer-events-none -translate-y-2"
         }`}
       >
         <div className="flex items-center gap-2.5">
@@ -683,42 +803,39 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
             onClick={() => {
               jumpToLive();
               if (videoRef.current?.paused) {
-                videoRef.current.play().catch(() => {});
+                videoRef.current.play().catch(() => { });
               }
             }}
-            className={`pointer-events-auto flex items-center gap-2 px-2.5 py-1 rounded text-xs font-medium backdrop-blur-sm border transition-all ${
-              isAdminPreview
+            className={`pointer-events-auto flex items-center gap-2 px-2.5 py-1 rounded text-xs font-medium backdrop-blur-sm border transition-all ${isAdminPreview
                 ? "bg-black/60 border-amber-400/50 text-amber-300"
                 : isBehindLive
-                ? "bg-red-950/90 hover:bg-red-900 border-red-500 text-red-200 animate-pulse cursor-pointer shadow-md ring-1 ring-red-500/40"
-                : "bg-black/60 border-gold-400/30 hover:border-gold-400/60 text-red-400 hover:text-red-300 cursor-pointer"
-            }`}
+                  ? "bg-red-950/90 hover:bg-red-900 border-red-500 text-red-200 animate-pulse cursor-pointer shadow-md ring-1 ring-red-500/40"
+                  : "bg-black/60 border-gold-400/30 hover:border-gold-400/60 text-red-400 hover:text-red-300 cursor-pointer"
+              }`}
             title={
               isAdminPreview
                 ? "Màn hình xem trước luồng OBS của Admin"
                 : isBehindLive
-                ? "Bạn đang xem chậm hơn luồng phát trực tiếp. Bấm để đồng bộ ngay với Hội Thánh!"
-                : "Đang xem trực tiếp thời gian thực. Bấm để làm mới luồng."
+                  ? "Bạn đang xem chậm hơn luồng phát trực tiếp. Bấm để đồng bộ ngay với Hội Thánh!"
+                  : "Đang xem trực tiếp thời gian thực. Bấm để làm mới luồng."
             }
           >
             <span className="relative flex h-2 w-2">
               <span
-                className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
-                  isAdminPreview ? "bg-amber-400" : "bg-red-400"
-                }`}
+                className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${isAdminPreview ? "bg-amber-400" : "bg-red-400"
+                  }`}
               />
               <span
-                className={`relative inline-flex rounded-full h-2 w-2 ${
-                  isAdminPreview ? "bg-amber-500" : "bg-red-500"
-                }`}
+                className={`relative inline-flex rounded-full h-2 w-2 ${isAdminPreview ? "bg-amber-500" : "bg-red-500"
+                  }`}
               />
             </span>
             <span className="tracking-wider text-[11px] font-semibold uppercase font-serif">
               {isAdminPreview
                 ? "TỔNG DUYỆT (CHỈ ADMIN)"
                 : isBehindLive
-                ? "Về Trực Tiếp ⚡"
-                : "TRỰC TIẾP"}
+                  ? "Trực Tiếp"
+                  : "TRỰC TIẾP"}
             </span>
           </button>
 
@@ -767,8 +884,17 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
       {/* Center Subtle Play Button (Visible on Pause for native HLS video) */}
       {!isYouTube && !isFacebook && !isPlaying && (
         <div
-          onClick={togglePlay}
-          className="absolute inset-0 flex items-center justify-center bg-black/35 cursor-pointer z-10"
+          onClick={(e) => {
+            e.stopPropagation();
+            togglePlay();
+            setShowControls(true);
+            resetControlsTimeout();
+          }}
+          className={`absolute inset-0 flex items-center justify-center bg-black/35 cursor-pointer z-10 transition-all duration-300 ${
+            showControls
+              ? "opacity-100 scale-100 pointer-events-auto"
+              : "opacity-0 scale-95 pointer-events-none"
+          }`}
         >
           <button
             aria-label="Bắt đầu thờ phượng"
@@ -842,11 +968,10 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
                   return (
                     <p
                       key={idx}
-                      className={`font-serif drop-shadow-md leading-relaxed ${
-                        isSecondary
+                      className={`font-serif drop-shadow-md leading-relaxed ${isSecondary
                           ? "text-xs sm:text-sm md:text-base text-gold-300 italic opacity-95"
                           : "text-sm sm:text-base md:text-lg text-white font-medium"
-                      }`}
+                        }`}
                     >
                       {line}
                     </p>
@@ -860,215 +985,220 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
       {/* Bottom Minimalist Controls Bar */}
       {!isYouTube && !isFacebook ? (
         <div
-          className={`relative z-20 w-full px-4 py-3 bg-gradient-to-t from-black/90 via-black/60 to-transparent transition-opacity duration-300 ${
-            showControls || !isPlaying ? "opacity-100" : "opacity-0"
+          onClick={(e) => e.stopPropagation()}
+          className={`absolute bottom-0 left-0 right-0 z-20 w-full px-3 sm:px-5 py-3 sm:py-4 bg-gradient-to-t from-black/95 via-black/70 to-transparent transition-all duration-300 ${
+            showControls
+              ? "opacity-100 pointer-events-auto translate-y-0"
+              : "opacity-0 pointer-events-none translate-y-2"
           }`}
         >
-        <div className="flex items-center justify-between gap-3 text-sanctuary-200">
-          {/* Left Controls: Play/Pause, Volume */}
-          <div className="flex items-center gap-3">
-            <button
-              onClick={togglePlay}
-              className="p-1.5 hover:text-gold-300 rounded transition-colors text-sanctuary-100"
-              aria-label={isPlaying ? "Tạm dừng" : "Tiếp tục phát"}
-              title={isPlaying ? "Tạm dừng" : "Tiếp tục"}
-            >
-              {isPlaying ? (
-                <Pause className="w-5 h-5 fill-current" />
-              ) : (
-                <Play className="w-5 h-5 fill-current" />
-              )}
-            </button>
-
-            {/* Volume & Minimal slider */}
-            <div className="flex items-center gap-2 group/vol">
+          <div className="flex items-center justify-between gap-3 text-sanctuary-200">
+            {/* Left Controls: Play/Pause, Volume */}
+            <div className="flex items-center gap-3">
               <button
-                onClick={toggleMute}
-                className="p-1.5 hover:text-gold-300 rounded transition-colors text-sanctuary-300"
-                aria-label={isMuted ? "Bật âm thanh" : "Tắt âm thanh"}
-                title={isMuted ? "Bật âm thanh" : "Tắt âm"}
+                onClick={togglePlay}
+                className="p-1.5 hover:text-gold-300 rounded transition-colors text-sanctuary-100"
+                aria-label={isPlaying ? "Tạm dừng" : "Tiếp tục phát"}
+                title={isPlaying ? "Tạm dừng" : "Tiếp tục"}
               >
-                {isMuted || volume === 0 ? (
-                  <VolumeX className="w-5 h-5 text-sanctuary-400" />
+                {isPlaying ? (
+                  <Pause className="w-5 h-5 fill-current" />
                 ) : (
-                  <Volume2 className="w-5 h-5" />
+                  <Play className="w-5 h-5 fill-current" />
                 )}
               </button>
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.05"
-                value={isMuted ? 0 : volume}
-                onChange={handleVolumeChange}
-                className="w-16 sm:w-20 h-1 bg-sanctuary-750 accent-gold-400 rounded-lg appearance-none cursor-pointer focus:outline-none"
-                aria-label="Âm lượng"
-              />
-            </div>
 
-            {/* Live Synchronized Badge */}
-            <button
-              onClick={() => {
-                jumpToLive();
-                if (videoRef.current?.paused) videoRef.current.play().catch(() => {});
-              }}
-              className="hidden md:flex items-center gap-1.5 text-[11px] text-emerald-400/90 hover:text-emerald-300 font-medium px-2 py-0.5 rounded bg-emerald-950/40 hover:bg-emerald-950/70 border border-emerald-500/20 hover:border-emerald-500/40 transition-colors cursor-pointer"
-              title="Bấm để đồng bộ ngay lập tức với luồng phát trực tiếp của Hội Thánh"
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span>Đồng bộ thời gian thực</span>
-            </button>
-          </div>
-
-          {/* Right Controls: Quality, Focus Mode, Fullscreen */}
-          <div className="flex items-center gap-2 sm:gap-3">
-            {/* Stream Quality Dropdown */}
-            <div className="relative">
-              <button
-                onClick={() => setShowQualityMenu((prev) => !prev)}
-                className="flex items-center gap-1 text-xs px-2 py-1 rounded bg-black/40 border border-white/10 hover:border-gold-400/40 hover:text-gold-300 transition-colors"
-                title="Chất lượng hình ảnh"
-              >
-                <Settings className="w-3.5 h-3.5 text-sanctuary-400" />
-                <span className="text-[11px]">{streamQuality}</span>
-              </button>
-
-              {showQualityMenu && (
-                <div className="absolute bottom-full right-0 mb-2 w-36 bg-sanctuary-900 border border-white/10 rounded-md py-1 shadow-sanctuary text-xs z-30">
-                  <div className="px-3 py-1 text-[10px] uppercase font-semibold text-sanctuary-400 border-b border-white/5">
-                    Độ phân giải
-                  </div>
-                  <button
-                    onClick={() => handleQualitySelect(-1, "Tự động")}
-                    className={`w-full text-left px-3 py-1.5 hover:bg-sanctuary-800 transition-colors flex items-center justify-between ${
-                      streamQuality === "Tự động" ? "text-gold-400 font-medium" : "text-sanctuary-300"
-                    }`}
-                  >
-                    <span>Tự động (Auto)</span>
-                  </button>
-                  {availableQualities.length > 0 ? (
-                    availableQualities.map((q) => (
-                      <button
-                        key={q.index}
-                        onClick={() => handleQualitySelect(q.index, `${q.height}p`)}
-                        className={`w-full text-left px-3 py-1.5 hover:bg-sanctuary-800 transition-colors flex items-center justify-between ${
-                          streamQuality === `${q.height}p`
-                            ? "text-gold-400 font-medium"
-                            : "text-sanctuary-300"
-                        }`}
-                      >
-                        <span>{q.height}p</span>
-                        {q.height >= 1080 && (
-                          <span className="text-[9px] bg-gold-400/20 text-gold-300 px-1 rounded">
-                            HD
-                          </span>
-                        )}
-                      </button>
-                    ))
+              {/* Volume & Minimal slider */}
+              <div className="flex items-center gap-2 group/vol">
+                <button
+                  onClick={toggleMute}
+                  className="p-1.5 hover:text-gold-300 rounded transition-colors text-sanctuary-300"
+                  aria-label={isMuted ? "Bật âm thanh" : "Tắt âm thanh"}
+                  title={isMuted ? "Bật âm thanh" : "Tắt âm"}
+                >
+                  {isMuted || volume === 0 ? (
+                    <VolumeX className="w-5 h-5 text-sanctuary-400" />
                   ) : (
-                    <>
-                      <button
-                        onClick={() => {
-                          setStreamQuality("1080p HD");
-                          setShowQualityMenu(false);
-                        }}
-                        className="w-full text-left px-3 py-1.5 hover:bg-sanctuary-800 text-sanctuary-300"
-                      >
-                        1080p HD
-                      </button>
-                      <button
-                        onClick={() => {
-                          setStreamQuality("720p");
-                          setShowQualityMenu(false);
-                        }}
-                        className="w-full text-left px-3 py-1.5 hover:bg-sanctuary-800 text-sanctuary-300"
-                      >
-                        720p
-                      </button>
-                      <button
-                        onClick={() => {
-                          setStreamQuality("480p");
-                          setShowQualityMenu(false);
-                        }}
-                        className="w-full text-left px-3 py-1.5 hover:bg-sanctuary-800 text-sanctuary-300"
-                      >
-                        480p (Tiết kiệm)
-                      </button>
-                    </>
+                    <Volume2 className="w-5 h-5" />
                   )}
-                </div>
-              )}
+                </button>
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.05"
+                  value={isMuted ? 0 : volume}
+                  onChange={handleVolumeChange}
+                  className="w-16 sm:w-20 h-1 bg-sanctuary-750 accent-gold-400 rounded-lg appearance-none cursor-pointer focus:outline-none"
+                  aria-label="Âm lượng"
+                />
+              </div>
+
+              {/* Live Synchronized Badge */}
+              <button
+                onClick={() => {
+                  jumpToLive();
+                  if (videoRef.current?.paused) videoRef.current.play().catch(() => { });
+                }}
+                className="hidden md:flex items-center gap-1.5 text-[11px] text-emerald-400/90 hover:text-emerald-300 font-medium px-2 py-0.5 rounded bg-emerald-950/40 hover:bg-emerald-950/70 border border-emerald-500/20 hover:border-emerald-500/40 transition-colors cursor-pointer"
+                title="Bấm để đồng bộ ngay lập tức với luồng phát trực tiếp của Hội Thánh"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span>Đồng bộ thời gian thực</span>
+              </button>
             </div>
 
-            {/* Live Lyrics Subtitles Toggle Button (CC) */}
-            {liveLyrics?.isEnabled && (
+            {/* Right Controls: Quality, Focus Mode, Fullscreen */}
+            <div className="flex items-center gap-2 sm:gap-3">
+              {/* Stream Quality Dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowQualityMenu((prev) => !prev)}
+                  className="flex items-center gap-1 text-xs px-2 py-1 rounded bg-black/40 border border-white/10 hover:border-gold-400/40 hover:text-gold-300 transition-colors"
+                  title="Chất lượng hình ảnh"
+                >
+                  <Settings className="w-3.5 h-3.5 text-sanctuary-400" />
+                  <span className="text-[11px]">{streamQuality}</span>
+                </button>
+
+                {showQualityMenu && (
+                  <div className="absolute bottom-full right-0 mb-2 w-36 bg-sanctuary-900 border border-white/10 rounded-md py-1 shadow-sanctuary text-xs z-30">
+                    <div className="px-3 py-1 text-[10px] uppercase font-semibold text-sanctuary-400 border-b border-white/5">
+                      Độ phân giải
+                    </div>
+                    <button
+                      onClick={() => handleQualitySelect(-1, "Tự động")}
+                      className={`w-full text-left px-3 py-1.5 hover:bg-sanctuary-800 transition-colors flex items-center justify-between ${streamQuality === "Tự động" ? "text-gold-400 font-medium" : "text-sanctuary-300"
+                        }`}
+                    >
+                      <span>Tự động (Auto)</span>
+                    </button>
+                    {availableQualities.length > 0 ? (
+                      availableQualities.map((q) => (
+                        <button
+                          key={q.index}
+                          onClick={() => handleQualitySelect(q.index, `${q.height}p`)}
+                          className={`w-full text-left px-3 py-1.5 hover:bg-sanctuary-800 transition-colors flex items-center justify-between ${streamQuality === `${q.height}p`
+                              ? "text-gold-400 font-medium"
+                              : "text-sanctuary-300"
+                            }`}
+                        >
+                          <span>{q.height}p</span>
+                          {q.height >= 1080 && (
+                            <span className="text-[9px] bg-gold-400/20 text-gold-300 px-1 rounded">
+                              HD
+                            </span>
+                          )}
+                        </button>
+                      ))
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => {
+                            setStreamQuality("1080p HD");
+                            setShowQualityMenu(false);
+                          }}
+                          className="w-full text-left px-3 py-1.5 hover:bg-sanctuary-800 text-sanctuary-300"
+                        >
+                          1080p HD
+                        </button>
+                        <button
+                          onClick={() => {
+                            setStreamQuality("720p");
+                            setShowQualityMenu(false);
+                          }}
+                          className="w-full text-left px-3 py-1.5 hover:bg-sanctuary-800 text-sanctuary-300"
+                        >
+                          720p
+                        </button>
+                        <button
+                          onClick={() => {
+                            setStreamQuality("480p");
+                            setShowQualityMenu(false);
+                          }}
+                          className="w-full text-left px-3 py-1.5 hover:bg-sanctuary-800 text-sanctuary-300"
+                        >
+                          480p (Tiết kiệm)
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Live Lyrics Subtitles Toggle Button (CC) */}
+              {liveLyrics?.isEnabled && (
+                <button
+                  onClick={() => setShowLyricsSubtitle((prev) => !prev)}
+                  className={`flex items-center gap-1 text-xs px-2 py-1 rounded border transition-colors ${showLyricsSubtitle
+                      ? "bg-gold-400/25 border-gold-400/60 text-gold-300 font-medium shadow-sm"
+                      : "bg-black/40 border-white/10 text-sanctuary-400 hover:text-sanctuary-200"
+                    }`}
+                  title={
+                    showLyricsSubtitle
+                      ? "Tắt phụ đề lời hát trực tiếp"
+                      : "Bật phụ đề lời hát trực tiếp (CC)"
+                  }
+                >
+                  <Music2 className="w-3.5 h-3.5 text-gold-400" />
+                  <span className="text-[11px] font-sans">Lời</span>
+                </button>
+              )}
+
+              {/* Quick Focus Mode inside player */}
               <button
-                onClick={() => setShowLyricsSubtitle((prev) => !prev)}
-                className={`flex items-center gap-1 text-xs px-2 py-1 rounded border transition-colors ${
-                  showLyricsSubtitle
-                    ? "bg-gold-400/25 border-gold-400/60 text-gold-300 font-medium shadow-sm"
-                    : "bg-black/40 border-white/10 text-sanctuary-400 hover:text-sanctuary-200"
-                }`}
+                onClick={toggleFocusMode}
+                className={`p-1.5 rounded transition-colors ${isFocusMode
+                    ? "text-gold-300 bg-gold-400/20"
+                    : "text-sanctuary-300 hover:text-sanctuary-100"
+                  }`}
                 title={
-                  showLyricsSubtitle
-                    ? "Tắt phụ đề lời hát trực tiếp"
-                    : "Bật phụ đề lời hát trực tiếp (CC)"
+                  isFocusMode
+                    ? "Tắt chế độ chiêm niệm"
+                    : "Bật chế độ chiêm niệm (Toàn màn hình không phân tâm)"
                 }
+                aria-label="Chế độ chiêm niệm"
               >
-                <Music2 className="w-3.5 h-3.5 text-gold-400" />
-                <span className="text-[11px] font-sans">Lời</span>
+                {isFocusMode ? (
+                  <EyeOff className="w-4 h-4" />
+                ) : (
+                  <Eye className="w-4 h-4 text-sanctuary-300" />
+                )}
               </button>
-            )}
 
-            {/* Quick Focus Mode inside player */}
-            <button
-              onClick={toggleFocusMode}
-              className={`p-1.5 rounded transition-colors ${
-                isFocusMode
-                  ? "text-gold-300 bg-gold-400/20"
-                  : "text-sanctuary-300 hover:text-sanctuary-100"
-              }`}
-              title={
-                isFocusMode
-                  ? "Tắt chế độ chiêm niệm"
-                  : "Bật chế độ chiêm niệm (Toàn màn hình không phân tâm)"
-              }
-              aria-label="Chế độ chiêm niệm"
-            >
-              {isFocusMode ? (
-                <EyeOff className="w-4 h-4" />
-              ) : (
-                <Eye className="w-4 h-4 text-sanctuary-300" />
-              )}
-            </button>
-
-            {/* Fullscreen Button */}
-            <button
-              onClick={toggleFullscreen}
-              className="p-1.5 hover:text-gold-300 rounded transition-colors text-sanctuary-300"
-              title={isFullscreen ? "Thu nhỏ" : "Toàn màn hình"}
-              aria-label="Toàn màn hình"
-            >
-              {isFullscreen ? (
-                <Minimize2 className="w-4 h-4" />
-              ) : (
-                <Maximize2 className="w-4 h-4" />
-              )}
-            </button>
+              {/* Fullscreen Button */}
+              <button
+                onClick={toggleFullscreen}
+                className="p-1.5 hover:text-gold-300 rounded transition-colors text-sanctuary-300"
+                title={isFullscreen ? "Thu nhỏ" : "Toàn màn hình"}
+                aria-label="Toàn màn hình"
+              >
+                {isFullscreen ? (
+                  <Minimize2 className="w-4 h-4" />
+                ) : (
+                  <Maximize2 className="w-4 h-4" />
+                )}
+              </button>
+            </div>
           </div>
         </div>
-      </div>
       ) : (
         /* Floating mini-bar for YouTube / Facebook: CC, Focus Mode, Fullscreen */
-        <div className="absolute bottom-3 right-3 z-20 flex items-center gap-2 pointer-events-auto">
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className={`absolute bottom-3 right-3 z-20 flex items-center gap-2 transition-all duration-300 ${
+            showControls
+              ? "opacity-100 pointer-events-auto translate-y-0"
+              : "opacity-0 pointer-events-none translate-y-2"
+          }`}
+        >
           {liveLyrics?.isEnabled && (
             <button
               onClick={() => setShowLyricsSubtitle((prev) => !prev)}
-              className={`flex items-center gap-1 text-xs px-2.5 py-1 rounded border transition-colors shadow-lg ${
-                showLyricsSubtitle
+              className={`flex items-center gap-1 text-xs px-2.5 py-1 rounded border transition-colors shadow-lg ${showLyricsSubtitle
                   ? "bg-gold-400/30 border-gold-400/70 text-gold-300 font-medium"
                   : "bg-black/75 border-white/15 text-sanctuary-300 hover:text-white"
-              }`}
+                }`}
               title="Phụ đề lời bài hát (CC)"
             >
               <Music2 className="w-3.5 h-3.5 text-gold-400" />
@@ -1078,11 +1208,10 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
 
           <button
             onClick={toggleFocusMode}
-            className={`p-1.5 rounded border transition-colors shadow-lg ${
-              isFocusMode
+            className={`p-1.5 rounded border transition-colors shadow-lg ${isFocusMode
                 ? "bg-gold-400/30 border-gold-400/70 text-gold-300"
                 : "bg-black/75 border-white/15 text-sanctuary-300 hover:text-gold-300"
-            }`}
+              }`}
             title="Chế độ chiêm niệm thờ phượng"
           >
             {isFocusMode ? <EyeOff className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
