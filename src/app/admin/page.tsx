@@ -900,15 +900,29 @@ export default function ChurchAdminDashboard() {
           </div>
 
           {/* Right header actions */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-2 sm:gap-2.5">
+            {/* Nút Xem Trang Hội Thánh */}
+            <Link
+              href={`/${church.slug}?view=wall`}
+              target="_blank"
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-md bg-stone-850 hover:bg-stone-800 text-stone-200 hover:text-white border border-white/10 hover:border-[#c5a059]/40 text-xs transition-colors shadow-sm"
+              title="Mở trang chủ, giới thiệu & bản tin của Hội Thánh trong tab mới"
+            >
+              <Church className="w-3.5 h-3.5 text-[#c5a059] shrink-0" />
+              <span className="hidden md:inline">Xem Trang Hội Thánh</span>
+              <span className="hidden sm:inline md:hidden">Trang HT</span>
+            </Link>
+
+            {/* Nút Xem Phòng Nhóm */}
             <Link
               href={`/${church.slug}`}
               target="_blank"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-stone-850 hover:bg-stone-800 text-stone-200 border border-white/10 hover:border-[#c5a059]/40 text-xs transition-colors shadow-sm"
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-md bg-stone-850 hover:bg-stone-800 text-stone-200 hover:text-white border border-white/10 hover:border-[#c5a059]/40 text-xs transition-colors shadow-sm"
               title="Mở phòng thờ phượng trực tuyến của Hội Thánh trong tab mới"
             >
-              <ExternalLink className="w-3.5 h-3.5 text-[#c5a059]" />
-              <span className="hidden sm:inline">Xem Phòng Nhóm</span>
+              <Radio className="w-3.5 h-3.5 text-red-400 shrink-0" />
+              <span className="hidden md:inline">Xem Phòng Nhóm</span>
+              <span className="hidden sm:inline md:hidden">Phòng Nhóm</span>
             </Link>
 
             <div className="hidden md:flex flex-col text-right pr-2 border-r border-stone-800">
