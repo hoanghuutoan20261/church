@@ -99,8 +99,23 @@ export function buildHlsStreamUrl(
     return fallbackUrl || "";
   }
 
-  const rawBase =
+  let rawBase =
     process.env.NEXT_PUBLIC_STREAM_SERVER_URL || DEFAULT_STREAM_SERVER_BASE_URL;
+
+  // On HTTPS websites (especially on mobile iOS Safari / Android Chrome that strictly block mixed content),
+  // if rawBase is HTTP with an external host/IP or port, use the relative reverse proxy path /live
+  if (
+    typeof window !== "undefined" &&
+    window.location.protocol === "https:" &&
+    rawBase.startsWith("http://")
+  ) {
+    const isLocal =
+      rawBase.includes("localhost") || rawBase.includes("127.0.0.1");
+    if (!isLocal) {
+      rawBase = "/live";
+    }
+  }
+
   const cleanBase = rawBase.replace(/\/+$/, "");
 
   return `${cleanBase}/${encodeURIComponent(streamKey.trim())}/index.m3u8`;

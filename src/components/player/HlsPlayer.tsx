@@ -81,6 +81,7 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
   const [isLiveBuffer, setIsLiveBuffer] = useState<boolean>(true);
   const [hasError, setHasError] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string>("");
+  const [isBuffering, setIsBuffering] = useState<boolean>(false);
   const [showQualityMenu, setShowQualityMenu] = useState<boolean>(false);
   const [availableQualities, setAvailableQualities] = useState<
     { height: number; index: number }[]
@@ -286,6 +287,12 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
   // Auto probe OBS stream on mount or when streamKey changes (for HLS mode)
   useEffect(() => {
     if (isYouTube || isFacebook) return;
+    // CRITICAL: Do NOT run candidate probe for normal viewers when a stream URL already exists!
+    // Probing exhausts mobile browser sockets and causes long initial loading delays.
+    if (!isAdminPreview && effectiveStreamUrl && effectiveStreamUrl !== worshipData.streamUrl) {
+      return;
+    }
+
     let isCancelled = false;
     async function checkLocal() {
       if (typeof window === "undefined") return;
@@ -309,7 +316,7 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
         }
       } catch { }
 
-      // Fallback: probe candidate URLs directly in browser
+      // Fallback: probe candidate URLs directly in browser (only for admin preview or when no URL)
       const candidates = getCandidateUrls(church?.streamKey, church?.slug);
       for (const url of candidates) {
         if (isCancelled) return;
@@ -328,7 +335,7 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
     return () => {
       isCancelled = true;
     };
-  }, [church?.streamKey, church?.slug, getCandidateUrls, isYouTube, isFacebook, onStreamUrlFound]);
+  }, [church?.streamKey, church?.slug, getCandidateUrls, isYouTube, isFacebook, isAdminPreview, effectiveStreamUrl, onStreamUrlFound]);
 
   const handleProbeObs = async () => {
     // 1. Try server-side probe endpoint first (bypasses browser mixed content / CORS)
@@ -407,35 +414,50 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
     const video = videoRef.current;
     if (!video) return;
 
+    const isMobileDevice = () => {
+      if (typeof window === "undefined") return false;
+      return (
+        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+          navigator.userAgent
+        ) || window.innerWidth <= 768
+      );
+    };
+
+    const isMobile = isMobileDevice();
+
     const getHlsConfig = () => ({
-      enableWorker: true,
-      lowLatencyMode: false, // Standard live HLS: allows healthy buffer cushion so mobile and other laptops do not stutter
-      backBufferLength: 10,  // Keep 10s of back buffer to avoid frame re-decoding stalls
-      liveSyncDurationCount: 3, // Live playhead ~6s behind encoder for rock-solid stability
-      liveMaxLatencyDurationCount: 8, // Catch up smoothly if drifted
-      maxLiveSyncPlaybackRate: 1.08, // Imperceptible pitch shift for worship music when catching up
+      enableWorker: !isMobile, // Disable worker on low-end mobile devices to avoid postMessage overhead; enable on desktop
+      lowLatencyMode: false, // Standard live HLS: allows healthy buffer cushion so mobile does not stutter
+      backBufferLength: isMobile ? 0 : 6, // 0 on mobile immediately frees memory, avoiding QuotaExceededError & decoder crash!
+      liveSyncDurationCount: isMobile ? 2 : 3, // Fast live start on mobile with 2 segments
+      liveMaxLatencyDurationCount: isMobile ? 12 : 8, // Give mobile more breathing room to avoid dropping frames
+      maxLiveSyncPlaybackRate: isMobile ? 1.02 : 1.06, // Do not fast-forward on mobile network
       liveDurationInfinity: true,
-      maxBufferLength: 30, // 30-second forward buffer cushion
-      maxMaxBufferLength: 60,
+      maxBufferLength: isMobile ? 8 : 20, // 8 seconds forward buffer on mobile (lightweight, zero memory crash)
+      maxMaxBufferLength: isMobile ? 14 : 35,
+      maxBufferSize: isMobile ? 15 * 1000 * 1000 : 60 * 1000 * 1000, // 15MB limit on mobile vs 60MB on desktop
+      capLevelToPlayerSize: true, // Crucial: scale resolution to viewport to prevent mobile GPU throttling
       nudgeOffset: 0.2, // Auto-nudge past minor decoding holes
-      nudgeMaxRetry: 8,
-      manifestLoadingTimeOut: 10000,
-      manifestLoadingMaxRetry: 8,
-      levelLoadingTimeOut: 10000,
-      levelLoadingMaxRetry: 8,
-      fragLoadingTimeOut: 10000,
-      fragLoadingMaxRetry: 8,
+      nudgeMaxRetry: 10,
+      manifestLoadingTimeOut: 15000,
+      manifestLoadingMaxRetry: 10,
+      levelLoadingTimeOut: 15000,
+      levelLoadingMaxRetry: 10,
+      fragLoadingTimeOut: 15000,
+      fragLoadingMaxRetry: 10,
     });
 
     if (Hls.isSupported()) {
       const hls = new Hls(getHlsConfig());
 
       hlsRef.current = hls;
+      setIsBuffering(true);
       hls.loadSource(activeUrl);
       hls.attachMedia(video);
 
       hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
         setHasError(false);
+        setIsBuffering(false);
         const levels = data.levels.map((lvl, index) => ({
           height: lvl.height || 720,
           index,
@@ -446,13 +468,17 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
           playPromise
             .then(() => {
               setIsPlaying(true);
+              setIsBuffering(false);
             })
             .catch(() => {
               // If browser blocked unmuted autoplay, mute and retry
               video.muted = true;
               setIsMuted(true);
               video.play()
-                .then(() => setIsPlaying(true))
+                .then(() => {
+                  setIsPlaying(true);
+                  setIsBuffering(false);
+                })
                 .catch(() => { });
             });
         }
@@ -473,7 +499,7 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
             data.details === Hls.ErrorDetails.BUFFER_NUDGE_ON_STALL ||
             data.details === Hls.ErrorDetails.BUFFER_SEEK_OVER_HOLE
           ) {
-            // Ensure loader is running; Hls.js will nudge past any small audio/video timestamp misalignments
+            setIsBuffering(true);
             if (hlsRef.current) {
               hlsRef.current.startLoad();
             }
@@ -481,27 +507,26 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
           return;
         }
 
-        // 2. Fatal errors: recover gently without constantly resetting the player
+        // 2. Fatal errors: recover gently WITHOUT destroying the player and causing black screen
         switch (data.type) {
           case Hls.ErrorTypes.NETWORK_ERROR:
-            console.warn("HLS network error (segment/manifest 404), retrying live load...", data.details);
+            console.warn("HLS network error, retrying live load...", data.details);
+            setIsBuffering(true);
             hls.startLoad();
             break;
           case Hls.ErrorTypes.MEDIA_ERROR:
             console.warn("HLS media decode error, attempting media error recovery...", data.details);
+            setIsBuffering(true);
             hls.recoverMediaError();
             break;
           default:
-            console.warn("Fatal unrecoverable HLS error, soft-restarting stream in 1.5s...", data.details);
-            hls.destroy();
-            setTimeout(() => {
-              if (videoRef.current && activeUrl) {
-                const newHls = new Hls(getHlsConfig());
-                hlsRef.current = newHls;
-                newHls.loadSource(activeUrl);
-                newHls.attachMedia(videoRef.current);
-              }
-            }, 1500);
+            console.warn("Fatal unrecoverable HLS error, reloading source smoothly...", data.details);
+            setIsBuffering(true);
+            hls.loadSource(activeUrl);
+            hls.startLoad();
+            if (videoRef.current) {
+              videoRef.current.play().catch(() => {});
+            }
             break;
         }
       });
@@ -510,25 +535,60 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
       video.src = activeUrl;
       const handleLoadedMetadata = () => {
         setHasError(false);
+        setIsBuffering(false);
         const playPromise = video.play();
         if (playPromise !== undefined) {
           playPromise
-            .then(() => setIsPlaying(true))
+            .then(() => {
+              setIsPlaying(true);
+              setIsBuffering(false);
+            })
             .catch(() => {
               video.muted = true;
               setIsMuted(true);
               video.play()
-                .then(() => setIsPlaying(true))
+                .then(() => {
+                  setIsPlaying(true);
+                  setIsBuffering(false);
+                })
                 .catch(() => {});
             });
         }
       };
+
+      const handleWaiting = () => setIsBuffering(true);
+      const handlePlaying = () => {
+        setIsBuffering(false);
+        setIsPlaying(true);
+      };
+
+      const handleError = () => {
+        // In native Safari iOS, do NOT abruptly swap to dummy mux stream!
+        // Retry loading actual stream after 2s to recover from brief network drop
+        setTimeout(() => {
+          if (videoRef.current && activeUrl) {
+            videoRef.current.src = activeUrl;
+            videoRef.current.load();
+            videoRef.current.play().catch(() => {});
+          }
+        }, 2000);
+      };
+
       video.addEventListener("loadedmetadata", handleLoadedMetadata);
-      video.addEventListener("error", () => {
-        if (activeUrl !== worshipData.streamUrl) {
-          video.src = worshipData.streamUrl;
+      video.addEventListener("waiting", handleWaiting);
+      video.addEventListener("playing", handlePlaying);
+      video.addEventListener("error", handleError);
+
+      return () => {
+        video.removeEventListener("loadedmetadata", handleLoadedMetadata);
+        video.removeEventListener("waiting", handleWaiting);
+        video.removeEventListener("playing", handlePlaying);
+        video.removeEventListener("error", handleError);
+        if (hlsRef.current) {
+          hlsRef.current.destroy();
+          hlsRef.current = null;
         }
-      });
+      };
     }
 
     return () => {
@@ -555,29 +615,32 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
         video.currentTime = hls.liveSyncPosition;
       } else if (video.seekable && video.seekable.length > 0) {
         const liveEnd = video.seekable.end(video.seekable.length - 1);
-        video.currentTime = Math.max(0, liveEnd - 0.5);
+        // Safe 4.0s cushion ahead of playhead so mobile decoder does not stall at the raw edge!
+        video.currentTime = Math.max(0, liveEnd - 4.0);
       } else {
         hls.loadSource(activeUrl);
         hls.startLoad();
       }
     } else if (video.seekable && video.seekable.length > 0) {
       const liveEnd = video.seekable.end(video.seekable.length - 1);
-      video.currentTime = Math.max(0, liveEnd - 0.5);
+      video.currentTime = Math.max(0, liveEnd - 4.0);
     }
     setIsBehindLive(false);
   }, [activeUrl]);
 
-  // Monitor live distance: if user falls behind (> 25s), auto-resync to live edge so segments don't 404!
+  // Monitor live distance: if user falls behind (> 30s), auto-resync to live edge so segments don't 404!
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
 
     const checkLiveDistance = () => {
+      if (video.paused) return;
+
       const hls = hlsRef.current;
       if (hls && typeof hls.liveSyncPosition === "number" && hls.liveSyncPosition > 0) {
         const distance = hls.liveSyncPosition - video.currentTime;
         setIsBehindLive(distance > 8);
-        if (distance > 25) {
+        if (distance > 30) {
           console.warn(`Lag distance is ${distance.toFixed(1)}s (segments expired). Auto-resyncing to live!`);
           jumpToLive();
         }
@@ -585,7 +648,7 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
         const liveEnd = video.seekable.end(video.seekable.length - 1);
         const distance = liveEnd - video.currentTime;
         setIsBehindLive(distance > 8);
-        if (distance > 25) {
+        if (distance > 30) {
           jumpToLive();
         }
       }
@@ -625,7 +688,7 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
           }
         } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
           if (video.seekable && video.seekable.length > 0) {
-            video.currentTime = Math.max(0, video.seekable.end(video.seekable.length - 1) - 0.5);
+            video.currentTime = Math.max(0, video.seekable.end(video.seekable.length - 1) - 4.0);
           }
           if (video.paused) {
             video.play().catch(() => {});
@@ -644,7 +707,7 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
   }, [jumpToLive]);
 
   // Freeze / Black Screen Watchdog:
-  // Automatically detects if video playback is genuinely frozen on black screen for >= 8s
+  // Automatically detects if video playback is genuinely frozen on black screen for >= 10s
   useEffect(() => {
     let lastTime = 0;
     let freezeCount = 0;
@@ -652,22 +715,32 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
     const watchdog = setInterval(() => {
       const video = videoRef.current;
       const hls = hlsRef.current;
-      if (!video || !hls || document.visibilityState !== "visible") return;
+      if (!video || document.visibilityState !== "visible") return;
 
       if (!video.paused && !video.ended) {
-        if (video.currentTime === lastTime && video.currentTime > 0) {
+        if (Math.abs(video.currentTime - lastTime) < 0.1 && video.currentTime > 0) {
+          // If video is simply waiting for network buffer (readyState < 3), don't jump to live! Just ensure loading!
+          if (video.readyState < 3) {
+            setIsBuffering(true);
+            if (hls) hls.startLoad();
+            return;
+          }
+
           freezeCount++;
-          // Stuck on exact same timestamp for >= 8 seconds (tolerates normal network buffering)
-          if (freezeCount >= 4) {
-            console.warn("Live stream freeze/black screen detected (>8s). Auto-recovering...");
+          // Stuck on exact same timestamp while readyState >= 3 for >= 10 seconds
+          if (freezeCount >= 5) {
+            console.warn("Live stream freeze detected (>10s). Auto-recovering...");
             freezeCount = 0;
-            hls.startLoad();
-            jumpToLive();
+            if (hls) {
+              hls.startLoad();
+              jumpToLive();
+            }
             video.play().catch(() => {});
           }
         } else {
           lastTime = video.currentTime;
           freezeCount = 0;
+          setIsBuffering(false);
         }
       } else {
         freezeCount = 0;
@@ -695,6 +768,19 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
       }
     };
 
+    const onPlaying = () => {
+      setIsPlaying(true);
+      setIsBuffering(false);
+    };
+
+    const onCanPlay = () => {
+      setIsBuffering(false);
+    };
+
+    const onTimeUpdate = () => {
+      setIsBuffering(false);
+    };
+
     const onPause = () => {
       setIsPlaying(false);
       lastPauseTimeRef.current = Date.now();
@@ -706,18 +792,23 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
     };
 
     const onWaiting = () => {
+      setIsBuffering(true);
       if (hlsRef.current) {
         hlsRef.current.startLoad();
       }
     };
 
     const onStalled = () => {
+      setIsBuffering(true);
       if (hlsRef.current) {
         hlsRef.current.startLoad();
       }
     };
 
     video.addEventListener("play", onPlay);
+    video.addEventListener("playing", onPlaying);
+    video.addEventListener("canplay", onCanPlay);
+    video.addEventListener("timeupdate", onTimeUpdate);
     video.addEventListener("pause", onPause);
     video.addEventListener("volumechange", onVolumeChange);
     video.addEventListener("waiting", onWaiting);
@@ -725,6 +816,9 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
 
     return () => {
       video.removeEventListener("play", onPlay);
+      video.removeEventListener("playing", onPlaying);
+      video.removeEventListener("canplay", onCanPlay);
+      video.removeEventListener("timeupdate", onTimeUpdate);
       video.removeEventListener("pause", onPause);
       video.removeEventListener("volumechange", onVolumeChange);
       video.removeEventListener("waiting", onWaiting);
@@ -956,12 +1050,46 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
           preload="auto"
           muted={isAdminPreview || isMuted}
           className="w-full h-full object-contain bg-black cursor-pointer"
+          {...({
+            "webkit-playsinline": "true",
+            "x5-playsinline": "true",
+            "x5-video-player-type": "h5-page",
+            "x5-video-player-fullscreen": "true",
+          } as any)}
           onClick={() => {
             togglePlay();
             setShowControls(true);
             resetControlsTimeout();
           }}
         />
+      )}
+
+      {/* Loading / Buffering Spinner Overlay */}
+      {isBuffering && !hasError && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-[1px] pointer-events-none z-15 transition-opacity duration-300">
+          <div className="flex flex-col items-center gap-2 px-4 py-2.5 rounded-lg bg-sanctuary-950/80 border border-gold-400/30 text-gold-300 shadow-xl">
+            <RefreshCw className="w-5 h-5 animate-spin text-gold-400" />
+            <span className="text-[11px] font-serif tracking-wider">Đang nạp luồng trực tiếp...</span>
+          </div>
+        </div>
+      )}
+
+      {/* Tap to Unmute Overlay Button (for Mobile browsers when autoplay muted) */}
+      {isMuted && !isAdminPreview && isPlaying && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            if (videoRef.current) {
+              videoRef.current.muted = false;
+              setIsMuted(false);
+            }
+          }}
+          className="absolute top-14 left-3 sm:top-16 sm:left-4 z-25 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-sanctuary-900/90 hover:bg-gold-500 hover:text-sanctuary-950 text-gold-300 border border-gold-400/50 text-xs font-serif shadow-lg animate-pulse transition-all cursor-pointer"
+          title="Chạm để bật âm thanh"
+        >
+          <VolumeX className="w-3.5 h-3.5 text-gold-400" />
+          <span>Chạm để bật tiếng</span>
+        </button>
       )}
 
       {/* Top Banner Overlay inside Video: Sermon Title & Live Status */}
