@@ -1097,64 +1097,39 @@ export default function ChurchAdminDashboard() {
           <main className="flex-1 min-w-0 bg-[#14161a] border border-stone-800 rounded-xl p-4 sm:p-6 shadow-xl">
             {/* ================= TAB 1: LIVE STUDIO & PHÁT SÓNG ================= */}
             {activeTab === "stream" && (
-              <div className="space-y-6">
-                {/* Header Title */}
-                <div className="border-b border-stone-800 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div>
-                    <h2 className="font-serif text-lg font-bold text-stone-100 flex items-center gap-2">
-                      <Radio className="w-5 h-5 text-[#c5a059]" />
-                      <span>Live Studio & Điều Khiển Phát Sóng</span>
-                    </h2>
-                    <p className="text-xs text-stone-400">
-                      Xem trước tín hiệu thực từ OBS, quản lý phát sóng và điều phối phòng chờ tín hữu
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-serif font-semibold border ${serviceForm.isLive
-                        ? "bg-red-500/15 text-red-400 border-red-500/30"
-                        : "bg-amber-500/15 text-amber-300 border-amber-500/30"
-                        }`}
-                    >
-                      <span
-                        className={`w-2 h-2 rounded-full ${serviceForm.isLive ? "bg-red-500 animate-ping" : "bg-amber-400"
-                          }`}
-                      />
-                      <span>{serviceForm.isLive ? "ĐANG ON-AIR" : "CHẾ ĐỘ TỔNG DUYỆT (OFF-AIR)"}</span>
-                    </span>
-                  </div>
-                </div>
-
-                {/* Master Broadcast Control Banner */}
+              <div className="space-y-4">
+                {/* Compact Header & Master Broadcast Switch Bar */}
                 <div
-                  className={`p-4 sm:p-5 rounded-xl border flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all shadow-lg ${serviceForm.isLive
-                    ? "bg-gradient-to-r from-red-950/70 via-stone-900 to-stone-900 border-red-500/50"
-                    : "bg-gradient-to-r from-amber-950/40 via-stone-900 to-stone-900 border-amber-500/30"
+                  className={`p-3.5 sm:px-5 sm:py-3.5 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all shadow-md ${serviceForm.isLive
+                    ? "bg-gradient-to-r from-red-950/60 via-stone-900 to-stone-900 border-red-500/40"
+                    : "bg-[#0f1115] border-stone-800"
                     }`}
                 >
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 font-serif font-bold text-sm sm:text-base">
-                      {serviceForm.isLive ? (
-                        <>
-                          <span className="w-3 h-3 rounded-full bg-red-500 animate-pulse inline-block" />
-                          <span className="text-red-300 uppercase tracking-wide">
-                            Đang Phát Sóng Toàn Thánh Đường (ON-AIR)
-                          </span>
-                        </>
-                      ) : (
-                        <>
-                          <span className="w-3 h-3 rounded-full bg-amber-400 inline-block" />
-                          <span className="text-amber-200 uppercase tracking-wide">
-                            Chế Độ Tổng Duyệt Nội Bộ (OFF-AIR — Phòng Chờ Đang Bật)
-                          </span>
-                        </>
-                      )}
+                  <div className="min-w-0 space-y-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Radio className="w-4 h-4 text-[#c5a059] shrink-0" />
+                      <h2 className="font-serif text-base font-bold text-stone-100">
+                        Live Studio & Điều Khiển Phát Sóng
+                      </h2>
+                      <span
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-serif font-semibold border ${serviceForm.isLive
+                          ? "bg-red-500/15 text-red-300 border-red-500/30"
+                          : "bg-amber-500/15 text-amber-300 border-amber-500/30"
+                          }`}
+                      >
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full ${serviceForm.isLive ? "bg-red-500 animate-ping" : "bg-amber-400"
+                            }`}
+                        />
+                        <span>
+                          {serviceForm.isLive ? "ĐANG ON-AIR" : "OFF-AIR (Phòng Chờ)"}
+                        </span>
+                      </span>
                     </div>
-                    <p className="text-xs text-stone-300 leading-relaxed max-w-2xl">
+                    <p className="text-xs text-stone-400 truncate">
                       {serviceForm.isLive
-                        ? "Toàn thể tín hữu và thân hữu khi truy cập đang xem trực tiếp luồng này. Khi buổi thờ phượng kết thúc, hãy bấm nút Kết thúc để chuyển tín hữu sang màn hình cảm tạ."
-                        : "Người ngoài khi vào phòng nhóm chỉ thấy 'Phòng Chờ Thờ Phượng' với nến sáng và thông tin bài giảng. Chỉ có admin xem trước được tín hiệu OBS bên dưới để chuẩn bị."}
+                        ? "Đang phát trực tiếp cho toàn thể tín hữu. Bấm 'Dừng Live' khi buổi nhóm kết thúc."
+                        : "Tín hữu bên ngoài đang thấy Phòng Chờ. Chỉ Admin xem trước được luồng bên dưới."}
                     </p>
                   </div>
 
@@ -1170,25 +1145,25 @@ export default function ChurchAdminDashboard() {
                             handleToggleLiveStatus(false);
                           }
                         }}
-                        className="px-5 py-3 rounded-lg bg-stone-800 hover:bg-red-900/80 text-stone-200 hover:text-white border border-stone-600 hover:border-red-500/50 font-serif font-bold text-xs sm:text-sm flex items-center gap-2 shadow-md transition-all cursor-pointer"
+                        className="w-full sm:w-auto justify-center px-4 py-2 rounded-lg bg-stone-800 hover:bg-red-900/80 text-stone-200 hover:text-white border border-stone-600 hover:border-red-500/50 font-serif font-bold text-xs flex items-center gap-2 shadow-sm transition-all cursor-pointer"
                       >
-                        <span className="w-2.5 h-2.5 rounded-sm bg-red-400" />
-                        <span>KẾT THÚC BUỔI NHÓM (DỪNG LIVE)</span>
+                        <span className="w-2 h-2 rounded-sm bg-red-400" />
+                        <span>DỪNG LIVE</span>
                       </button>
                     ) : (
                       <button
                         onClick={() => {
                           if (
                             confirm(
-                              "BẮT ĐẦU PHÁT SÓNG TRỰC TIẾP CHO HỘI THÁNH?\n\nMọi tín hữu đang ở phòng chờ sẽ lập tức được chuyển vào luồng phát trực tiếp từ OBS."
+                              "BẮT ĐẦU PHÁT SÓNG TRỰC TIẾP CHO HỘI THÁNH?\n\nMọi tín hữu đang ở phòng chờ sẽ lập tức được chuyển vào luồng phát trực tiếp."
                             )
                           ) {
                             handleToggleLiveStatus(true);
                           }
                         }}
-                        className="px-6 py-3 rounded-lg bg-red-600 hover:bg-red-500 text-white font-serif font-bold text-xs sm:text-sm flex items-center gap-2 shadow-xl hover:shadow-red-900/50 transition-all transform hover:scale-[1.02] cursor-pointer"
+                        className="w-full sm:w-auto justify-center px-5 py-2.5 rounded-lg bg-red-600 hover:bg-red-500 text-white font-serif font-bold text-xs flex items-center gap-2 shadow-lg hover:shadow-red-900/50 transition-all cursor-pointer"
                       >
-                        <Radio className="w-4 h-4 text-white animate-pulse" />
+                        <Radio className="w-3.5 h-3.5 text-white animate-pulse" />
                         <span>BẮT ĐẦU PHÁT SÓNG (GO LIVE)</span>
                       </button>
                     )}
