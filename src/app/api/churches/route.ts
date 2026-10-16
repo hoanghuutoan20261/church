@@ -110,17 +110,24 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const formattedSlug = slug.toLowerCase().trim().replace(/[^a-z0-9-]/g, "");
+    const baseSlug =
+      slug.toLowerCase().trim().replace(/[^a-z0-9-]/g, "") || "hoithanh";
+    let formattedSlug = baseSlug;
+    let slugCounter = 1;
+    while (await Church.exists({ slug: formattedSlug })) {
+      slugCounter++;
+      formattedSlug = `${baseSlug}-${slugCounter}`;
+    }
 
-    const existingChurch = await Church.findOne({
-      $or: [{ slug: formattedSlug }, { streamKey: streamKey.trim() }],
-    });
-
-    if (existingChurch) {
-      return NextResponse.json(
-        { error: "Mã định danh slug hoặc stream key đã tồn tại trên hệ thống" },
-        { status: 409 }
-      );
+    const baseKey = streamKey.trim() || `${formattedSlug}-live`;
+    let finalStreamKey =
+      slugCounter > 1 && baseKey === `${baseSlug}-live`
+        ? `${formattedSlug}-live`
+        : baseKey;
+    let keyCounter = 1;
+    while (await Church.exists({ streamKey: finalStreamKey })) {
+      keyCounter++;
+      finalStreamKey = `${formattedSlug}-live-${keyCounter}`;
     }
 
     const newChurch = await Church.create({
@@ -128,7 +135,7 @@ export async function POST(req: NextRequest) {
       slug: formattedSlug,
       denomination: denomination || "Tin Lành Việt Nam",
       address: address || "Việt Nam",
-      streamKey: streamKey.trim(),
+      streamKey: finalStreamKey,
       themeConfig: themeConfig || { accentColor: "#c5a059", logoUrl: "" },
       bankingConfig: bankingConfig || {
         bankName: "MB Bank",

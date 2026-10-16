@@ -88,15 +88,24 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const cleanSlug = slug.toLowerCase().trim().replace(/[^a-z0-9-]/g, "");
+    const baseSlug =
+      slug.toLowerCase().trim().replace(/[^a-z0-9-]/g, "") || "hoithanh";
+    let cleanSlug = baseSlug;
+    let slugCounter = 1;
+    while (await Church.exists({ slug: cleanSlug })) {
+      slugCounter++;
+      cleanSlug = `${baseSlug}-${slugCounter}`;
+    }
 
-    // Check duplicate slug
-    const existing = await Church.findOne({ slug: cleanSlug });
-    if (existing) {
-      return NextResponse.json(
-        { success: false, error: `Slug '/${cleanSlug}' đã được sử dụng bởi một Hội Thánh khác` },
-        { status: 400 }
-      );
+    const baseKey = streamKey.trim() || `${cleanSlug}-live`;
+    let finalStreamKey =
+      slugCounter > 1 && baseKey === `${baseSlug}-live`
+        ? `${cleanSlug}-live`
+        : baseKey;
+    let keyCounter = 1;
+    while (await Church.exists({ streamKey: finalStreamKey })) {
+      keyCounter++;
+      finalStreamKey = `${cleanSlug}-live-${keyCounter}`;
     }
 
     const newChurch = await Church.create({
@@ -104,7 +113,7 @@ export async function POST(req: NextRequest) {
       slug: cleanSlug,
       denomination: denomination.trim(),
       address: address.trim(),
-      streamKey: streamKey.trim(),
+      streamKey: finalStreamKey,
       liveSchedule: liveSchedule.trim(),
       isActive: Boolean(isActive),
       themeConfig: {

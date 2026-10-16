@@ -67,27 +67,29 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const cleanSlug = slug.toLowerCase().trim().replace(/[^a-z0-9-]/g, "");
+    const baseSlug =
+      slug.toLowerCase().trim().replace(/[^a-z0-9-]/g, "") || "hoithanh";
     const cleanEmail = email.toLowerCase().trim();
-    const finalStreamKey =
-      (streamKey && streamKey.trim()) || `${cleanSlug}-live`;
 
-    // Check if slug or streamKey already exists
-    const existingChurch = await Church.findOne({
-      $or: [{ slug: cleanSlug }, { streamKey: finalStreamKey }],
-    });
+    // Automatically resolve any slug or streamKey collision so users never hit duplicate errors
+    let cleanSlug = baseSlug;
+    let slugCounter = 1;
+    while (await Church.exists({ slug: cleanSlug })) {
+      slugCounter++;
+      cleanSlug = `${baseSlug}-${slugCounter}`;
+    }
 
-    if (existingChurch) {
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            existingChurch.slug === cleanSlug
-              ? "Mã đường dẫn (slug) này đã được sử dụng. Xin chọn tên khác."
-              : "Khóa luồng phát (stream key) này đã tồn tại trên hệ thống.",
-        },
-        { status: 409 }
-      );
+    const baseStreamKey =
+      (streamKey && streamKey.trim().replace(/[^a-z0-9-_]/gi, "")) ||
+      `${cleanSlug}-live`;
+    let finalStreamKey =
+      slugCounter > 1 && (!streamKey || streamKey.trim() === `${baseSlug}-live`)
+        ? `${cleanSlug}-live`
+        : baseStreamKey;
+    let keyCounter = 1;
+    while (await Church.exists({ streamKey: finalStreamKey })) {
+      keyCounter++;
+      finalStreamKey = `${cleanSlug}-live-${keyCounter}`;
     }
 
     // Check if user email already exists

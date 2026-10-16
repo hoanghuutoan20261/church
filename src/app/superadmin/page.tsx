@@ -2141,12 +2141,28 @@ export default function SuperAdminPage() {
                     const cleanedPrefix = rawNormalized
                       .replace(/^(hoi\s+thanh\s+tin\s+lanh|hoi\s+thanh|httl|ht)\s+/i, "")
                       .trim();
-                    const autoSlug = (cleanedPrefix || rawNormalized).replace(/[^a-z0-9]/g, "");
+                    const baseSlug = (cleanedPrefix || rawNormalized).replace(/[^a-z0-9]/g, "");
+                    if (!baseSlug) {
+                      setChurchForm({ ...churchForm, name: val, slug: "", streamKey: "" });
+                      return;
+                    }
+                    let uniqueSlug = baseSlug;
+                    let counter = 1;
+                    while (churches.some((c) => c.slug === uniqueSlug)) {
+                      counter++;
+                      uniqueSlug = `${baseSlug}-${counter}`;
+                    }
+                    let uniqueKey = `${uniqueSlug}-live`;
+                    let keyCounter = 1;
+                    while (churches.some((c) => c.streamKey === uniqueKey)) {
+                      keyCounter++;
+                      uniqueKey = `${uniqueSlug}-live-${keyCounter}`;
+                    }
                     setChurchForm({
                       ...churchForm,
                       name: val,
-                      slug: autoSlug,
-                      streamKey: autoSlug ? `${autoSlug}-live` : "",
+                      slug: uniqueSlug,
+                      streamKey: uniqueKey,
                     });
                   }}
                   placeholder="Ví dụ: Hội Thánh Tin Lành Cần Thơ"

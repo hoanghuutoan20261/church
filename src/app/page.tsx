@@ -2276,9 +2276,26 @@ export default function ChurchDirectoryPage() {
                     const cleanedPrefix = rawNormalized
                       .replace(/^(hoi\s+thanh\s+tin\s+lanh|hoi\s+thanh|httl|ht)\s+/i, "")
                       .trim();
-                    const autoSlug = (cleanedPrefix || rawNormalized).replace(/[^a-z0-9]/g, "");
-                    setFormSlug(autoSlug);
-                    setFormStreamKey(autoSlug ? `${autoSlug}-live` : "");
+                    const baseSlug = (cleanedPrefix || rawNormalized).replace(/[^a-z0-9]/g, "");
+                    if (!baseSlug) {
+                      setFormSlug("");
+                      setFormStreamKey("");
+                      return;
+                    }
+                    let uniqueSlug = baseSlug;
+                    let counter = 1;
+                    while (churches.some((c) => c.slug === uniqueSlug)) {
+                      counter++;
+                      uniqueSlug = `${baseSlug}-${counter}`;
+                    }
+                    let uniqueKey = `${uniqueSlug}-live`;
+                    let keyCounter = 1;
+                    while (churches.some((c) => c.streamKey === uniqueKey)) {
+                      keyCounter++;
+                      uniqueKey = `${uniqueSlug}-live-${keyCounter}`;
+                    }
+                    setFormSlug(uniqueSlug);
+                    setFormStreamKey(uniqueKey);
                   }}
                   placeholder="Ví dụ: Hội Thánh Tin Lành Bến Tre"
                   className="w-full bg-sanctuary-850 border border-white/[0.08] focus:border-gold-400/60 rounded-xl px-3.5 py-2.5 text-xs text-sanctuary-100 placeholder-sanctuary-500 focus:outline-none transition-colors"
