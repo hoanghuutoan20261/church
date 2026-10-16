@@ -214,7 +214,7 @@ export default function SuperAdminPage() {
 
   // Post Form
   const [postForm, setPostForm] = useState({
-    churchSlug: "loibansusong",
+    churchSlug: "",
     title: "",
     content: "",
     category: "announcement",
@@ -232,7 +232,7 @@ export default function SuperAdminPage() {
     email: "",
     password: "",
     role: "pastor",
-    churchSlug: "loibansusong",
+    churchSlug: "",
     phone: "",
   });
 
@@ -620,7 +620,7 @@ export default function SuperAdminPage() {
       showNotification(json.message);
       setShowPostModal(false);
       setPostForm({
-        churchSlug: "loibansusong",
+        churchSlug: "",
         title: "",
         content: "",
         category: "announcement",
@@ -655,7 +655,7 @@ export default function SuperAdminPage() {
         email: "",
         password: "",
         role: "pastor",
-        churchSlug: "loibansusong",
+        churchSlug: "",
         phone: "",
       });
       loadAllData();

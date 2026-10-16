@@ -11,13 +11,23 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const churchSlug = (
+  let churchSlug = (
     searchParams.get("churchSlug") ||
     searchParams.get("slug") ||
-    "loibansusong"
+    ""
   )
     .toLowerCase()
     .trim();
+
+  if (!churchSlug) {
+    try {
+      await connectDB();
+      const firstChurch = await Church.findOne({ isActive: true });
+      if (firstChurch) churchSlug = firstChurch.slug;
+    } catch {
+      // Ignored
+    }
+  }
 
   const channel = (searchParams.get("channel") || "all").toLowerCase().trim();
 

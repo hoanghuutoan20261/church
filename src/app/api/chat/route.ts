@@ -10,7 +10,11 @@ export async function GET(req: NextRequest) {
   try {
     await connectDB();
     const { searchParams } = new URL(req.url);
-    const churchSlug = (searchParams.get("churchSlug") || "loibansusong").toLowerCase().trim();
+    const churchSlug = (searchParams.get("churchSlug") || searchParams.get("slug") || "").toLowerCase().trim();
+
+    if (!churchSlug) {
+      return NextResponse.json({ success: true, data: [] });
+    }
 
     const messages = await ChatMessage.find({ churchSlug })
       .sort({ createdAt: 1 })
@@ -59,7 +63,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const slug = (churchSlug || "loibansusong").toLowerCase().trim();
+    const slug = (churchSlug || "").toLowerCase().trim();
+    if (!slug) {
+      return NextResponse.json({ success: false, error: "Thiếu mã định danh Hội Thánh (churchSlug)" }, { status: 400 });
+    }
 
     // Prevent Role Impersonation: Only authenticated leaders of this church can send with pastoral badges
     let verifiedRole: "pastor" | "moderator" | "elder" | "member" = "member";
