@@ -1879,7 +1879,7 @@ export default function ChurchDirectoryPage() {
             </>
           )}
 
-          {/* TAB 2: KHÁN PHÒNG THỜ PHƯỢNG TRỰC TIẾP */}
+          {/* TAB 2: KHÁN PHÒNG THỜ PHƯỢNG TRỰC TIẾP (CHỈ HIỂN THỊ HỘI THÁNH ĐANG LIVE) */}
           {navTab === "sanctuary" && (
             <div className="space-y-4">
               <div className="p-4 rounded-2xl bg-sanctuary-900 border border-gold-400/30 flex items-center justify-between">
@@ -1892,59 +1892,91 @@ export default function ChurchDirectoryPage() {
                 </span>
               </div>
 
-              {churches.map((church) => (
-                <div
-                  key={church._id}
-                  className="bg-sanctuary-900 border border-white/[0.08] rounded-2xl overflow-hidden shadow-md flex flex-col sm:flex-row gap-4 p-4"
-                >
-                  <div className="relative w-full sm:w-48 h-36 rounded-xl overflow-hidden bg-black shrink-0">
-                    <img
-                      src={church.profileConfig?.coverImageUrl || "https://images.unsplash.com/photo-1438232992991-995b7058bbb3?auto=format&fit=crop&w=600&q=80"}
-                      alt={church.name}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute top-2 left-2">
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-red-600 text-white uppercase">
-                        LIVE
-                      </span>
-                    </div>
+              {liveChurches.length === 0 ? (
+                <div className="bg-sanctuary-900 border border-white/[0.08] rounded-2xl p-8 sm:p-10 text-center space-y-3 shadow-md">
+                  <div className="w-12 h-12 rounded-full bg-sanctuary-850 border border-gold-400/30 flex items-center justify-center text-gold-400 mx-auto shadow-candle">
+                    <Radio className="w-6 h-6" />
                   </div>
-
-                  <div className="flex-1 flex flex-col justify-between space-y-2">
-                    <div>
-                      <span className="text-[11px] text-gold-400 font-serif">
-                        {church.denomination}
-                      </span>
-                      <h4 className="font-serif text-lg font-bold text-white">
-                        {church.name}
-                      </h4>
-                      <p className="text-xs text-sanctuary-300 font-serif italic">
-                        Chủ đề: &ldquo;{church.currentService?.title || "Lễ Thờ Phượng Chúa Nhật"}&rdquo;
-                      </p>
-                      <p className="text-xs text-sanctuary-400 mt-1">
-                        Diễn giả: {church.currentService?.speaker || church.profileConfig?.leadPastor}
-                      </p>
-                    </div>
-
-                    <div className="flex items-center gap-2 pt-2">
-                      <Link
-                        href={`/${church.slug}?view=sanctuary`}
-                        className="px-4 py-2 rounded-xl bg-gold-400 hover:bg-gold-500 text-sanctuary-950 font-serif font-bold text-xs flex items-center gap-1.5 shadow-sm"
-                      >
-                        <Radio className="w-3.5 h-3.5" />
-                        <span>Vào Thờ Phượng Trực Tiếp</span>
-                      </Link>
-
-                      <Link
-                        href={`/${church.slug}?view=wall`}
-                        className="px-3 py-2 rounded-xl bg-sanctuary-850 hover:bg-sanctuary-800 text-sanctuary-300 text-xs font-serif"
-                      >
-                        Xem Bản Tin
-                      </Link>
-                    </div>
+                  <div className="space-y-1">
+                    <h4 className="font-serif text-base sm:text-lg font-bold text-white">
+                      Hiện Chưa Có Hội Thánh Nào Đang Phát Trực Tiếp
+                    </h4>
+                    <p className="text-xs text-sanctuary-400 max-w-md mx-auto leading-relaxed">
+                      Các buổi lễ thờ phượng trực tuyến sẽ tự động hiển thị tại đây ngay khi Hội Thánh bắt đầu lên sóng (ON-AIR). Quý vị có thể xem lịch nhóm hoặc ghé thăm trang của từng Hội Thánh.
+                    </p>
+                  </div>
+                  <div className="pt-2 flex items-center justify-center gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => setNavTab("churches")}
+                      className="px-4 py-2 rounded-xl bg-gold-400 hover:bg-gold-500 text-sanctuary-950 font-serif font-bold text-xs shadow-sm transition-colors cursor-pointer"
+                    >
+                      Xem Danh Sách Các Hội Thánh
+                    </button>
                   </div>
                 </div>
-              ))}
+              ) : (
+                liveChurches.map((church) => (
+                  <div
+                    key={church._id}
+                    className="bg-sanctuary-900 border border-red-500/30 rounded-2xl overflow-hidden shadow-md flex flex-col sm:flex-row gap-4 p-4"
+                  >
+                    <div className="relative w-full sm:w-48 h-36 rounded-xl overflow-hidden bg-black shrink-0">
+                      <img
+                        src={
+                          church.profileConfig?.coverImageUrl ||
+                          "https://images.unsplash.com/photo-1438232992991-995b7058bbb3?auto=format&fit=crop&w=600&q=80"
+                        }
+                        alt={church.name}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute top-2 left-2 flex items-center gap-1.5">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-red-600 text-white uppercase animate-pulse">
+                          🔴 LIVE
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex-1 flex flex-col justify-between space-y-2">
+                      <div>
+                        <span className="text-[11px] text-gold-400 font-serif">
+                          {church.denomination}
+                        </span>
+                        <h4 className="font-serif text-lg font-bold text-white">
+                          {church.name}
+                        </h4>
+                        <p className="text-xs text-sanctuary-300 font-serif italic">
+                          Chủ đề: &ldquo;
+                          {church.currentService?.title || "Lễ Thờ Phượng Chúa Nhật"}
+                          &rdquo;
+                        </p>
+                        <p className="text-xs text-sanctuary-400 mt-1">
+                          Diễn giả:{" "}
+                          {church.currentService?.speaker ||
+                            church.profileConfig?.leadPastor}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2 pt-2">
+                        <Link
+                          href={`/${church.slug}?view=sanctuary`}
+                          className="px-4 py-2 rounded-xl bg-gold-400 hover:bg-gold-500 text-sanctuary-950 font-serif font-bold text-xs flex items-center gap-1.5 shadow-sm"
+                        >
+                          <Radio className="w-3.5 h-3.5" />
+                          <span>Vào Thờ Phượng Trực Tiếp</span>
+                        </Link>
+
+                        <Link
+                          href={`/${church.slug}?view=wall`}
+                          className="px-3 py-2 rounded-xl bg-sanctuary-850 hover:bg-sanctuary-800 text-sanctuary-300 text-xs font-serif"
+                        >
+                          Xem Bản Tin
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           )}
 
