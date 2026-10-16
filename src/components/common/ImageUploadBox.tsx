@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useRef } from "react";
-import { UploadCloud, X, Check, ImageIcon, Sparkles, RefreshCw, AlertCircle } from "lucide-react";
-import { compressImageClient, formatBytes } from "@/lib/imageCompressor";
+import { UploadCloud, X, Check, ImageIcon, RefreshCw, AlertCircle } from "lucide-react";
+import { compressImageClient } from "@/lib/imageCompressor";
 
 interface ImageUploadBoxProps {
   label?: string;
@@ -35,7 +35,12 @@ export const ImageUploadBox: React.FC<ImageUploadBoxProps> = ({
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const handleFileProcess = async (file: File) => {
-    if (!file.type.startsWith("image/")) {
+    const isImageMime = file.type && file.type.startsWith("image/");
+    const isImageExt = /\.(jpg|jpeg|png|webp|gif|heic|heif|bmp|svg|avif)$/i.test(
+      file.name || ""
+    );
+
+    if (!isImageMime && !isImageExt) {
       setErrorMsg("Vui lòng chọn tệp tin hình ảnh hợp lệ (PNG, JPG, WebP...).");
       return;
     }
@@ -46,47 +51,73 @@ export const ImageUploadBox: React.FC<ImageUploadBoxProps> = ({
 
     try {
       // 1. Client-side compression
-      let maxWidth = 1400;
-      let maxHeight = 1400;
+      let maxWidth = 1280;
+      let maxHeight = 1280;
       if (type === "avatar") {
         maxWidth = 400;
         maxHeight = 400;
       } else if (type === "cover") {
-        maxWidth = 1920;
-        maxHeight = 800;
+        maxWidth = 1600;
+        maxHeight = 720;
       }
 
       const compressed = await compressImageClient(file, {
         maxWidth,
         maxHeight,
-        quality: 0.82,
+        quality: 0.8,
         mimeType: "image/webp",
       });
 
-      // 2. Upload to server VPS
-      const formData = new FormData();
-      formData.append("file", compressed.file);
-      formData.append("type", type);
-
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
-
-      const json = await res.json();
-      if (!res.ok || !json.success) {
-        throw new Error(json.message || "Lỗi khi lưu ảnh lên máy chủ");
+      // Immediately show compressed image so user never sees blank/missing preview
+      if (compressed.dataUrl) {
+        onChange(compressed.dataUrl);
       }
 
-      onChange(json.url);
-      setUploadStats({
-        originalSize: compressed.originalSize,
-        savedSize: json.savedSize || compressed.compressedSize,
-        savedPercent: json.savedPercent || compressed.compressionRatio,
-      });
+      // 2. Upload to server for Sharp optimization & persistence
+      try {
+        const formData = new FormData();
+        formData.append("file", compressed.file);
+        formData.append("type", type);
+
+        const res = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        const json = await res.json();
+        if (res.ok && json.success && json.url) {
+          onChange(json.url);
+          setUploadStats({
+            originalSize: compressed.originalSize,
+            savedSize: json.savedSize || compressed.compressedSize,
+            savedPercent: json.savedPercent || compressed.compressionRatio,
+          });
+        } else if (compressed.dataUrl) {
+          // Fallback to client-compressed Data URL if server upload fails
+          onChange(compressed.dataUrl);
+          setUploadStats({
+            originalSize: compressed.originalSize,
+            savedSize: compressed.compressedSize,
+            savedPercent: compressed.compressionRatio,
+          });
+        } else {
+          throw new Error(json.message || "Lỗi khi xử lý ảnh trên máy chủ");
+        }
+      } catch (serverErr) {
+        if (compressed.dataUrl) {
+          onChange(compressed.dataUrl);
+          setUploadStats({
+            originalSize: compressed.originalSize,
+            savedSize: compressed.compressedSize,
+            savedPercent: compressed.compressionRatio,
+          });
+        } else {
+          throw serverErr;
+        }
+      }
     } catch (err: any) {
       console.error("Upload error:", err);
-      setErrorMsg(err.message || "Không thể tải ảnh lên máy chủ.");
+      setErrorMsg(err.message || "Không thể tải ảnh lên. Vui lòng thử ảnh khác.");
     } finally {
       setIsUploading(false);
     }
@@ -96,6 +127,8 @@ export const ImageUploadBox: React.FC<ImageUploadBoxProps> = ({
     if (e.target.files && e.target.files[0]) {
       handleFileProcess(e.target.files[0]);
     }
+    // Reset input value so selecting the same file again still triggers onChange
+    e.target.value = "";
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -113,7 +146,10 @@ export const ImageUploadBox: React.FC<ImageUploadBoxProps> = ({
         ? "aspect-[16/6] w-full"
         : aspectRatio === "post"
           ? "aspect-[16/9] w-full"
-          : "h-36 w-full";
+          : "h-40 w-full";
+
+  const isUploadedData =
+    value.startsWith("/uploads/") || value.startsWith("data:image/");
 
   return (
     <div className="space-y-2">
@@ -132,7 +168,7 @@ export const ImageUploadBox: React.FC<ImageUploadBoxProps> = ({
             onClick={() => setShowPresets(!showPresets)}
             className="text-[11px] text-[#c5a059] hover:underline font-serif cursor-pointer ml-auto"
           >
-            {showPresets ? "Đóng ảnh mẫu" : ""}
+            {showPresets ? "Đóng ảnh mẫu" : "Chọn ảnh mẫu Cơ Đốc"}
           </button>
         )}
       </div>
@@ -156,19 +192,17 @@ export const ImageUploadBox: React.FC<ImageUploadBoxProps> = ({
           onDragLeave={() => setIsDragOver(false)}
           onDrop={handleDrop}
           onClick={() => !isUploading && fileInputRef.current?.click()}
-          className={`relative border-2 border-dashed rounded-xl p-4 sm:p-5 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2 ${isDragOver
-            ? "border-[#c5a059] bg-[#c5a059]/10"
-            : "border-stone-700 hover:border-[#c5a059]/70 bg-stone-900/60 hover:bg-stone-900"
-            }`}
+          className={`relative border-2 border-dashed rounded-xl p-4 sm:p-5 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2 ${
+            isDragOver
+              ? "border-[#c5a059] bg-[#c5a059]/10"
+              : "border-stone-700 hover:border-[#c5a059]/70 bg-stone-900/60 hover:bg-stone-900"
+          }`}
         >
           {isUploading ? (
             <div className="py-3 flex flex-col items-center gap-2 text-stone-300">
               <RefreshCw className="w-7 h-7 text-[#c5a059] animate-spin" />
               <p className="text-xs font-serif font-semibold">
-                Đang nén ảnh & tải lên máy chủ VPS...
-              </p>
-              <p className="text-[10px] text-stone-400">
-                (Tự động tối ưu WebP để tiết kiệm dung lượng)
+                Đang tối ưu & tải ảnh lên...
               </p>
             </div>
           ) : (
@@ -178,9 +212,14 @@ export const ImageUploadBox: React.FC<ImageUploadBoxProps> = ({
               </div>
               <div className="space-y-0.5">
                 <p className="text-xs font-serif font-bold text-stone-200">
-                  Bấm để tải ảnh lên <span className="font-normal text-stone-400">hoặc kéo thả vào đây</span>
+                  Bấm để chọn ảnh từ máy{" "}
+                  <span className="font-normal text-stone-400">
+                    hoặc kéo thả vào đây
+                  </span>
                 </p>
-
+                <p className="text-[10px] text-stone-500">
+                  Hỗ trợ JPG, PNG, WebP, ảnh chụp từ điện thoại
+                </p>
               </div>
             </>
           )}
@@ -193,7 +232,7 @@ export const ImageUploadBox: React.FC<ImageUploadBoxProps> = ({
           >
             <img
               src={value}
-              alt="Preview"
+              alt="Xem trước hình ảnh"
               className="w-full h-full object-cover"
             />
 
@@ -206,7 +245,9 @@ export const ImageUploadBox: React.FC<ImageUploadBoxProps> = ({
                 className="px-2.5 py-1 rounded-full bg-black/75 hover:bg-black text-white text-[11px] font-serif border border-white/20 shadow-md backdrop-blur-sm flex items-center gap-1 cursor-pointer transition-all hover:scale-105"
                 title="Thay đổi ảnh khác"
               >
-                <RefreshCw className={`w-3 h-3 ${isUploading ? "animate-spin" : ""}`} />
+                <RefreshCw
+                  className={`w-3 h-3 ${isUploading ? "animate-spin" : ""}`}
+                />
                 <span>Đổi ảnh</span>
               </button>
 
@@ -225,7 +266,7 @@ export const ImageUploadBox: React.FC<ImageUploadBoxProps> = ({
 
             {/* Storage indicator tag */}
             <div className="absolute bottom-2 left-2 bg-black/70 backdrop-blur-md px-2 py-0.5 rounded text-[10px] text-stone-300 border border-white/10 font-mono">
-              {value.startsWith("/uploads/") ? "📁" : "🔗 Link ngoài"}
+              {isUploadedData ? "✓ Đã tải ảnh lên" : "🔗 Ảnh mẫu / Link"}
             </div>
           </div>
         </div>
@@ -236,8 +277,11 @@ export const ImageUploadBox: React.FC<ImageUploadBoxProps> = ({
         <div className="p-2 bg-emerald-950/70 border border-emerald-500/40 rounded-lg text-[11px] text-emerald-300 font-serif flex items-center justify-between animate-fadeIn">
           <div className="flex items-center gap-1.5">
             <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+            <span>Đã tải ảnh lên thành công!</span>
           </div>
-          <span className="text-[10px] font-mono text-emerald-400">Đã lưu VPS</span>
+          <span className="text-[10px] font-mono text-emerald-400">
+            Hãy bấm nút Lưu / Đăng bài bên dưới
+          </span>
         </div>
       )}
 
@@ -249,11 +293,11 @@ export const ImageUploadBox: React.FC<ImageUploadBoxProps> = ({
         </div>
       )}
 
-      {/* Optional Preset Presets Samples */}
+      {/* Optional Preset Samples */}
       {showPresets && presetSamples.length > 0 && (
         <div className="p-3 bg-stone-900/80 border border-stone-800 rounded-xl space-y-1.5 animate-fadeIn">
           <p className="text-[10px] text-[#c5a059] font-serif">
-            ⚡ Hoặc chạm vào một ảnh Cơ Đốc mẫu để áp dụng nhanh:
+            ⚡ Chạm vào một ảnh Cơ Đốc mẫu để áp dụng nhanh:
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 max-h-44 overflow-y-auto pr-1">
             {presetSamples.map((ps, idx) => (
@@ -264,10 +308,11 @@ export const ImageUploadBox: React.FC<ImageUploadBoxProps> = ({
                   setShowPresets(false);
                   setUploadStats(null);
                 }}
-                className={`relative rounded-lg overflow-hidden border cursor-pointer group transition-all aspect-video ${value === ps.url
-                  ? "border-[#c5a059] ring-2 ring-[#c5a059]/50"
-                  : "border-stone-800 hover:border-stone-600"
-                  }`}
+                className={`relative rounded-lg overflow-hidden border cursor-pointer group transition-all aspect-video ${
+                  value === ps.url
+                    ? "border-[#c5a059] ring-2 ring-[#c5a059]/50"
+                    : "border-stone-800 hover:border-stone-600"
+                }`}
               >
                 <img
                   src={ps.url}

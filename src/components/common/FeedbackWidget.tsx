@@ -99,26 +99,6 @@ export const FeedbackWidget: React.FC = () => {
 
   return (
     <>
-      {/* Floating Action Button (Desktop Only - hidden on mobile so it never overlaps mobile tabs) */}
-      {!isHiddenRoute && (
-        <button
-          type="button"
-          onClick={() => {
-            setIsSubmitted(false);
-            setErrorMsg("");
-            setIsOpen(true);
-          }}
-          className="hidden md:flex fixed bottom-5 left-5 z-40 items-center gap-2 px-3.5 py-2.5 rounded-full bg-[#121621]/95 hover:bg-[#181e2c] text-gold-300 border border-gold-400/40 hover:border-gold-400 shadow-2xl backdrop-blur-md transition-all group cursor-pointer"
-          title="Đóng góp ý kiến cho Ban Quản Trị Dự Án (Super Admin)"
-        >
-          <div className="w-6 h-6 rounded-full bg-gold-400/20 flex items-center justify-center text-gold-400 group-hover:scale-110 transition-transform">
-            <MessageSquarePlus className="w-3.5 h-3.5" />
-          </div>
-          <span className="text-xs font-serif font-semibold tracking-wide pr-0.5">
-            Góp Ý Dự Án
-          </span>
-        </button>
-      )}
 
       {/* Feedback Modal */}
       {isOpen && (

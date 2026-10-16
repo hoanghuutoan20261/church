@@ -22,6 +22,14 @@ export interface ICurrentService {
   viewersCount: number;
 }
 
+export interface IGalleryImage {
+  id: string;
+  url: string;
+  title?: string;
+  category?: string;
+  createdAt?: string;
+}
+
 export interface IProfileConfig {
   coverImageUrl?: string;
   avatarUrl?: string;
@@ -31,6 +39,7 @@ export interface IProfileConfig {
   contactEmail?: string;
   slogan?: string;
   googleMapUrl?: string;
+  galleryImages?: IGalleryImage[];
 }
 
 export interface ILiveLyrics {
@@ -194,6 +203,19 @@ const ChurchSchema = new Schema<IChurch>(
       googleMapUrl: {
         type: String,
         default: "",
+      },
+      galleryImages: {
+        type: [
+          {
+            _id: false,
+            id: { type: String },
+            url: { type: String },
+            title: { type: String, default: "" },
+            category: { type: String, default: "Sinh Hoạt" },
+            createdAt: { type: String, default: "" },
+          },
+        ],
+        default: [],
       },
     },
     currentService: {

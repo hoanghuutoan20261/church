@@ -1,7 +1,8 @@
 /**
  * Client-side Image Compression Utility
  * Resizes and compresses images in the browser before uploading to server.
- * Dramatically reduces upload bandwidth and saves disk space on VPS.
+ * Includes automatic JPEG fallback for mobile browsers that don't support WebP canvas encoding,
+ * and returns a ready-to-use Base64 Data URL so images always display reliably.
  */
 
 export interface CompressionOptions {
@@ -14,6 +15,7 @@ export interface CompressionOptions {
 export interface CompressedResult {
   file: File;
   previewUrl: string;
+  dataUrl: string;
   originalSize: number;
   compressedSize: number;
   compressionRatio: number; // percentage saved
@@ -21,22 +23,33 @@ export interface CompressedResult {
   height: number;
 }
 
+function fileToDataUrl(file: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve((r.result as string) || "");
+    r.onerror = (err) => reject(err);
+    r.readAsDataURL(file);
+  });
+}
+
 export async function compressImageClient(
   file: File,
   options: CompressionOptions = {}
 ): Promise<CompressedResult> {
   const {
-    maxWidth = 1600,
+    maxWidth = 1400,
     maxHeight = 1200,
-    quality = 0.82,
+    quality = 0.8,
     mimeType = "image/webp",
   } = options;
 
   // Don't compress SVG or animated GIF
   if (file.type === "image/svg+xml" || file.type === "image/gif") {
+    const dataUrl = await fileToDataUrl(file);
     return {
       file,
-      previewUrl: URL.createObjectURL(file),
+      previewUrl: dataUrl,
+      dataUrl,
       originalSize: file.size,
       compressedSize: file.size,
       compressionRatio: 0,
@@ -49,16 +62,18 @@ export async function compressImageClient(
     const reader = new FileReader();
 
     reader.onload = (e) => {
+      const originalDataUrl = (e.target?.result as string) || "";
       const img = new Image();
+
       img.onload = () => {
-        let width = img.width;
-        let height = img.height;
+        let width = img.width || 800;
+        let height = img.height || 600;
 
         // Calculate aspect-ratio scale
         if (width > maxWidth || height > maxHeight) {
           const ratio = Math.min(maxWidth / width, maxHeight / height);
-          width = Math.round(width * ratio);
-          height = Math.round(height * ratio);
+          width = Math.max(1, Math.round(width * ratio));
+          height = Math.max(1, Math.round(height * ratio));
         }
 
         const canvas = document.createElement("canvas");
@@ -67,10 +82,10 @@ export async function compressImageClient(
 
         const ctx = canvas.getContext("2d");
         if (!ctx) {
-          // Fallback if canvas context fails
           resolve({
             file,
-            previewUrl: URL.createObjectURL(file),
+            previewUrl: originalDataUrl,
+            dataUrl: originalDataUrl,
             originalSize: file.size,
             compressedSize: file.size,
             compressionRatio: 0,
@@ -85,13 +100,25 @@ export async function compressImageClient(
         ctx.imageSmoothingQuality = "high";
         ctx.drawImage(img, 0, 0, width, height);
 
+        // Generate Data URL (try WebP first, fallback to JPEG if browser doesn't encode WebP)
+        let dataUrl = canvas.toDataURL(mimeType, quality);
+        let actualMime = mimeType;
+        if (
+          mimeType === "image/webp" &&
+          !dataUrl.startsWith("data:image/webp")
+        ) {
+          actualMime = "image/jpeg";
+          dataUrl = canvas.toDataURL("image/jpeg", quality);
+        }
+
         // Convert to blob
         canvas.toBlob(
           (blob) => {
             if (!blob) {
               resolve({
                 file,
-                previewUrl: URL.createObjectURL(file),
+                previewUrl: dataUrl || originalDataUrl,
+                dataUrl: dataUrl || originalDataUrl,
                 originalSize: file.size,
                 compressedSize: file.size,
                 compressionRatio: 0,
@@ -101,17 +128,17 @@ export async function compressImageClient(
               return;
             }
 
-            // Derive safe file name with .webp extension
-            const originalBase = file.name.replace(/\.[^/.]+$/, "");
-            const ext = mimeType === "image/webp" ? "webp" : "jpg";
+            const originalBase =
+              file.name.replace(/\.[^/.]+$/, "").replace(/[^a-zA-Z0-9_-]/g, "_") ||
+              "image";
+            const ext = actualMime === "image/webp" ? "webp" : "jpg";
             const newFileName = `${originalBase}.${ext}`;
 
             const compressedFile = new File([blob], newFileName, {
-              type: mimeType,
+              type: actualMime,
               lastModified: Date.now(),
             });
 
-            const previewUrl = URL.createObjectURL(blob);
             const ratio = Math.max(
               0,
               Math.round(((file.size - compressedFile.size) / file.size) * 100)
@@ -119,7 +146,8 @@ export async function compressImageClient(
 
             resolve({
               file: compressedFile,
-              previewUrl,
+              previewUrl: dataUrl,
+              dataUrl,
               originalSize: file.size,
               compressedSize: compressedFile.size,
               compressionRatio: ratio,
@@ -127,16 +155,16 @@ export async function compressImageClient(
               height,
             });
           },
-          mimeType,
+          actualMime,
           quality
         );
       };
 
       img.onerror = () => {
-        // If image loading fails, return original
         resolve({
           file,
-          previewUrl: URL.createObjectURL(file),
+          previewUrl: originalDataUrl,
+          dataUrl: originalDataUrl,
           originalSize: file.size,
           compressedSize: file.size,
           compressionRatio: 0,
@@ -145,7 +173,7 @@ export async function compressImageClient(
         });
       };
 
-      img.src = e.target?.result as string;
+      img.src = originalDataUrl;
     };
 
     reader.onerror = (err) => reject(err);

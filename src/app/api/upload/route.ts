@@ -6,17 +6,17 @@ import { getAuthUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB limit
+const MAX_FILE_SIZE = 15 * 1024 * 1024; // 15MB limit
 
 export async function POST(req: NextRequest) {
   try {
-    // Require authenticated user (pastor, admin, tech_leader, superadmin, or registered member)
+    // Allow authenticated user; also allow upload if session cookie is present
     const authSession = await getAuthUser(req);
     if (!authSession) {
       return NextResponse.json(
         {
           success: false,
-          message: "Yêu cầu đăng nhập tài khoản để tải tệp tin lên hệ thống.",
+          message: "Yêu cầu đăng nhập tài khoản quản trị để tải ảnh lên hệ thống.",
           code: "UNAUTHORIZED",
         },
         { status: 401 }
@@ -48,16 +48,21 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check MIME type
-    if (!file.type.startsWith("image/")) {
+    // Check MIME type or file extension (mobile browsers sometimes omit file.type)
+    const isImageMime = file.type && file.type.startsWith("image/");
+    const isImageExt = /\.(jpg|jpeg|png|webp|gif|heic|heif|bmp|svg|avif)$/i.test(
+      file.name || ""
+    );
+    if (!isImageMime && !isImageExt) {
       return NextResponse.json(
-        { success: false, message: "Tệp tin tải lên phải là hình ảnh hợp lệ (JPEG, PNG, WebP, GIF...)." },
+        {
+          success: false,
+          message:
+            "Tệp tin tải lên phải là hình ảnh hợp lệ (JPEG, PNG, WebP, GIF...).",
+        },
         { status: 400 }
       );
     }
-
-    const uploadDir = path.join(process.cwd(), "public", "uploads");
-    await fs.mkdir(uploadDir, { recursive: true });
 
     const originalSize = file.size;
     const rawBuffer = Buffer.from(await file.arrayBuffer());
@@ -66,13 +71,13 @@ export async function POST(req: NextRequest) {
     const timestamp = Date.now();
     const randomSuffix = Math.random().toString(36).substring(2, 8);
     const outputFilename = `${type}_${timestamp}_${randomSuffix}.webp`;
-    const outputPath = path.join(uploadDir, outputFilename);
 
     let processedBuffer: Buffer;
+    let outputMime = "image/webp";
 
     // Apply Sharp compression & resizing according to image purpose
     try {
-      let sharpInstance = sharp(rawBuffer);
+      let sharpInstance = sharp(rawBuffer).rotate(); // auto-orient EXIF from mobile camera
 
       if (type === "avatar") {
         sharpInstance = sharpInstance.resize(400, 400, {
@@ -80,46 +85,65 @@ export async function POST(req: NextRequest) {
           position: "center",
         });
       } else if (type === "cover") {
-        sharpInstance = sharpInstance.resize(1920, 800, {
+        sharpInstance = sharpInstance.resize(1600, 720, {
           fit: "inside",
           withoutEnlargement: true,
         });
       } else {
         // Post or general image
-        sharpInstance = sharpInstance.resize(1400, 1400, {
+        sharpInstance = sharpInstance.resize(1280, 1280, {
           fit: "inside",
           withoutEnlargement: true,
         });
       }
 
-      // Convert to WebP with 80% quality for optimal balance of sharpness and tiny file size
       processedBuffer = await sharpInstance
-        .webp({ quality: 80, effort: 4 })
+        .webp({ quality: 78, effort: 4 })
         .toBuffer();
     } catch {
-      // Fallback if sharp transformation fails for any reason
       processedBuffer = rawBuffer;
+      outputMime = file.type || "image/webp";
     }
 
-    // Save to disk
-    await fs.writeFile(outputPath, processedBuffer);
+    // 1. Save to disk if filesystem is writable (local / VPS)
+    try {
+      const uploadDir = path.join(process.cwd(), "public", "uploads");
+      await fs.mkdir(uploadDir, { recursive: true });
+      const outputPath = path.join(uploadDir, outputFilename);
+      await fs.writeFile(outputPath, processedBuffer);
+    } catch (fsErr) {
+      console.warn("Notice: Could not write to public/uploads (using Data URL):", fsErr);
+    }
 
-    const relativeUrl = `/uploads/${outputFilename}`;
+    // 2. Build self-contained Data URL so the image ALWAYS displays on every environment
+    // (avoids Next.js production static 404, container restarts, or read-only filesystems)
+    const dataUrl = `data:${outputMime};base64,${processedBuffer.toString("base64")}`;
+    const fileUrl = `/uploads/${outputFilename}`;
 
     return NextResponse.json({
       success: true,
-      url: relativeUrl,
+      url: dataUrl,
+      fileUrl,
       filename: outputFilename,
       originalSize,
       savedSize: processedBuffer.length,
-      savedPercent: originalSize > 0 
-        ? Math.max(0, Math.round(((originalSize - processedBuffer.length) / originalSize) * 100))
-        : 0,
+      savedPercent:
+        originalSize > 0
+          ? Math.max(
+              0,
+              Math.round(
+                ((originalSize - processedBuffer.length) / originalSize) * 100
+              )
+            )
+          : 0,
     });
   } catch (error: any) {
     console.error("Upload error:", error);
     return NextResponse.json(
-      { success: false, message: "Lỗi máy chủ khi xử lý hình ảnh: " + error.message },
+      {
+        success: false,
+        message: "Lỗi máy chủ khi xử lý hình ảnh: " + error.message,
+      },
       { status: 500 }
     );
   }

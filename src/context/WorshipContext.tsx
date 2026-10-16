@@ -42,6 +42,13 @@ export interface CurrentChurchInfo {
     contactEmail?: string;
     slogan?: string;
     googleMapUrl?: string;
+    galleryImages?: {
+      id: string;
+      url: string;
+      title?: string;
+      category?: string;
+      createdAt?: string;
+    }[];
   };
   liveSchedule?: string;
   worshipSchedules?: {

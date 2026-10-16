@@ -616,6 +616,7 @@ export default function ChurchAdminDashboard() {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          churchSlug: church?.slug,
           ...churchInfoForm,
           bankingConfig: bankForm,
           profileConfig: profileForm,
@@ -624,7 +625,7 @@ export default function ChurchAdminDashboard() {
 
       const data = await res.json();
       if (data.success) {
-        if (data.church) setChurch(data.church);
+        if (data.data || data.church) setChurch(data.data || data.church);
         setSaveSuccess("Cập nhật thông tin Hội Thánh & Dâng hiến thành công!");
         setTimeout(() => setSaveSuccess(""), 4000);
       }
@@ -635,23 +636,53 @@ export default function ChurchAdminDashboard() {
     }
   };
 
+  // Auto-save Cover / Avatar when uploaded in Settings
+  const handleQuickSaveProfileImage = async (patch: { coverImageUrl?: string; avatarUrl?: string }) => {
+    const updatedProfile = { ...profileForm, ...patch };
+    setProfileForm(updatedProfile);
+    try {
+      const res = await fetch("/api/admin/church", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          churchSlug: church?.slug,
+          profileConfig: patch,
+        }),
+      });
+      const data = await res.json();
+      if (data.success && (data.data || data.church)) {
+        setChurch(data.data || data.church);
+        setSaveSuccess("Đã tự động lưu hình ảnh giao diện Hội Thánh!");
+        setTimeout(() => setSaveSuccess(""), 3500);
+      }
+    } catch {
+      // Ignored; user can still click Save button
+    }
+  };
+
   // Publish new post to Church Wall
   const handleCreatePost = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!postForm.title.trim() || !postForm.content.trim()) {
-      alert("Vui lòng nhập đầy đủ tiêu đề và nội dung bài viết.");
+    if (!postForm.title.trim() && !postForm.content.trim() && !postForm.imageUrl.trim()) {
+      alert("Vui lòng nhập nội dung hoặc tải hình ảnh bài viết.");
       return;
     }
 
     setIsPosting(true);
     try {
+      const finalTitle =
+        postForm.title.trim() ||
+        postForm.content.trim().split("\n")[0].slice(0, 80) ||
+        `Hình ảnh sinh hoạt — ${church?.name || "Hội Thánh"}`;
+      const finalContent = postForm.content.trim() || finalTitle;
+
       const res = await fetch("/api/posts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           churchSlug: church?.slug,
-          title: postForm.title,
-          content: postForm.content,
+          title: finalTitle,
+          content: finalContent,
           category: postForm.category,
           scriptureVerse: postForm.scriptureVerse,
           imageUrl: postForm.imageUrl,
@@ -2124,12 +2155,11 @@ export default function ChurchAdminDashboard() {
                         </label>
                         <input
                           type="text"
-                          required
                           value={postForm.title}
                           onChange={(e) =>
                             setPostForm({ ...postForm, title: e.target.value })
                           }
-                          placeholder="Thông báo lễ phục sinh, tĩnh nguyện tuần này..."
+                          placeholder="Thông báo lễ phục sinh, tĩnh nguyện tuần này... (tự động điền nếu chỉ đăng ảnh)"
                           className="w-full bg-[#14161a] border border-stone-700 rounded-lg px-3 py-2 text-xs text-stone-100 focus:outline-none focus:border-[#c5a059]"
                         />
                       </div>
@@ -2179,7 +2209,6 @@ export default function ChurchAdminDashboard() {
                           Nội Dung Bài Viết:
                         </label>
                         <textarea
-                          required
                           rows={5}
                           value={postForm.content}
                           onChange={(e) =>
@@ -2317,6 +2346,16 @@ export default function ChurchAdminDashboard() {
                             <p className="text-xs text-stone-300 line-clamp-2 leading-relaxed">
                               {post.content}
                             </p>
+
+                            {post.imageUrl && (
+                              <div className="rounded-lg overflow-hidden border border-stone-800 bg-stone-950 max-h-40">
+                                <img
+                                  src={post.imageUrl}
+                                  alt={post.title}
+                                  className="w-full h-36 object-cover"
+                                />
+                              </div>
+                            )}
 
                             <div className="flex items-center justify-between text-[11px] text-stone-500 pt-1 border-t border-stone-800/80">
                               <span className="flex items-center gap-1.5 text-[#c5a059]">
@@ -2678,7 +2717,10 @@ export default function ChurchAdminDashboard() {
                       <ImageUploadBox
                         type="cover"
                         value={profileForm.coverImageUrl}
-                        onChange={(url) => setProfileForm({ ...profileForm, coverImageUrl: url })}
+                        onChange={(url) => {
+                          setProfileForm({ ...profileForm, coverImageUrl: url });
+                          if (url) handleQuickSaveProfileImage({ coverImageUrl: url });
+                        }}
                         label="Ảnh Bìa Tường Hội Thánh (Cover Image)"
                       />
                     </div>
@@ -2687,7 +2729,10 @@ export default function ChurchAdminDashboard() {
                       <ImageUploadBox
                         type="avatar"
                         value={profileForm.avatarUrl}
-                        onChange={(url) => setProfileForm({ ...profileForm, avatarUrl: url })}
+                        onChange={(url) => {
+                          setProfileForm({ ...profileForm, avatarUrl: url });
+                          if (url) handleQuickSaveProfileImage({ avatarUrl: url });
+                        }}
                         label="Ảnh Đại Diện / Biểu Trưng (Avatar)"
                       />
                     </div>

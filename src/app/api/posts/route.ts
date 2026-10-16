@@ -80,9 +80,9 @@ export async function POST(req: NextRequest) {
       authorRole,
     } = body;
 
-    if (!churchSlug || !content) {
+    if (!churchSlug || (!content?.trim() && !imageUrl?.trim())) {
       return NextResponse.json(
-        { success: false, message: "Nội dung bài viết và Hội Thánh đăng tải là bắt buộc" },
+        { success: false, message: "Vui lòng nhập nội dung hoặc tải hình ảnh cho bài viết" },
         { status: 400 }
       );
     }
@@ -127,14 +127,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const safeContent = (content || "").trim() || (title || "").trim() || `Hình ảnh sinh hoạt — ${church.name}`;
     let finalTitle = title?.trim();
     if (!finalTitle) {
       if (category === "announcement") finalTitle = `Thông Báo Mục Vụ - ${church.name}`;
       else if (category === "scripture") finalTitle = "Lời Chúa Nuôi Dưỡng Tâm Linh";
       else if (category === "sermon") finalTitle = "Sứ Điệp Lời Chúa";
-      else if (category === "fellowship") finalTitle = "Làm Chứng & Thông Công";
+      else if (category === "fellowship") finalTitle = `Hình Ảnh Sinh Hoạt & Thông Công`;
       else if (category === "worship") finalTitle = `Chương Trình Thờ Phượng - ${church.name}`;
-      else finalTitle = content.trim().slice(0, 60) + (content.length > 60 ? "..." : "");
+      else finalTitle = safeContent.slice(0, 60) + (safeContent.length > 60 ? "..." : "");
     }
 
     const newPost = await Post.create({
@@ -157,7 +158,7 @@ export async function POST(req: NextRequest) {
       },
       category,
       title: finalTitle,
-      content: content.trim(),
+      content: safeContent,
       scriptureVerse: scriptureVerse?.trim() || "",
       imageUrl: imageUrl?.trim() || "",
       videoUrl: videoUrl?.trim() || "",

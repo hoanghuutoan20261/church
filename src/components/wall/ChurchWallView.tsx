@@ -6,6 +6,7 @@ import Link from "next/link";
 import { CurrentChurchInfo, useWorship } from "@/context/WorshipContext";
 import { getChurchAvatar } from "@/lib/churchAvatar";
 import { ImageUploadBox } from "@/components/common/ImageUploadBox";
+import { compressImageClient } from "@/lib/imageCompressor";
 import { AmenIcon } from "@/components/common/AmenIcon";
 import { getChurchGoogleMapsUrl } from "@/lib/mapUtils";
 import {
@@ -77,51 +78,6 @@ interface ChurchWallViewProps {
   onGoToSanctuary: () => void;
   isLive: boolean;
 }
-
-const CHURCH_GALLERY_PHOTOS = [
-  {
-    id: 1,
-    title: "Lễ Tiệc Thánh Thiêng Liêng",
-    desc: "Hiệp lòng tưởng niệm sự thương khó và hy sinh của Chúa Cứu Thế Giê-xu trên thập tự giá.",
-    url: "https://images.unsplash.com/photo-1544427920-c49ccfb85579?auto=format&fit=crop&w=1200&q=80",
-    category: "Tiệc Thánh",
-  },
-  {
-    id: 2,
-    title: "Đêm Ca Khen Ban Thanh Niên",
-    desc: "Tuổi trẻ kính sợ Chúa, hiệp một thờ phượng và ca ngợi danh Đấng Tạo Hóa.",
-    url: "https://images.unsplash.com/photo-1511632765486-a01980e01a18?auto=format&fit=crop&w=1200&q=80",
-    category: "Thanh Niên",
-  },
-  {
-    id: 3,
-    title: "Ban Hát Lễ Tôn Vinh Chúa",
-    desc: "Dâng tiếng hát ngợi khen tôn cao danh Chúa trong buổi Lễ Chúa Nhật.",
-    url: "https://images.unsplash.com/photo-1465847899084-d164df4dedc6?auto=format&fit=crop&w=1200&q=80",
-    category: "Ban Hát Lễ",
-  },
-  {
-    id: 4,
-    title: "Lớp Kinh Thánh Thiếu Nhi",
-    desc: "Dạy cho trẻ thơ con đường nó phải theo, để khi trở về già cũng không hề lìa khỏi đó.",
-    url: "https://images.unsplash.com/photo-1485546246426-74dc88dec4d9?auto=format&fit=crop&w=1200&q=80",
-    category: "Thiếu Nhi",
-  },
-  {
-    id: 5,
-    title: "Hành Trình Bác Ái & Yêu Thương",
-    desc: "Lan tỏa tình yêu thương của Chúa đến với những mảnh đời cơ nhỡ trong cộng đồng.",
-    url: "https://images.unsplash.com/photo-1469571486292-0ba58a3f068b?auto=format&fit=crop&w=1200&q=80",
-    category: "Bác Ái",
-  },
-  {
-    id: 6,
-    title: "Ánh Nến Phục Sinh Trang Nghiêm",
-    desc: "Không gian thánh đường lung linh trong đêm lễ cảm tạ ơn Chúa.",
-    url: "https://images.unsplash.com/photo-1548625361-195972886a86?auto=format&fit=crop&w=1200&q=80",
-    category: "Thánh Đường",
-  },
-];
 
 const CHRISTIAN_IMAGE_COLLECTION = [
   {
@@ -395,10 +351,164 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
     setShowEditProfileModal(true);
   };
 
+  const [isUploadingGallery, setIsUploadingGallery] = useState<boolean>(false);
+  const galleryFileInputRef = React.useRef<HTMLInputElement | null>(null);
+
+  const handleQuickSaveAppearance = async (patch: {
+    coverImageUrl?: string;
+    avatarUrl?: string;
+  }) => {
+    const nextCover =
+      patch.coverImageUrl !== undefined
+        ? patch.coverImageUrl
+        : profileFormData.coverImageUrl;
+    const nextAvatar =
+      patch.avatarUrl !== undefined
+        ? patch.avatarUrl
+        : profileFormData.avatarUrl;
+
+    updateChurch({
+      profileConfig: {
+        ...church.profileConfig,
+        coverImageUrl: nextCover,
+        avatarUrl: nextAvatar,
+      },
+    });
+
+    try {
+      await fetch("/api/admin/church", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          churchSlug: church.slug,
+          profileConfig: {
+            ...church.profileConfig,
+            coverImageUrl: nextCover,
+            avatarUrl: nextAvatar,
+          },
+        }),
+      });
+    } catch (e) {
+      console.warn("Auto-save appearance warning:", e);
+    }
+  };
+
+  const handleQuickUploadGalleryPhoto = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+
+    setIsUploadingGallery(true);
+    try {
+      const compressed = await compressImageClient(file, {
+        maxWidth: 1280,
+        maxHeight: 1280,
+        quality: 0.8,
+        mimeType: "image/webp",
+      });
+
+      let finalUrl = compressed.dataUrl;
+      try {
+        const formData = new FormData();
+        formData.append("file", compressed.file);
+        formData.append("type", "post");
+        const res = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+        const json = await res.json();
+        if (res.ok && json.success && json.url) {
+          finalUrl = json.url;
+        }
+      } catch {
+        // Use compressed.dataUrl fallback
+      }
+
+      if (!finalUrl) {
+        alert("Không thể xử lý hình ảnh. Vui lòng thử ảnh khác.");
+        return;
+      }
+
+      const newPhoto = {
+        id: `gal_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        url: finalUrl,
+        title: `Hình ảnh sinh hoạt — ${church.name}`,
+        category: "Sinh Hoạt",
+        createdAt: new Date().toISOString(),
+      };
+
+      const updatedGallery = [
+        newPhoto,
+        ...(church.profileConfig?.galleryImages || []),
+      ];
+
+      updateChurch({
+        profileConfig: {
+          ...church.profileConfig,
+          galleryImages: updatedGallery,
+        },
+      });
+
+      await fetch("/api/admin/church", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          churchSlug: church.slug,
+          profileConfig: {
+            ...church.profileConfig,
+            galleryImages: updatedGallery,
+          },
+        }),
+      });
+    } catch (err: any) {
+      alert("Lỗi tải ảnh lên: " + (err.message || "Vui lòng thử lại."));
+    } finally {
+      setIsUploadingGallery(false);
+    }
+  };
+
+  const handleDeleteGalleryPhoto = async (
+    photoId: string,
+    e: React.MouseEvent
+  ) => {
+    e.stopPropagation();
+    if (!confirm("Bạn muốn xoá bức ảnh này khỏi thư viện Hình Ảnh Sinh Hoạt?"))
+      return;
+
+    const updatedGallery = (church.profileConfig?.galleryImages || []).filter(
+      (g) => g.id !== photoId
+    );
+
+    updateChurch({
+      profileConfig: {
+        ...church.profileConfig,
+        galleryImages: updatedGallery,
+      },
+    });
+
+    try {
+      await fetch("/api/admin/church", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          churchSlug: church.slug,
+          profileConfig: {
+            ...church.profileConfig,
+            galleryImages: updatedGallery,
+          },
+        }),
+      });
+    } catch (err) {
+      console.error("Delete gallery photo error:", err);
+    }
+  };
+
   const handleCreatePost = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newPostContent.trim()) {
-      alert("Vui lòng nhập nội dung bài viết.");
+    if (!newPostContent.trim() && !newPostImageUrl.trim()) {
+      alert("Vui lòng nhập nội dung hoặc chọn hình ảnh cho bài viết.");
       return;
     }
 
@@ -412,7 +522,10 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
           title: newPostTitle.trim(),
           category: newPostCategory,
           scriptureVerse: newPostScripture.trim(),
-          content: newPostContent.trim(),
+          content:
+            newPostContent.trim() ||
+            newPostTitle.trim() ||
+            `Hình ảnh sinh hoạt — ${church.name}`,
           imageUrl: newPostImageUrl.trim(),
           videoUrl: newPostVideoUrl.trim(),
           isPinned: newPostIsPinned,
@@ -550,6 +663,7 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
           liveSchedule: scheduleSummary,
           worshipSchedules: profileFormData.worshipSchedules,
           profileConfig: {
+            ...church.profileConfig,
             coverImageUrl: profileFormData.coverImageUrl.trim(),
             avatarUrl: profileFormData.avatarUrl.trim(),
             slogan: profileFormData.slogan.trim(),
@@ -741,6 +855,49 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
         return { label: "Bản Tin", color: "bg-stone-500/20 text-stone-300 border-stone-500/30" };
     }
   };
+
+  // Build gallery strictly from the church's own uploaded gallery photos + post attachments (no default fake photos)
+  const churchGalleryPhotos = React.useMemo(() => {
+    const items: {
+      id: string;
+      url: string;
+      title: string;
+      desc?: string;
+      category?: string;
+      isCustomGallery?: boolean;
+    }[] = [];
+    const seenUrls = new Set<string>();
+
+    (church.profileConfig?.galleryImages || []).forEach((g) => {
+      if (g.url && g.url.trim() && !seenUrls.has(g.url)) {
+        seenUrls.add(g.url);
+        items.push({
+          id: g.id || g.url,
+          url: g.url,
+          title: g.title || `Hình ảnh sinh hoạt — ${church.name}`,
+          desc: "",
+          category: g.category || "Sinh Hoạt",
+          isCustomGallery: true,
+        });
+      }
+    });
+
+    posts.forEach((p) => {
+      if (p.imageUrl && p.imageUrl.trim() && !seenUrls.has(p.imageUrl)) {
+        seenUrls.add(p.imageUrl);
+        items.push({
+          id: `post_${p._id}`,
+          url: p.imageUrl,
+          title: p.title || `Hình ảnh — ${church.name}`,
+          desc: p.content,
+          category: getCategoryBadge(p.category).label,
+          isCustomGallery: false,
+        });
+      }
+    });
+
+    return items;
+  }, [church.profileConfig?.galleryImages, church.name, posts]);
 
   return (
     <div className="min-h-screen bg-[#0f1115] text-stone-200 pb-20 selection:bg-[#c5a059]/30">
@@ -1196,47 +1353,95 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
               </div>
             )}
 
-            {/* Card 3: Thư Viện Hình Ảnh Sinh Hoạt (Giống Facebook Photos Box) */}
+            {/* Card 3: Thư Viện Hình Ảnh Sinh Hoạt (Chỉ hiển thị ảnh thực tế của Hội Thánh) */}
             <div className={`bg-[#14161a] border border-stone-800 rounded-xl p-4 sm:p-5 space-y-3.5 shadow-lg ${mobileWallTab === "about" ? "hidden lg:block" : "block"}`}>
-              <div className="flex items-center justify-between border-b border-stone-800 pb-3">
+              <div className="flex items-center justify-between border-b border-stone-800 pb-3 gap-2">
                 <h3 className="font-serif text-sm font-bold text-stone-100 flex items-center gap-2">
                   <Camera className="w-4 h-4 text-[#c5a059]" />
                   <span>Hình Ảnh Sinh Hoạt</span>
+                  <span className="text-[11px] text-stone-400 font-mono font-normal">
+                    ({churchGalleryPhotos.length})
+                  </span>
                 </h3>
-                <span className="text-[11px] text-stone-400 font-mono">
-                  {CHURCH_GALLERY_PHOTOS.length} ảnh
-                </span>
-              </div>
 
-              {/* Grid: 2 cols on mobile, 3 cols on sm+ */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {CHURCH_GALLERY_PHOTOS.map((photo) => (
-                  <div
-                    key={photo.id}
-                    onClick={() =>
-                      setSelectedLightboxImage({
-                        url: photo.url,
-                        title: photo.title,
-                        desc: photo.desc,
-                        category: photo.category,
-                      })
-                    }
-                    className="relative aspect-square rounded-lg overflow-hidden border border-stone-800 bg-stone-900 group cursor-pointer shadow-sm hover:border-[#c5a059]/60 transition-all"
-                  >
-                    <img
-                      src={photo.url}
-                      alt={photo.title}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                {isAuthorizedAdmin && (
+                  <>
+                    <input
+                      ref={galleryFileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleQuickUploadGalleryPhoto}
+                      className="hidden"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-1.5 sm:p-2">
-                      <span className="text-[10px] sm:text-[9px] font-serif text-stone-200 line-clamp-1">
-                        {photo.title}
-                      </span>
-                    </div>
-                  </div>
-                ))}
+                    <button
+                      type="button"
+                      disabled={isUploadingGallery}
+                      onClick={() => galleryFileInputRef.current?.click()}
+                      className="px-2.5 py-1 rounded-lg bg-[#c5a059]/20 hover:bg-[#c5a059]/30 text-[#c5a059] border border-[#c5a059]/40 text-[11px] font-serif font-bold flex items-center gap-1 transition-colors cursor-pointer shrink-0 disabled:opacity-50"
+                      title="Tải ảnh sinh hoạt mới lên tường Hội Thánh"
+                    >
+                      <Plus className="w-3 h-3" />
+                      <span>{isUploadingGallery ? "Đang tải..." : "Tải Ảnh Lên"}</span>
+                    </button>
+                  </>
+                )}
               </div>
 
+              {churchGalleryPhotos.length === 0 ? (
+                <div className="py-6 px-3 text-center rounded-xl bg-stone-900/50 border border-dashed border-stone-800 space-y-2">
+                  <Camera className="w-6 h-6 text-stone-600 mx-auto" />
+                  <p className="text-xs text-stone-400 font-serif">
+                    Chưa có hình ảnh sinh hoạt nào.
+                  </p>
+                  {isAuthorizedAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => galleryFileInputRef.current?.click()}
+                      className="text-[11px] text-[#c5a059] hover:underline font-serif cursor-pointer"
+                    >
+                      + Bấm vào đây để tải bức ảnh đầu tiên lên
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {churchGalleryPhotos.map((photo) => (
+                    <div
+                      key={photo.id}
+                      onClick={() =>
+                        setSelectedLightboxImage({
+                          url: photo.url,
+                          title: photo.title,
+                          desc: photo.desc,
+                          category: photo.category,
+                        })
+                      }
+                      className="relative aspect-square rounded-lg overflow-hidden border border-stone-800 bg-stone-900 group cursor-pointer shadow-sm hover:border-[#c5a059]/60 transition-all"
+                    >
+                      <img
+                        src={photo.url}
+                        alt={photo.title}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                      />
+                      {isAuthorizedAdmin && photo.isCustomGallery && (
+                        <button
+                          type="button"
+                          onClick={(e) => handleDeleteGalleryPhoto(photo.id, e)}
+                          className="absolute top-1.5 right-1.5 p-1 rounded-full bg-black/75 hover:bg-red-600 text-stone-200 hover:text-white opacity-0 group-hover:opacity-100 transition-all z-10"
+                          title="Xoá ảnh này khỏi thư viện"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-1.5 sm:p-2">
+                        <span className="text-[10px] sm:text-[9px] font-serif text-stone-200 line-clamp-1">
+                          {photo.title}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Card 4: Lời Chúa Khích Lệ */}
@@ -1393,7 +1598,7 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
                     <div>
                       <textarea
                         rows={4}
-                        required
+                        required={!newPostImageUrl.trim()}
                         placeholder="Nội dung tâm tình, thông báo hoặc sứ điệp của Hội Thánh..."
                         value={newPostContent}
                         onChange={(e) => setNewPostContent(e.target.value)}
@@ -1401,7 +1606,7 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
                       />
                     </div>
 
-                    {/* Image Upload Box with WebP compression directly to VPS */}
+                    {/* Image Upload Box */}
                     <div className="bg-stone-900/50 p-3 rounded-xl border border-stone-800/80">
                       <ImageUploadBox
                         label="Hình ảnh đính kèm bài viết"
@@ -1453,7 +1658,10 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
 
                         <button
                           type="submit"
-                          disabled={isSubmittingPost || !newPostContent.trim()}
+                          disabled={
+                            isSubmittingPost ||
+                            (!newPostContent.trim() && !newPostImageUrl.trim())
+                          }
                           className="px-5 py-2 rounded-xl bg-[#c5a059] hover:bg-[#d6b068] disabled:opacity-50 text-stone-950 font-serif font-bold text-xs sm:text-sm shadow flex items-center gap-1.5 transition-all cursor-pointer"
                         >
                           {isSubmittingPost ? (
@@ -2082,9 +2290,10 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
                     <ImageUploadBox
                       label="Ảnh Bìa"
                       value={profileFormData.coverImageUrl}
-                      onChange={(url) =>
-                        setProfileFormData((prev) => ({ ...prev, coverImageUrl: url }))
-                      }
+                      onChange={(url) => {
+                        setProfileFormData((prev) => ({ ...prev, coverImageUrl: url }));
+                        handleQuickSaveAppearance({ coverImageUrl: url });
+                      }}
                       type="cover"
                       aspectRatio="cover"
                       presetSamples={CHRISTIAN_COVERS_SAMPLE}
@@ -2096,9 +2305,10 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
                     <ImageUploadBox
                       label="Ảnh Đại Diện Hội Thánh"
                       value={profileFormData.avatarUrl}
-                      onChange={(url) =>
-                        setProfileFormData((prev) => ({ ...prev, avatarUrl: url }))
-                      }
+                      onChange={(url) => {
+                        setProfileFormData((prev) => ({ ...prev, avatarUrl: url }));
+                        handleQuickSaveAppearance({ avatarUrl: url });
+                      }}
                       type="avatar"
                       aspectRatio="square"
                       presetSamples={CHRISTIAN_AVATARS_SAMPLE}

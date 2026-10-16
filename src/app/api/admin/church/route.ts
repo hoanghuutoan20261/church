@@ -157,6 +157,9 @@ export async function PUT(req: NextRequest) {
         slogan: body.profileConfig.slogan ?? church.profileConfig?.slogan,
         googleMapUrl:
           body.profileConfig.googleMapUrl ?? church.profileConfig?.googleMapUrl ?? "",
+        galleryImages: Array.isArray(body.profileConfig.galleryImages)
+          ? body.profileConfig.galleryImages
+          : church.profileConfig?.galleryImages ?? [],
       };
     }
 

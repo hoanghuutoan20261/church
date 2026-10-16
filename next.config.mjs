@@ -14,6 +14,10 @@ const nextConfig = {
         source: "/live/:path*",
         destination: "http://127.0.0.1:8888/live/:path*",
       },
+      {
+        source: "/uploads/:filename",
+        destination: "/api/uploads/:filename",
+      },
     ];
   },
 };
