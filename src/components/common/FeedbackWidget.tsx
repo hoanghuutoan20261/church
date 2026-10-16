@@ -99,7 +99,7 @@ export const FeedbackWidget: React.FC = () => {
 
   return (
     <>
-      {/* Floating Action Button (Bottom Left to avoid overlapping chat/scroll buttons) */}
+      {/* Floating Action Button (Desktop Only - hidden on mobile so it never overlaps mobile tabs) */}
       {!isHiddenRoute && (
         <button
           type="button"
@@ -108,7 +108,7 @@ export const FeedbackWidget: React.FC = () => {
             setErrorMsg("");
             setIsOpen(true);
           }}
-          className="fixed bottom-4 right-4 z-40 flex items-center gap-2 px-3.5 py-2.5 rounded-full bg-[#121621]/95 hover:bg-[#181e2c] text-gold-300 border border-gold-400/40 hover:border-gold-400 shadow-2xl backdrop-blur-md transition-all group cursor-pointer"
+          className="hidden md:flex fixed bottom-5 left-5 z-40 items-center gap-2 px-3.5 py-2.5 rounded-full bg-[#121621]/95 hover:bg-[#181e2c] text-gold-300 border border-gold-400/40 hover:border-gold-400 shadow-2xl backdrop-blur-md transition-all group cursor-pointer"
           title="Đóng góp ý kiến cho Ban Quản Trị Dự Án (Super Admin)"
         >
           <div className="w-6 h-6 rounded-full bg-gold-400/20 flex items-center justify-center text-gold-400 group-hover:scale-110 transition-transform">
@@ -173,7 +173,7 @@ export const FeedbackWidget: React.FC = () => {
                   </h4>
                   <p className="text-xs text-sanctuary-300 max-w-md mx-auto leading-relaxed">
                     Ý kiến của quý vị đã được ghi nhận và chuyển trực tiếp đến hộp thư của{" "}
-                    <span className="text-gold-300 font-semibold">Super Admin</span>. Nguyện Chúa ban phước dồi dào trên quý vị và Hội Thánh!
+                    <span className="text-gold-300 font-semibold">Đội Ngũ Phát Triển</span>. Nguyện Chúa ban phước dồi dào trên quý vị và Hội Thánh!
                   </p>
                 </div>
                 <div className="pt-2 flex items-center justify-center gap-3">

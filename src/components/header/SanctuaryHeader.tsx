@@ -4,7 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { useWorship, FontSizeOption } from "@/context/WorshipContext";
 import { worshipData } from "@/data/worshipServiceData";
-import { Eye, EyeOff, Type, ArrowLeft, Radio, Newspaper } from "lucide-react";
+import { Eye, EyeOff, Type, ArrowLeft, Radio, Newspaper, MessageSquarePlus } from "lucide-react";
 
 export const SanctuaryHeader: React.FC = () => {
   const {
@@ -119,6 +119,16 @@ export const SanctuaryHeader: React.FC = () => {
 
       {/* Right: Accessibility & Focus Mode Controls */}
       <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+        <button
+          type="button"
+          onClick={() => window.dispatchEvent(new Event("open-feedback-modal"))}
+          className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-md bg-sanctuary-850 hover:bg-sanctuary-800 text-gold-300 border border-gold-400/30 text-xs transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
+          title="Đóng góp ý kiến về dự án"
+        >
+          <MessageSquarePlus className="w-3.5 h-3.5 text-gold-400" />
+          <span className="hidden lg:inline">Góp Ý</span>
+        </button>
+
         <Link
           href="/admin"
           className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-md bg-sanctuary-850 hover:bg-sanctuary-800 text-sanctuary-300 hover:text-gold-300 border border-white/[0.08] text-xs transition-colors flex items-center gap-1.5 shadow-sm"

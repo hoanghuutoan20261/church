@@ -1017,6 +1017,16 @@ export default function ChurchDirectoryPage() {
           </button>
 
           <button
+            type="button"
+            onClick={() => window.dispatchEvent(new Event("open-feedback-modal"))}
+            className="flex items-center gap-1 p-1.5 sm:px-2.5 sm:py-1.5 rounded-full bg-sanctuary-850 hover:bg-sanctuary-800 text-gold-300 border border-gold-400/30 transition-colors text-xs font-serif cursor-pointer"
+            title="Đóng góp ý kiến cho dự án"
+          >
+            <MessageCircle className="w-4 h-4 text-gold-400" />
+            <span className="hidden lg:inline">Góp Ý</span>
+          </button>
+
+          <button
             onClick={() => setShowRegisterModal(true)}
             className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs font-serif font-bold rounded-full bg-gold-400 hover:bg-gold-500 text-sanctuary-950 transition-colors shadow-sm cursor-pointer"
             title="Đăng ký thêm Hội Thánh mới"
@@ -2862,9 +2872,10 @@ export default function ChurchDirectoryPage() {
       )}
 
       {/* ========================================================================= */}
-      {/* 4. MOBILE BOTTOM NAVIGATION TAB BAR (FACEBOOK STYLE CHO MOBILE)           */}
+      {/* 4. MOBILE BOTTOM NAVIGATION TAB BAR (PHƯƠNG ÁN A TỐI ƯU UX MOBILE)        */}
       {/* ========================================================================= */}
       <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-[#0a0d13]/95 border-t border-white/[0.08] backdrop-blur-xl px-2 py-1 flex items-center justify-around shadow-2xl safe-area-bottom">
+        {/* 1. Bảng Tin */}
         <button
           onClick={() => {
             setNavTab("feed");
@@ -2877,35 +2888,7 @@ export default function ChurchDirectoryPage() {
           <span className="text-[10px] mt-0.5">Bảng Tin</span>
         </button>
 
-        <button
-          onClick={() => {
-            setNavTab("sanctuary");
-            window.scrollTo({ top: 0, behavior: "smooth" });
-          }}
-          className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-colors relative ${navTab === "sanctuary" ? "text-gold-400 font-bold" : "text-sanctuary-400 hover:text-sanctuary-200"
-            }`}
-        >
-          <div className="relative">
-            <Radio className="w-5 h-5" />
-            {liveChurches.length > 0 && (
-              <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-red-500 animate-ping" />
-            )}
-          </div>
-          <span className="text-[10px] mt-0.5">Trực Tiếp</span>
-        </button>
-
-        {/* Center floating button: Đăng Ký Hội Thánh */}
-        <button
-          onClick={() => setShowRegisterModal(true)}
-          className="flex flex-col items-center justify-center -mt-5"
-          title="Đăng Ký Hội Thánh"
-        >
-          <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-gold-500 to-amber-300 text-sanctuary-950 flex items-center justify-center shadow-candle hover:scale-105 transition-transform border-2 border-[#0a0d13]">
-            <Plus className="w-6 h-6 stroke-[2.5]" />
-          </div>
-          <span className="text-[9px] text-gold-300 mt-0.5 font-medium">Đăng Ký</span>
-        </button>
-
+        {/* 2. Hội Thánh */}
         <button
           onClick={() => {
             setNavTab("churches");
@@ -2915,9 +2898,38 @@ export default function ChurchDirectoryPage() {
             }`}
         >
           <Building2 className="w-5 h-5" />
-          <span className="text-[10px] mt-0.5">Điểm nhóm</span>
+          <span className="text-[10px] mt-0.5">Hội Thánh</span>
         </button>
 
+        {/* 3. Center floating button: Trực Tiếp (Phòng Thờ Phượng) */}
+        <button
+          onClick={() => {
+            setNavTab("sanctuary");
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+          className="flex flex-col items-center justify-center -mt-5 relative"
+          title="Lễ Thờ Phượng Trực Tiếp"
+        >
+          <div
+            className={`w-11 h-11 rounded-full flex items-center justify-center shadow-candle hover:scale-105 transition-transform border-2 border-[#0a0d13] relative ${navTab === "sanctuary"
+              ? "bg-gradient-to-tr from-red-600 to-amber-500 text-white ring-2 ring-gold-400/60"
+              : "bg-gradient-to-tr from-gold-500 to-amber-300 text-sanctuary-950"
+              }`}
+          >
+            <Radio className="w-5 h-5 stroke-[2.4]" />
+            {liveChurches.length > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-red-500 border-2 border-[#0a0d13] animate-pulse" />
+            )}
+          </div>
+          <span
+            className={`text-[9px] mt-0.5 font-semibold ${navTab === "sanctuary" ? "text-gold-400 font-bold" : "text-gold-300"
+              }`}
+          >
+            Trực Tiếp
+          </span>
+        </button>
+
+        {/* 4. Cầu Thay */}
         <button
           onClick={() => {
             setNavTab("prayers");
@@ -2928,6 +2940,17 @@ export default function ChurchDirectoryPage() {
         >
           <Heart className="w-5 h-5" />
           <span className="text-[10px] mt-0.5">Cầu Thay</span>
+        </button>
+
+        {/* 5. Góp Ý Dự Án */}
+        <button
+          type="button"
+          onClick={() => window.dispatchEvent(new Event("open-feedback-modal"))}
+          className="flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-colors text-sanctuary-400 hover:text-gold-300"
+          title="Đóng góp ý kiến cho dự án"
+        >
+          <MessageCircle className="w-5 h-5 text-gold-400/90" />
+          <span className="text-[10px] mt-0.5">Góp Ý</span>
         </button>
       </nav>
     </div>
