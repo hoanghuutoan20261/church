@@ -70,12 +70,4 @@ body {
   transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Prevent iOS Safari & Mobile browsers from auto-zooming when focusing inputs */
-@media screen and (max-width: 768px) {
-  input,
-  textarea,
-  select {
-    font-size: 16px !important;
-  }
-}
 
