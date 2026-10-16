@@ -378,7 +378,7 @@ export default function ChurchDirectoryPage() {
       dayOfWeek: "Chúa Nhật",
       time: "08:00 - 09:30",
       type: "main",
-      description: "Thánh đường",
+      description: "Hội Thánh",
     },
     {
       id: "2",
@@ -801,12 +801,22 @@ export default function ChurchDirectoryPage() {
   };
 
   // Filter churches
+  const [denominationFilter, setDenominationFilter] = useState<string>("all");
+
   const filteredChurches = churches.filter((church) => {
-    return (
+    const matchesSearch =
       church.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       church.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      church.slug.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+      church.slug.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (church.profileConfig?.leadPastor &&
+        church.profileConfig.leadPastor.toLowerCase().includes(searchTerm.toLowerCase()));
+
+    const matchesDenom =
+      denominationFilter === "all" ||
+      (church.denomination &&
+        church.denomination.toLowerCase().includes(denominationFilter.toLowerCase()));
+
+    return matchesSearch && matchesDenom;
   });
 
   // Filter feed posts across all churches
@@ -1980,81 +1990,255 @@ export default function ChurchDirectoryPage() {
             </div>
           )}
 
-          {/* TAB 3: DANH BẠ HỘI THÁNH */}
+          {/* TAB 3: KHÁM PHÁ CÁC HỘI THÁNH (REDESIGNED) */}
           {navTab === "churches" && (
             <div className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {filteredChurches.map((church) => (
-                  <div
-                    key={church._id}
-                    className="bg-sanctuary-900 border border-white/[0.08] rounded-2xl p-4 flex flex-col justify-between space-y-3"
-                  >
-                    <div className="flex items-start gap-3">
-                      <img
-                        src={getChurchAvatar(church.name, church.slug, church.profileConfig?.avatarUrl)}
-                        alt={church.name}
-                        className="w-12 h-12 rounded-xl object-cover border border-gold-400/40 shrink-0"
-                      />
-                      <div className="min-w-0">
-                        <span className="text-[10px] text-gold-400 font-serif block truncate">
-                          {church.denomination}
-                        </span>
-                        <h4 className="font-serif font-bold text-sm text-white truncate">
-                          {church.name}
-                        </h4>
-                        <a
-                          href={getChurchGoogleMapsUrl(church.address, church.name, church.profileConfig?.googleMapUrl)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs text-sanctuary-400 hover:text-gold-300 flex items-center gap-1 mt-0.5 truncate font-sans transition-colors group/map"
-                          title="Xem trên Google Maps & Chỉ đường"
-                        >
-                          <MapPin className="w-3 h-3 text-gold-400 shrink-0 group-hover/map:scale-110 transition-transform" />
-                          <span className="truncate group-hover/map:underline underline-offset-2">{church.address}</span>
-                          <ExternalLink className="w-2.5 h-2.5 text-sanctuary-500 group-hover/map:text-gold-400 shrink-0 opacity-70" />
-                        </a>
-                      </div>
+              {/* Directory Header & Denomination Filter Bar */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-sanctuary-900 via-[#10141f] to-[#0b0e16] border border-gold-400/30 space-y-3.5 shadow-md">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2 text-gold-400 text-[11px] font-serif uppercase tracking-wider font-bold">
+                      <Building2 className="w-3.5 h-3.5" />
+                      <span>Mạng Lưới Hội Thánh Trực Tuyến</span>
                     </div>
-
-                    {/* Worship Schedules Info */}
-                    <div className="space-y-1 bg-sanctuary-950/60 p-2.5 rounded-xl border border-white/[0.04]">
-                      <div className="flex items-center gap-1.5 text-[11px] text-gold-300 font-serif font-medium">
-                        <Clock className="w-3 h-3 text-gold-400 shrink-0" />
-                        <span>Lịch Thờ Phượng & Sinh Hoạt:</span>
-                      </div>
-                      {church.worshipSchedules && church.worshipSchedules.length > 0 ? (
-                        <div className="space-y-1">
-                          {church.worshipSchedules.map((sch, sIdx) => (
-                            <div key={sch.id || sIdx} className="flex items-center justify-between text-[11px] text-sanctuary-300">
-                              <span className="truncate pr-1">• {sch.dayOfWeek}: {sch.title}</span>
-                              <span className="font-mono text-amber-400 shrink-0">{sch.time}</span>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-[11px] text-sanctuary-400">
-                          {church.liveSchedule || "Chúa Nhật: Lễ 1 (08:00) • Lễ 2 (09:30)"}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-2 pt-2 border-t border-white/[0.05]">
-                      <Link
-                        href={`/${church.slug}?view=sanctuary`}
-                        className="flex-1 py-1.5 rounded-lg bg-gold-400 text-sanctuary-950 font-serif font-bold text-xs text-center shadow-sm"
-                      >
-                        Vào Phòng
-                      </Link>
-                      <Link
-                        href={`/${church.slug}?view=wall`}
-                        className="px-3 py-1.5 rounded-lg bg-sanctuary-850 text-sanctuary-300 text-xs font-serif text-center"
-                      >
-                        Bản Tin
-                      </Link>
-                    </div>
+                    <h3 className="font-serif text-lg sm:text-xl font-bold text-white mt-0.5">
+                      Khám Phá Các Hội Thánh ({filteredChurches.length})
+                    </h3>
                   </div>
-                ))}
+
+                  <button
+                    type="button"
+                    onClick={() => setShowRegisterModal(true)}
+                    className="self-start sm:self-auto px-3.5 py-2 rounded-xl bg-gold-400 hover:bg-gold-500 text-sanctuary-950 font-serif font-bold text-xs flex items-center gap-1.5 shadow-candle transition-all cursor-pointer shrink-0"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Đăng Ký Hội Thánh Mới</span>
+                  </button>
+                </div>
+
+                {/* Search & Denomination Filter Pills */}
+                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
+                  {[
+                    { id: "all", label: "Tất cả Hệ phái" },
+                    { id: "Tin Lành Việt Nam", label: "HTTL Việt Nam" },
+                    { id: "Báp-tít", label: "Báp-tít" },
+                    { id: "Trưởng Lão", label: "Trưởng Lão" },
+                    { id: "Liên Hữu", label: "Liên Hữu Cơ Đốc" },
+                    { id: "Ân Điển", label: "Độc Lập / Ân Điển" },
+                  ].map((d) => (
+                    <button
+                      key={d.id}
+                      type="button"
+                      onClick={() => setDenominationFilter(d.id)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-serif whitespace-nowrap transition-all cursor-pointer border ${denominationFilter === d.id
+                        ? "bg-gold-400 text-sanctuary-950 font-bold border-gold-300 shadow-sm"
+                        : "bg-sanctuary-850/80 text-sanctuary-300 hover:text-white border-white/[0.08]"
+                        }`}
+                    >
+                      {d.label}
+                    </button>
+                  ))}
+                </div>
               </div>
+
+              {/* Churches Grid */}
+              {filteredChurches.length === 0 ? (
+                <div className="bg-sanctuary-900 border border-white/[0.08] rounded-2xl p-8 text-center space-y-2">
+                  <Building2 className="w-8 h-8 text-sanctuary-500 mx-auto" />
+                  <p className="font-serif text-sm text-sanctuary-300">
+                    Không tìm thấy Hội Thánh nào phù hợp với bộ lọc hiện tại.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {filteredChurches.map((church) => {
+                    const isLive = Boolean(church.currentService?.isLive);
+                    const isFav = favorites.includes(church.slug);
+                    const coverUrl =
+                      church.profileConfig?.coverImageUrl ||
+                      "https://images.unsplash.com/photo-1438232992991-995b7058bbb3?auto=format&fit=crop&w=800&q=80";
+                    const avatarUrl = getChurchAvatar(
+                      church.name,
+                      church.slug,
+                      church.profileConfig?.avatarUrl
+                    );
+
+                    return (
+                      <div
+                        key={church._id}
+                        className={`bg-sanctuary-900 border rounded-2xl overflow-hidden flex flex-col justify-between transition-all group shadow-md hover:shadow-xl ${isLive
+                          ? "border-red-500/40 hover:border-red-500/70"
+                          : "border-white/[0.08] hover:border-gold-400/40"
+                          }`}
+                      >
+                        <div>
+                          {/* Top Cover Banner */}
+                          <div className="relative h-28 w-full overflow-hidden bg-sanctuary-950">
+                            <img
+                              src={coverUrl}
+                              alt={church.name}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 brightness-75"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-sanctuary-900 via-sanctuary-900/20 to-black/40" />
+
+                            {/* Top Left: Denomination / Live Badge */}
+                            <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
+                              {isLive ? (
+                                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-red-600 text-white flex items-center gap-1 shadow-md animate-pulse">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-white" />
+                                  <span>ĐANG LIVE</span>
+                                </span>
+                              ) : (
+                                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-serif bg-black/65 backdrop-blur-md text-gold-300 border border-gold-400/30">
+                                  {church.denomination || "Hội Thánh Tin Lành"}
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Top Right: Bookmark / Favorite button */}
+                            <button
+                              type="button"
+                              onClick={(e) => toggleFavorite(church.slug, e)}
+                              className={`absolute top-2.5 right-2.5 p-1.5 rounded-full backdrop-blur-md border transition-colors cursor-pointer ${isFav
+                                ? "bg-gold-400 text-sanctuary-950 border-gold-300"
+                                : "bg-black/50 text-white/80 hover:text-gold-300 border-white/15"
+                                }`}
+                              title={isFav ? "Bỏ lưu Hội Thánh" : "Lưu Hội Thánh yêu thích"}
+                            >
+                              <Bookmark className={`w-3.5 h-3.5 ${isFav ? "fill-current" : ""}`} />
+                            </button>
+                          </div>
+
+                          {/* Avatar & Church Identity */}
+                          <div className="px-4 pb-3 -mt-7 relative z-10 space-y-2.5">
+                            <div className="flex items-end justify-between gap-2">
+                              <Link
+                                href={`/${church.slug}?view=wall`}
+                                className="w-14 h-14 rounded-2xl overflow-hidden border-2 border-gold-400/70 bg-sanctuary-950 shadow-lg shrink-0 block"
+                              >
+                                <img
+                                  src={avatarUrl}
+                                  alt={church.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              </Link>
+                              <span className="text-[11px] font-mono text-sanctuary-400 bg-sanctuary-950/80 px-2 py-0.5 rounded-md border border-white/[0.06]">
+                                /{church.slug}
+                              </span>
+                            </div>
+
+                            <div>
+                              <Link
+                                href={`/${church.slug}?view=wall`}
+                                className="font-serif font-bold text-base text-white hover:text-gold-300 transition-colors line-clamp-1 block"
+                              >
+                                {church.name}
+                              </Link>
+
+                              {/* Pastor & Location */}
+                              <div className="mt-1 space-y-1 text-xs text-sanctuary-300">
+                                <div className="flex items-center gap-1.5 text-[11px] text-sanctuary-300">
+                                  <UserIcon className="w-3 h-3 text-gold-400 shrink-0" />
+                                  <span className="truncate">
+                                    {church.profileConfig?.leadPastor || "Mục sư Quản Nhiệm"}
+                                  </span>
+                                </div>
+
+                                <a
+                                  href={getChurchGoogleMapsUrl(
+                                    church.address,
+                                    church.name,
+                                    church.profileConfig?.googleMapUrl
+                                  )}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-[11px] text-sanctuary-400 hover:text-gold-300 flex items-center gap-1.5 truncate font-sans transition-colors group/map"
+                                  title="Xem trên Google Maps & Chỉ đường"
+                                >
+                                  <MapPin className="w-3 h-3 text-gold-400 shrink-0" />
+                                  <span className="truncate group-hover/map:underline underline-offset-2">
+                                    {church.address}
+                                  </span>
+                                  <ExternalLink className="w-2.5 h-2.5 text-sanctuary-500 shrink-0 opacity-70" />
+                                </a>
+                              </div>
+                            </div>
+
+                            {/* Compact Worship Schedule Box */}
+                            <div className="space-y-1 bg-sanctuary-950/70 p-2.5 rounded-xl border border-white/[0.05]">
+                              <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-gold-400 font-serif font-bold">
+                                <Clock className="w-3 h-3 text-gold-400 shrink-0" />
+                                <span>Giờ Nhóm Thờ Phượng</span>
+                              </div>
+                              {church.worshipSchedules && church.worshipSchedules.length > 0 ? (
+                                <div className="space-y-0.5">
+                                  {church.worshipSchedules.slice(0, 2).map((sch, sIdx) => (
+                                    <div
+                                      key={sch.id || sIdx}
+                                      className="flex items-center justify-between text-[11px] text-sanctuary-200"
+                                    >
+                                      <span className="truncate pr-1">
+                                        • {sch.dayOfWeek}: {sch.title}
+                                      </span>
+                                      <span className="font-mono text-gold-300 shrink-0">
+                                        {sch.time}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="text-[11px] text-sanctuary-300 truncate">
+                                  {church.liveSchedule || "Chúa Nhật: 08:30 - 11:00"}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Smart Context-Aware Footer Action Bar */}
+                        <div className="px-4 pb-4 pt-1 flex items-center gap-2">
+                          {isLive ? (
+                            <>
+                              <Link
+                                href={`/${church.slug}?view=sanctuary`}
+                                className="flex-1 py-2 px-3 rounded-xl bg-red-600 hover:bg-red-500 text-white font-serif font-bold text-xs flex items-center justify-center gap-1.5 shadow-md transition-colors"
+                              >
+                                <Radio className="w-3.5 h-3.5 animate-pulse" />
+                                <span>Vào Xem Trực Tiếp</span>
+                              </Link>
+                              <Link
+                                href={`/${church.slug}?view=wall`}
+                                className="py-2 px-3 rounded-xl bg-sanctuary-850 hover:bg-sanctuary-800 text-sanctuary-200 hover:text-white border border-white/10 text-xs font-serif transition-colors"
+                                title="Xem Trang Hội Thánh"
+                              >
+                                Trang HT
+                              </Link>
+                            </>
+                          ) : (
+                            <>
+                              <Link
+                                href={`/${church.slug}?view=wall`}
+                                className="flex-1 py-2 px-3 rounded-xl bg-gold-400 hover:bg-gold-500 text-sanctuary-950 font-serif font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-colors"
+                              >
+                                <ChurchIcon className="w-3.5 h-3.5" />
+                                <span>Ghé Thăm Hội Thánh</span>
+                              </Link>
+                              <Link
+                                href={`/${church.slug}?view=sanctuary`}
+                                className="py-2 px-2.5 rounded-xl bg-sanctuary-850 hover:bg-sanctuary-800 text-sanctuary-300 hover:text-gold-300 border border-white/10 text-xs font-serif flex items-center gap-1 transition-colors"
+                                title="Vào Phòng Thờ Phượng / Phòng Chờ"
+                              >
+                                <Radio className="w-3.5 h-3.5 text-gold-400" />
+                                <span>Phòng Nhóm</span>
+                              </Link>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
 

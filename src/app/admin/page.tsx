@@ -1242,8 +1242,8 @@ export default function ChurchAdminDashboard() {
                             setStreamSettingsForm((prev) => ({ ...prev, streamType: "youtube" }))
                           }
                           className={`px-3 py-2 rounded-lg text-xs font-serif font-bold flex items-center justify-center gap-1.5 transition-all border cursor-pointer ${streamSettingsForm.streamType === "youtube"
-                              ? "bg-red-500/20 text-red-300 border-red-500/60 shadow-sm"
-                              : "bg-[#14161a] text-stone-400 border-stone-800 hover:text-stone-200"
+                            ? "bg-red-500/20 text-red-300 border-red-500/60 shadow-sm"
+                            : "bg-[#14161a] text-stone-400 border-stone-800 hover:text-stone-200"
                             }`}
                         >
                           <span className="w-2 h-2 rounded-full bg-red-500" />
@@ -1256,8 +1256,8 @@ export default function ChurchAdminDashboard() {
                             setStreamSettingsForm((prev) => ({ ...prev, streamType: "mediamtx" }))
                           }
                           className={`px-3 py-2 rounded-lg text-xs font-serif font-bold flex items-center justify-center gap-1.5 transition-all border cursor-pointer ${streamSettingsForm.streamType === "mediamtx"
-                              ? "bg-amber-500/20 text-amber-300 border-amber-500/60 shadow-sm"
-                              : "bg-[#14161a] text-stone-400 border-stone-800 hover:text-stone-200"
+                            ? "bg-amber-500/20 text-amber-300 border-amber-500/60 shadow-sm"
+                            : "bg-[#14161a] text-stone-400 border-stone-800 hover:text-stone-200"
                             }`}
                         >
                           <Shield className="w-3.5 h-3.5" />
@@ -1270,8 +1270,8 @@ export default function ChurchAdminDashboard() {
                             setStreamSettingsForm((prev) => ({ ...prev, streamType: "facebook" }))
                           }
                           className={`px-3 py-2 rounded-lg text-xs font-serif font-bold flex items-center justify-center gap-1.5 transition-all border cursor-pointer ${streamSettingsForm.streamType === "facebook"
-                              ? "bg-blue-500/20 text-blue-300 border-blue-500/60 shadow-sm"
-                              : "bg-[#14161a] text-stone-400 border-stone-800 hover:text-stone-200"
+                            ? "bg-blue-500/20 text-blue-300 border-blue-500/60 shadow-sm"
+                            : "bg-[#14161a] text-stone-400 border-stone-800 hover:text-stone-200"
                             }`}
                         >
                           <span className="w-2 h-2 rounded-full bg-blue-500" />
@@ -1284,8 +1284,8 @@ export default function ChurchAdminDashboard() {
                             setStreamSettingsForm((prev) => ({ ...prev, streamType: "custom_hls" }))
                           }
                           className={`px-3 py-2 rounded-lg text-xs font-serif font-bold flex items-center justify-center gap-1.5 transition-all border cursor-pointer ${streamSettingsForm.streamType === "custom_hls"
-                              ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/60 shadow-sm"
-                              : "bg-[#14161a] text-stone-400 border-stone-800 hover:text-stone-200"
+                            ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/60 shadow-sm"
+                            : "bg-[#14161a] text-stone-400 border-stone-800 hover:text-stone-200"
                             }`}
                         >
                           <span className="w-2 h-2 rounded-full bg-emerald-500" />
@@ -1624,7 +1624,7 @@ export default function ChurchAdminDashboard() {
                     <div className="bg-[#0f1115] border border-stone-800 rounded-xl p-4 sm:p-5 space-y-3 shadow-lg">
                       <div className="flex items-center gap-2 text-xs text-stone-400 font-medium">
                         <ExternalLink className="w-4 h-4 text-[#c5a059]" />
-                        <span>Đường Dẫn Thánh Đường Cho Tín Hữu:</span>
+                        <span>Đường Dẫn Hội Thánh Cho Tín Hữu:</span>
                       </div>
                       <div className="p-3 bg-[#14161a] rounded-lg border border-stone-700/80 font-mono text-xs text-[#c5a059] break-all select-all flex items-center justify-between">
                         <span>/{church.slug}</span>

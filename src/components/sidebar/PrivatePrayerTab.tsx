@@ -95,7 +95,7 @@ export const PrivatePrayerTab: React.FC = () => {
 
         <p className="text-xs text-sanctuary-300 max-w-sm leading-relaxed mb-5 font-sans">
           Ban Mục Vụ và các chiến sĩ cầu thay đã nhận được nan đề của quý vị trong cơ sở
-          dữ liệu thánh đường. Nguyện xin bình an vượt quá mọi sự hiểu biết gìn giữ lòng
+          dữ liệu Hội Thánh. Nguyện xin bình an vượt quá mọi sự hiểu biết gìn giữ lòng
           và ý tưởng quý vị trong Chúa Cứu Thế Giê-xu.
         </p>
 
@@ -214,11 +214,10 @@ export const PrivatePrayerTab: React.FC = () => {
             <button
               type="button"
               onClick={() => setConfidentialLevel("pastor_only")}
-              className={`p-2 rounded border text-left transition-all ${
-                confidentialLevel === "pastor_only"
+              className={`p-2 rounded border text-left transition-all ${confidentialLevel === "pastor_only"
                   ? "bg-gold-400/15 border-gold-400/40 text-gold-300"
                   : "bg-sanctuary-850 border-white/[0.06] text-sanctuary-400"
-              }`}
+                }`}
             >
               <div className="font-semibold text-[11px] flex items-center gap-1">
                 <Lock className="w-3 h-3 text-gold-400" /> Chỉ Mục Sư Quản Nhiệm
@@ -229,11 +228,10 @@ export const PrivatePrayerTab: React.FC = () => {
             <button
               type="button"
               onClick={() => setConfidentialLevel("prayer_team")}
-              className={`p-2 rounded border text-left transition-all ${
-                confidentialLevel === "prayer_team"
+              className={`p-2 rounded border text-left transition-all ${confidentialLevel === "prayer_team"
                   ? "bg-gold-400/15 border-gold-400/40 text-gold-300"
                   : "bg-sanctuary-850 border-white/[0.06] text-sanctuary-400"
-              }`}
+                }`}
             >
               <div className="font-semibold text-[11px] flex items-center gap-1">
                 <HeartHandshake className="w-3 h-3 text-gold-400" /> Ban Cầu Nguyện
