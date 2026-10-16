@@ -1239,29 +1239,6 @@ export default function ChurchDirectoryPage() {
 
           <div className="h-px bg-white/[0.06] my-1" />
 
-          {/* Lối tắt các Hội Thánh đã lưu / nổi bật */}
-          <div className="space-y-1">
-            <span className="text-[11px] font-serif uppercase tracking-wider text-sanctuary-400 font-bold px-3">
-              Lối Tắt Hội Thánh Nổi Bật
-            </span>
-            {churches.slice(0, 3).map((c) => (
-              <Link
-                key={c._id}
-                href={`/${c.slug}?view=sanctuary`}
-                className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-serif text-sanctuary-300 hover:bg-sanctuary-850 hover:text-gold-300 transition-colors"
-              >
-                <div className="w-7 h-7 rounded-lg overflow-hidden border border-white/10 shrink-0">
-                  <img
-                    src={getChurchAvatar(c.name, c.slug, c.profileConfig?.avatarUrl)}
-                    alt={c.name}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <span className="truncate">{c.name}</span>
-              </Link>
-            ))}
-          </div>
-
           {/* Scripture Verse Quote */}
           <div className="p-3.5 rounded-2xl bg-gradient-to-br from-[#121620] to-[#0a0c12] border border-gold-400/20 text-xs font-serif space-y-1.5 shadow-sm">
             <span className="text-[10px] uppercase tracking-wider text-gold-400 font-bold block">
@@ -2410,22 +2387,6 @@ export default function ChurchDirectoryPage() {
                 );
               })}
             </div>
-          </div>
-
-          {/* Quick VietQR Giving Card (Dâng hiến 1 click) */}
-          <div className="p-3.5 rounded-2xl bg-gradient-to-br from-[#141820] to-[#0c0e14] border border-gold-400/20 space-y-2 shadow-sm text-center">
-            <span className="text-[11px] font-serif uppercase tracking-wider text-gold-400 font-bold block">
-              Dâng Hiến & Đồng Công Mục Vụ
-            </span>
-            <p className="text-[11px] text-sanctuary-300 font-sans leading-relaxed">
-              Tích hợp chuẩn VietQR chuyển khoản nhanh chóng, minh bạch đến các Hội Thánh.
-            </p>
-            <Link
-              href="/loibansusong?view=sanctuary"
-              className="inline-block w-full py-1.5 rounded-lg bg-gold-400/15 hover:bg-gold-400/25 text-gold-300 border border-gold-400/30 text-xs font-serif transition-colors"
-            >
-              Mở Mã VietQR Dâng Hiến
-            </Link>
           </div>
         </aside>
       </div>
