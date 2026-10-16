@@ -4,6 +4,7 @@ import { Church } from "@/models/Church";
 import { Post } from "@/models/Post";
 import { User } from "@/models/User";
 import { PrayerRequest } from "@/models/PrayerRequest";
+import { Feedback } from "@/models/Feedback";
 import { requireSuperadmin } from "@/lib/superadminAuth";
 
 export const dynamic = "force-dynamic";
@@ -22,6 +23,8 @@ export async function GET(req: NextRequest) {
       totalPrayers,
       recentPosts,
       pinnedPostsCount,
+      totalFeedbacks,
+      newFeedbacksCount,
     ] = await Promise.all([
       Church.find({}).lean(),
       Post.countDocuments({}),
@@ -29,6 +32,8 @@ export async function GET(req: NextRequest) {
       PrayerRequest ? PrayerRequest.countDocuments({}) : 0,
       Post.find({}).sort({ createdAt: -1 }).limit(8).lean(),
       Post.countDocuments({ isPinned: true }),
+      Feedback ? Feedback.countDocuments({}) : 0,
+      Feedback ? Feedback.countDocuments({ status: "new" }) : 0,
     ]);
 
     const activeChurches = churches.filter((c) => c.isActive !== false);
@@ -82,6 +87,8 @@ export async function GET(req: NextRequest) {
           totalComments,
           totalUsers,
           totalPrayers,
+          totalFeedbacks,
+          newFeedbacksCount,
         },
         liveStreams: liveChurches.map((c) => ({
           _id: (c._id as any).toString(),

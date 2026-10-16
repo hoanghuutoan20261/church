@@ -1199,6 +1199,22 @@ export default function ChurchDirectoryPage() {
               </div>
               <span className="text-sm">Khám Phá Các Hội Thánh</span>
             </button>
+
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new Event("open-feedback-modal"))}
+              className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-serif font-medium transition-colors text-left text-sanctuary-300 hover:bg-sanctuary-850/60 hover:text-gold-300 cursor-pointer"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-7 h-7 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400">
+                  <MessageCircle className="w-4 h-4" />
+                </div>
+                <span className="text-sm">Đóng Góp Ý Kiến</span>
+              </div>
+              <span className="px-1.5 py-0.5 rounded text-[9px] font-sans bg-gold-400/15 text-gold-300 border border-gold-400/30">
+                Góp ý
+              </span>
+            </button>
           </div>
 
           <div className="h-px bg-white/[0.06] my-1" />
@@ -1239,12 +1255,18 @@ export default function ChurchDirectoryPage() {
 
           {/* Footer mini links */}
           <div className="px-3 text-[11px] text-sanctuary-500 font-sans space-y-1">
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Link href="/admin" className="hover:underline">Quản Trị</Link>
               <span>•</span>
               <button onClick={() => setShowRegisterModal(true)} className="hover:underline">Đăng Ký</button>
               <span>•</span>
-              <a href="#top" className="hover:underline">Đầu trang</a>
+              <button
+                type="button"
+                onClick={() => window.dispatchEvent(new Event("open-feedback-modal"))}
+                className="text-gold-400 hover:underline"
+              >
+                Góp Ý Dự Án
+              </button>
             </div>
             <p>© 2026 Cổng Thờ Phượng Trực Tuyến Việt Nam</p>
           </div>

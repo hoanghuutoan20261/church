@@ -59,6 +59,8 @@ interface SuperAdminKPIs {
   totalComments: number;
   totalUsers: number;
   totalPrayers: number;
+  totalFeedbacks?: number;
+  newFeedbacksCount?: number;
 }
 
 interface ChurchItem {
@@ -134,6 +136,21 @@ interface UserItem {
   createdAt: string;
 }
 
+interface FeedbackItem {
+  _id: string;
+  senderName: string;
+  contact?: string;
+  role: string;
+  category: string;
+  rating: number;
+  message: string;
+  churchSlug?: string;
+  pageUrl?: string;
+  status: "new" | "reviewed" | "resolved";
+  adminNote?: string;
+  createdAt: string;
+}
+
 export default function SuperAdminPage() {
   const router = useRouter();
 
@@ -148,7 +165,7 @@ export default function SuperAdminPage() {
 
   // Active navigation tab
   const [activeTab, setActiveTab] = useState<
-    "overview" | "churches" | "posts" | "users" | "broadcasts" | "maintenance"
+    "overview" | "churches" | "posts" | "users" | "broadcasts" | "feedbacks" | "maintenance"
   >("overview");
 
   // Dashboard Data
@@ -156,6 +173,8 @@ export default function SuperAdminPage() {
   const [churches, setChurches] = useState<ChurchItem[]>([]);
   const [posts, setPosts] = useState<PostItem[]>([]);
   const [users, setUsers] = useState<UserItem[]>([]);
+  const [feedbacks, setFeedbacks] = useState<FeedbackItem[]>([]);
+  const [feedbackStatusFilter, setFeedbackStatusFilter] = useState<string>("all");
   const [loadingData, setLoadingData] = useState(false);
   const [actionMessage, setActionMessage] = useState("");
 
@@ -289,11 +308,12 @@ export default function SuperAdminPage() {
   const loadAllData = async () => {
     setLoadingData(true);
     try {
-      const [statsRes, churchesRes, postsRes, usersRes] = await Promise.all([
+      const [statsRes, churchesRes, postsRes, usersRes, feedbacksRes] = await Promise.all([
         fetch("/api/superadmin/stats"),
         fetch("/api/superadmin/churches"),
         fetch("/api/superadmin/posts"),
         fetch("/api/superadmin/users"),
+        fetch("/api/superadmin/feedback"),
       ]);
 
       if (statsRes.ok) {
@@ -312,6 +332,10 @@ export default function SuperAdminPage() {
         const usersJson = await usersRes.json();
         if (usersJson.success) setUsers(usersJson.data);
       }
+      if (feedbacksRes.ok) {
+        const feedbacksJson = await feedbacksRes.json();
+        if (feedbacksJson.success) setFeedbacks(feedbacksJson.data);
+      }
     } catch (err) {
       console.error("Lỗi nạp dữ liệu Superadmin:", err);
     } finally {
@@ -322,6 +346,42 @@ export default function SuperAdminPage() {
   const showNotification = (msg: string) => {
     setActionMessage(msg);
     setTimeout(() => setActionMessage(""), 4000);
+  };
+
+  const handleUpdateFeedbackStatus = async (
+    feedbackId: string,
+    newStatus: "new" | "reviewed" | "resolved"
+  ) => {
+    try {
+      const res = await fetch("/api/superadmin/feedback", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ feedbackId, status: newStatus }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      showNotification("Đã cập nhật trạng thái góp ý!");
+      loadAllData();
+    } catch (err: any) {
+      alert("Lỗi: " + err.message);
+    }
+  };
+
+  const handleDeleteFeedback = async (feedbackId: string) => {
+    const confirmed = confirm("Bạn có chắc chắn muốn xóa thư góp ý này?");
+    if (!confirmed) return;
+
+    try {
+      const res = await fetch(`/api/superadmin/feedback?feedbackId=${feedbackId}`, {
+        method: "DELETE",
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      showNotification("Đã xóa thư góp ý!");
+      loadAllData();
+    } catch (err: any) {
+      alert("Lỗi: " + err.message);
+    }
   };
 
   // Toggle Live for any church
@@ -684,6 +744,19 @@ export default function SuperAdminPage() {
     );
   });
 
+  // Filtered feedbacks
+  const filteredFeedbacks = feedbacks.filter((f) => {
+    const term = searchTerm.toLowerCase();
+    const matchesTerm =
+      !term ||
+      f.senderName.toLowerCase().includes(term) ||
+      f.message.toLowerCase().includes(term) ||
+      (f.contact && f.contact.toLowerCase().includes(term));
+    const matchesStatus =
+      feedbackStatusFilter === "all" || f.status === feedbackStatusFilter;
+    return matchesTerm && matchesStatus;
+  });
+
   // =========================================================================
   // VIEW 1: SUPERADMIN AUTHENTICATION GATE (MÀN HÌNH ĐĂNG NHẬP BẢO MẬT)
   // =========================================================================
@@ -922,6 +995,12 @@ export default function SuperAdminPage() {
           },
           { id: "posts", label: "📰 Bài Đăng & Kiểm Duyệt", badge: posts.length },
           { id: "users", label: "👥 Người Dùng & Phân Quyền", badge: users.length },
+          {
+            id: "feedbacks",
+            label: "💬 Hòm Thư Góp Ý",
+            badge: feedbacks.filter((f) => f.status === "new").length || feedbacks.length,
+            badgeLive: feedbacks.some((f) => f.status === "new"),
+          },
           { id: "maintenance", label: "⚙️ CSDL & Bảo Trì", badge: null },
         ].map((tab) => (
           <button
@@ -1748,6 +1827,163 @@ export default function SuperAdminPage() {
                 );
               })}
             </div>
+          </div>
+        )}
+
+        {/* =================================================================== */}
+        {/* TAB 5.5: HÒM THƯ GÓP Ý TỪ NGƯỜI DÙNG (USER FEEDBACK INBOX)          */}
+        {/* =================================================================== */}
+        {activeTab === "feedbacks" && (
+          <div className="space-y-4 animate-fadeIn">
+            <div className="bg-[#0e131d] p-4 sm:p-5 rounded-2xl border border-gold-400/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div>
+                <h3 className="font-serif text-lg font-bold text-white flex items-center gap-2">
+                  <MessageCircle className="w-5 h-5 text-gold-400" />
+                  <span>Hòm Thư Đóng Góp Ý Kiến Từ Tín Hữu & Mục Sư ({filteredFeedbacks.length})</span>
+                </h3>
+                <p className="text-xs text-sanctuary-400 mt-0.5">
+                  Tất cả ý kiến đóng góp, báo lỗi và đề xuất tính năng từ người dùng gửi trực tiếp về Super Admin
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <select
+                  value={feedbackStatusFilter}
+                  onChange={(e) => setFeedbackStatusFilter(e.target.value)}
+                  className="bg-sanctuary-850 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-sanctuary-200 focus:outline-none"
+                >
+                  <option value="all">Tất cả trạng thái ({feedbacks.length})</option>
+                  <option value="new">
+                    🔴 Mới nhận ({feedbacks.filter((f) => f.status === "new").length})
+                  </option>
+                  <option value="reviewed">
+                    🟡 Đã xem ({feedbacks.filter((f) => f.status === "reviewed").length})
+                  </option>
+                  <option value="resolved">
+                    🟢 Đã xử lý ({feedbacks.filter((f) => f.status === "resolved").length})
+                  </option>
+                </select>
+              </div>
+            </div>
+
+            {filteredFeedbacks.length === 0 ? (
+              <div className="bg-[#0e131d] border border-white/[0.08] rounded-2xl p-10 text-center space-y-2">
+                <MessageCircle className="w-8 h-8 text-sanctuary-500 mx-auto" />
+                <p className="font-serif text-sm text-sanctuary-300">
+                  Hiện chưa có thư đóng góp ý kiến nào trong danh mục này.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {filteredFeedbacks.map((fb) => {
+                  const categoryLabel: Record<string, string> = {
+                    suggestion: "💡 Đề xuất tính năng",
+                    ui_ux: "🎨 Giao diện & Trải nghiệm",
+                    bug: "🛠️ Báo lỗi kỹ thuật",
+                    church_support: "⛪ Hỗ trợ mở Hội Thánh",
+                    compliment: "❤️ Lời khích lệ",
+                  };
+                  const roleLabel: Record<string, string> = {
+                    believer: "Tín hữu",
+                    pastor: "Mục sư / Chấp sự",
+                    tech_team: "Ban Kỹ Thuật HT",
+                    visitor: "Khách thăm",
+                  };
+
+                  return (
+                    <div
+                      key={fb._id}
+                      className={`bg-[#0e131d] border rounded-2xl p-5 flex flex-col justify-between space-y-3.5 transition-all ${
+                        fb.status === "new"
+                          ? "border-gold-400/50 bg-[#121826] shadow-candle"
+                          : "border-white/[0.08]"
+                      }`}
+                    >
+                      <div className="space-y-2.5">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-serif font-bold text-sm text-white">
+                                {fb.senderName}
+                              </span>
+                              <span className="px-2 py-0.5 rounded-full text-[10px] bg-sanctuary-850 text-gold-300 border border-gold-400/20">
+                                {roleLabel[fb.role] || fb.role}
+                              </span>
+                              <span className="text-amber-400 text-xs font-mono">
+                                {"★".repeat(fb.rating || 5)}
+                              </span>
+                            </div>
+                            <div className="text-[11px] text-sanctuary-400 mt-0.5 flex items-center gap-2 flex-wrap">
+                              {fb.contact && (
+                                <span className="text-gold-300 font-mono">
+                                  📞 {fb.contact}
+                                </span>
+                              )}
+                              <span>• Từ trang: {fb.pageUrl || `/${fb.churchSlug}`}</span>
+                              <span>
+                                • {new Date(fb.createdAt).toLocaleString("vi-VN")}
+                              </span>
+                            </div>
+                          </div>
+
+                          <span
+                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${
+                              fb.status === "new"
+                                ? "bg-red-500/20 text-red-300 border border-red-500/40 animate-pulse"
+                                : fb.status === "reviewed"
+                                  ? "bg-amber-500/20 text-amber-300 border border-amber-500/40"
+                                  : "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+                            }`}
+                          >
+                            {fb.status === "new"
+                              ? "Mới nhận"
+                              : fb.status === "reviewed"
+                                ? "Đã xem"
+                                : "Đã xử lý"}
+                          </span>
+                        </div>
+
+                        <div>
+                          <span className="inline-block px-2 py-0.5 rounded text-[10px] font-medium bg-sanctuary-800 text-sanctuary-200 mb-1.5">
+                            {categoryLabel[fb.category] || fb.category}
+                          </span>
+                          <p className="text-xs sm:text-sm text-sanctuary-100 font-sans leading-relaxed whitespace-pre-line bg-[#0a0e17] p-3 rounded-xl border border-white/[0.05]">
+                            {fb.message}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="pt-2.5 border-t border-white/[0.06] flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => handleUpdateFeedbackStatus(fb._id, "reviewed")}
+                            disabled={fb.status === "reviewed"}
+                            className="px-2.5 py-1 rounded-lg bg-sanctuary-850 hover:bg-sanctuary-800 disabled:opacity-40 text-amber-300 text-[11px] font-serif cursor-pointer"
+                          >
+                            Đánh dấu Đã Xem
+                          </button>
+                          <button
+                            onClick={() => handleUpdateFeedbackStatus(fb._id, "resolved")}
+                            disabled={fb.status === "resolved"}
+                            className="px-2.5 py-1 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 disabled:opacity-40 text-emerald-300 border border-emerald-500/30 text-[11px] font-serif cursor-pointer"
+                          >
+                            ✓ Đã Xử Lý
+                          </button>
+                        </div>
+
+                        <button
+                          onClick={() => handleDeleteFeedback(fb._id)}
+                          className="p-1.5 rounded-lg bg-red-950/40 hover:bg-red-900/60 text-red-400 transition-colors cursor-pointer"
+                          title="Xóa góp ý này"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 

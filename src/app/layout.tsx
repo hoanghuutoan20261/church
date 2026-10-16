@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans, Lora } from "next/font/google";
 import "./globals.css";
 import { PwaRegistrar } from "@/components/common/PwaRegistrar";
+import { FeedbackWidget } from "@/components/common/FeedbackWidget";
 
 const sansFont = Plus_Jakarta_Sans({
   subsets: ["latin", "vietnamese"],
@@ -138,6 +139,7 @@ export default function RootLayout({
       </head>
       <body className="bg-sanctuary-900 text-sanctuary-100 font-sans selection:bg-gold-400/20 selection:text-gold-300">
         {children}
+        <FeedbackWidget />
         <PwaRegistrar />
       </body>
     </html>
