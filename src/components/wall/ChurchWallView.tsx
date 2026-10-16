@@ -116,18 +116,8 @@ const CHRISTIAN_IMAGE_COLLECTION = [
     icon: "🤝",
     url: "https://images.unsplash.com/photo-1511632765486-a01980e01a18?auto=format&fit=crop&w=1200&q=80",
   },
-  {
-    name: "Trường Chúa Nhật Thiếu Nhi",
-    category: "Thiếu Nhi",
-    icon: "👶",
-    url: "https://images.unsplash.com/photo-1485546246426-74dc88dec4d9?auto=format&fit=crop&w=1200&q=80",
-  },
-  {
-    name: "Cầu Nguyện & Tĩnh Nguyện",
-    category: "Tâm Linh",
-    icon: "✝️",
-    url: "https://images.unsplash.com/photo-1445445290350-18a3b86e0b5b?auto=format&fit=crop&w=1200&q=80",
-  },
+
+
 ];
 
 const CHRISTIAN_COVERS_SAMPLE = [

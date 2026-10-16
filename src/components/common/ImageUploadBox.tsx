@@ -168,7 +168,7 @@ export const ImageUploadBox: React.FC<ImageUploadBoxProps> = ({
             onClick={() => setShowPresets(!showPresets)}
             className="text-[11px] text-[#c5a059] hover:underline font-serif cursor-pointer ml-auto"
           >
-            {showPresets ? "Đóng ảnh mẫu" : "Chọn ảnh mẫu Cơ Đốc"}
+            {showPresets ? "Đóng ảnh mẫu" : "Chọn ảnh mẫu"}
           </button>
         )}
       </div>
@@ -193,8 +193,8 @@ export const ImageUploadBox: React.FC<ImageUploadBoxProps> = ({
           onDrop={handleDrop}
           onClick={() => !isUploading && fileInputRef.current?.click()}
           className={`relative border-2 border-dashed rounded-xl p-4 sm:p-5 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2 ${isDragOver
-              ? "border-[#c5a059] bg-[#c5a059]/10"
-              : "border-stone-700 hover:border-[#c5a059]/70 bg-stone-900/60 hover:bg-stone-900"
+            ? "border-[#c5a059] bg-[#c5a059]/10"
+            : "border-stone-700 hover:border-[#c5a059]/70 bg-stone-900/60 hover:bg-stone-900"
             }`}
         >
           {isUploading ? (
@@ -284,9 +284,6 @@ export const ImageUploadBox: React.FC<ImageUploadBoxProps> = ({
       {/* Optional Preset Samples */}
       {showPresets && presetSamples.length > 0 && (
         <div className="p-3 bg-stone-900/80 border border-stone-800 rounded-xl space-y-1.5 animate-fadeIn">
-          <p className="text-[10px] text-[#c5a059] font-serif">
-            ⚡ Chạm vào một ảnh Cơ Đốc mẫu để áp dụng nhanh:
-          </p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 max-h-44 overflow-y-auto pr-1">
             {presetSamples.map((ps, idx) => (
               <div
@@ -297,8 +294,8 @@ export const ImageUploadBox: React.FC<ImageUploadBoxProps> = ({
                   setUploadStats(null);
                 }}
                 className={`relative rounded-lg overflow-hidden border cursor-pointer group transition-all aspect-video ${value === ps.url
-                    ? "border-[#c5a059] ring-2 ring-[#c5a059]/50"
-                    : "border-stone-800 hover:border-stone-600"
+                  ? "border-[#c5a059] ring-2 ring-[#c5a059]/50"
+                  : "border-stone-800 hover:border-stone-600"
                   }`}
               >
                 <img
