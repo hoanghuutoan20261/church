@@ -192,11 +192,10 @@ export const ImageUploadBox: React.FC<ImageUploadBoxProps> = ({
           onDragLeave={() => setIsDragOver(false)}
           onDrop={handleDrop}
           onClick={() => !isUploading && fileInputRef.current?.click()}
-          className={`relative border-2 border-dashed rounded-xl p-4 sm:p-5 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2 ${
-            isDragOver
+          className={`relative border-2 border-dashed rounded-xl p-4 sm:p-5 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2 ${isDragOver
               ? "border-[#c5a059] bg-[#c5a059]/10"
               : "border-stone-700 hover:border-[#c5a059]/70 bg-stone-900/60 hover:bg-stone-900"
-          }`}
+            }`}
         >
           {isUploading ? (
             <div className="py-3 flex flex-col items-center gap-2 text-stone-300">
@@ -272,18 +271,7 @@ export const ImageUploadBox: React.FC<ImageUploadBoxProps> = ({
         </div>
       )}
 
-      {/* Success Compression Stats Banner */}
-      {uploadStats && (
-        <div className="p-2 bg-emerald-950/70 border border-emerald-500/40 rounded-lg text-[11px] text-emerald-300 font-serif flex items-center justify-between animate-fadeIn">
-          <div className="flex items-center gap-1.5">
-            <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-            <span>Đã tải ảnh lên thành công!</span>
-          </div>
-          <span className="text-[10px] font-mono text-emerald-400">
-            Hãy bấm nút Lưu / Đăng bài bên dưới
-          </span>
-        </div>
-      )}
+
 
       {/* Error Message */}
       {errorMsg && (
@@ -308,11 +296,10 @@ export const ImageUploadBox: React.FC<ImageUploadBoxProps> = ({
                   setShowPresets(false);
                   setUploadStats(null);
                 }}
-                className={`relative rounded-lg overflow-hidden border cursor-pointer group transition-all aspect-video ${
-                  value === ps.url
+                className={`relative rounded-lg overflow-hidden border cursor-pointer group transition-all aspect-video ${value === ps.url
                     ? "border-[#c5a059] ring-2 ring-[#c5a059]/50"
                     : "border-stone-800 hover:border-stone-600"
-                }`}
+                  }`}
               >
                 <img
                   src={ps.url}
