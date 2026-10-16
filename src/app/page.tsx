@@ -2265,16 +2265,20 @@ export default function ChurchDirectoryPage() {
                   type="text"
                   value={formName}
                   onChange={(e) => {
-                    setFormName(e.target.value);
-                    if (!formSlug) {
-                      const slugified = e.target.value
-                        .toLowerCase()
-                        .normalize("NFD")
-                        .replace(/[\u0300-\u036f]/g, "")
-                        .replace(/[đĐ]/g, "d")
-                        .replace(/[^a-z0-9]/g, "");
-                      setFormSlug(slugified);
-                    }
+                    const val = e.target.value;
+                    setFormName(val);
+                    const rawNormalized = val
+                      .toLowerCase()
+                      .normalize("NFD")
+                      .replace(/[\u0300-\u036f]/g, "")
+                      .replace(/[đĐ]/g, "d")
+                      .trim();
+                    const cleanedPrefix = rawNormalized
+                      .replace(/^(hoi\s+thanh\s+tin\s+lanh|hoi\s+thanh|httl|ht)\s+/i, "")
+                      .trim();
+                    const autoSlug = (cleanedPrefix || rawNormalized).replace(/[^a-z0-9]/g, "");
+                    setFormSlug(autoSlug);
+                    setFormStreamKey(autoSlug ? `${autoSlug}-live` : "");
                   }}
                   placeholder="Ví dụ: Hội Thánh Tin Lành Bến Tre"
                   className="w-full bg-sanctuary-850 border border-white/[0.08] focus:border-gold-400/60 rounded-xl px-3.5 py-2.5 text-xs text-sanctuary-100 placeholder-sanctuary-500 focus:outline-none transition-colors"
@@ -2283,8 +2287,8 @@ export default function ChurchDirectoryPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-sanctuary-200">
-                    Mã đường dẫn (Slug) <span className="text-gold-400">*</span>
+                  <label className="text-xs font-medium text-sanctuary-200 flex items-center justify-between">
+                    <span>Mã đường dẫn (Slug)</span>
                   </label>
                   <div className="flex items-center bg-sanctuary-850 border border-white/[0.08] rounded-xl px-3 focus-within:border-gold-400/60">
                     <span className="text-[11px] text-sanctuary-500 font-mono">/</span>
@@ -2292,9 +2296,11 @@ export default function ChurchDirectoryPage() {
                       required
                       type="text"
                       value={formSlug}
-                      onChange={(e) =>
-                        setFormSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))
-                      }
+                      onChange={(e) => {
+                        const customSlug = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "");
+                        setFormSlug(customSlug);
+                        setFormStreamKey(customSlug ? `${customSlug}-live` : "");
+                      }}
                       placeholder="bentre"
                       className="w-full bg-transparent px-1 py-2.5 text-xs text-gold-300 font-mono focus:outline-none"
                     />
@@ -2302,8 +2308,8 @@ export default function ChurchDirectoryPage() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-sanctuary-200">
-                    Khóa luồng phát (Stream Key) <span className="text-gold-400">*</span>
+                  <label className="text-xs font-medium text-sanctuary-200 flex items-center justify-between">
+                    <span>Khóa luồng phát (Stream Key)</span>
                   </label>
                   <input
                     required
@@ -2311,7 +2317,7 @@ export default function ChurchDirectoryPage() {
                     value={formStreamKey}
                     onChange={(e) => setFormStreamKey(e.target.value.trim())}
                     placeholder="bentre-live"
-                    className="w-full bg-sanctuary-850 border border-white/[0.08] focus:border-gold-400/60 rounded-xl px-3.5 py-2.5 text-xs text-sanctuary-100 placeholder-sanctuary-500 focus:outline-none"
+                    className="w-full bg-sanctuary-850 border border-white/[0.08] focus:border-gold-400/60 rounded-xl px-3.5 py-2.5 text-xs text-sanctuary-100 font-mono placeholder-sanctuary-500 focus:outline-none"
                   />
                 </div>
               </div>

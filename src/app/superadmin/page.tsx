@@ -2127,17 +2127,26 @@ export default function SuperAdminPage() {
                   type="text"
                   value={churchForm.name}
                   onChange={(e) => {
+                    const val = e.target.value;
+                    if (editingChurch) {
+                      setChurchForm({ ...churchForm, name: val });
+                      return;
+                    }
+                    const rawNormalized = val
+                      .toLowerCase()
+                      .normalize("NFD")
+                      .replace(/[\u0300-\u036f]/g, "")
+                      .replace(/[đĐ]/g, "d")
+                      .trim();
+                    const cleanedPrefix = rawNormalized
+                      .replace(/^(hoi\s+thanh\s+tin\s+lanh|hoi\s+thanh|httl|ht)\s+/i, "")
+                      .trim();
+                    const autoSlug = (cleanedPrefix || rawNormalized).replace(/[^a-z0-9]/g, "");
                     setChurchForm({
                       ...churchForm,
-                      name: e.target.value,
-                      slug: editingChurch
-                        ? churchForm.slug
-                        : e.target.value
-                          .toLowerCase()
-                          .normalize("NFD")
-                          .replace(/[\u0300-\u036f]/g, "")
-                          .replace(/[đĐ]/g, "d")
-                          .replace(/[^a-z0-9]/g, ""),
+                      name: val,
+                      slug: autoSlug,
+                      streamKey: autoSlug ? `${autoSlug}-live` : "",
                     });
                   }}
                   placeholder="Ví dụ: Hội Thánh Tin Lành Cần Thơ"
@@ -2147,20 +2156,37 @@ export default function SuperAdminPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-sanctuary-200 font-medium">Slug Đường Dẫn *</label>
+                  <label className="text-sanctuary-200 font-medium flex items-center justify-between">
+                    <span>Slug Đường Dẫn</span>
+                    {!editingChurch && (
+                      <span className="text-[10px] text-gold-400/80 font-normal">Tự động tạo</span>
+                    )}
+                  </label>
                   <input
                     required
                     disabled={Boolean(editingChurch)}
                     type="text"
                     value={churchForm.slug}
-                    onChange={(e) => setChurchForm({ ...churchForm, slug: e.target.value })}
+                    onChange={(e) => {
+                      const customSlug = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "");
+                      setChurchForm({
+                        ...churchForm,
+                        slug: customSlug,
+                        streamKey: customSlug ? `${customSlug}-live` : "",
+                      });
+                    }}
                     placeholder="cantho"
                     className="w-full bg-[#131926] border border-white/10 rounded-xl px-3.5 py-2 text-gold-300 font-mono focus:outline-none focus:border-gold-400 disabled:opacity-60"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-sanctuary-200 font-medium">Khóa Stream Key *</label>
+                  <label className="text-sanctuary-200 font-medium flex items-center justify-between">
+                    <span>Khóa Stream Key</span>
+                    {!editingChurch && (
+                      <span className="text-[10px] text-gold-400/80 font-normal">Tự động tạo</span>
+                    )}
+                  </label>
                   <input
                     required
                     type="text"
