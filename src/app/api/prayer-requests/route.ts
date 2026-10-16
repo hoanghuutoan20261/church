@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongoose";
 import { PrayerRequest } from "@/models/PrayerRequest";
+import { Church } from "@/models/Church";
 import { getAuthUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -43,8 +44,21 @@ export async function POST(req: NextRequest) {
 
     const sanitizedContact = contact ? contact.trim().slice(0, 80) : null;
 
+    // Resolve churchSlug dynamically: verify it exists or fallback to the first active church
+    let resolvedSlug = (churchSlug || "").toLowerCase().trim();
+    if (resolvedSlug) {
+      const exists = await Church.exists({ slug: resolvedSlug, isActive: true });
+      if (!exists) {
+        const firstChurch = await Church.findOne({ isActive: true });
+        if (firstChurch) resolvedSlug = firstChurch.slug;
+      }
+    } else {
+      const firstChurch = await Church.findOne({ isActive: true });
+      if (firstChurch) resolvedSlug = firstChurch.slug;
+    }
+
     const record = await PrayerRequest.create({
-      churchSlug: (churchSlug || "loibansusong").toLowerCase().trim(),
+      churchSlug: resolvedSlug || "hoithanh",
       name: sanitizedName,
       isAnonymous: Boolean(isAnonymous),
       contact: sanitizedContact,

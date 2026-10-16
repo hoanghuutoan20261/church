@@ -45,11 +45,14 @@ import {
   MoreHorizontal,
   Smile,
   Bookmark,
+  BookmarkCheck,
   CheckCircle2,
   ChevronRight,
   LogOut,
   Trash2,
   ExternalLink,
+  EyeOff,
+  Flag,
 } from "lucide-react";
 import { ImageUploadBox } from "@/components/common/ImageUploadBox";
 import { AmenIcon } from "@/components/common/AmenIcon";
@@ -329,11 +332,36 @@ export default function ChurchDirectoryPage() {
     isAnonymous: false,
     contact: "",
     category: "Sức khỏe & Chữa lành",
-    churchSlug: "loibansusong",
+    churchSlug: "",
     prayerContent: "",
   });
   const [prayerSubmitted, setPrayerSubmitted] = useState<boolean>(false);
   const [isSubmittingPrayer, setIsSubmittingPrayer] = useState<boolean>(false);
+
+  // Post 3-dots Menu & Actions State
+  const [openPostMenuId, setOpenPostMenuId] = useState<string | null>(null);
+  const [savedPostIds, setSavedPostIds] = useState<string[]>([]);
+  const [hiddenPostIds, setHiddenPostIds] = useState<string[]>([]);
+  const [feedToast, setFeedToast] = useState<string | null>(null);
+
+  // Load saved posts from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("sacred_saved_posts");
+      if (saved) setSavedPostIds(JSON.parse(saved));
+    } catch {
+      // Ignored
+    }
+  }, []);
+
+  // Close 3-dots menu when clicking outside
+  useEffect(() => {
+    const handleGlobalClick = () => setOpenPostMenuId(null);
+    if (openPostMenuId) {
+      window.addEventListener("click", handleGlobalClick);
+      return () => window.removeEventListener("click", handleGlobalClick);
+    }
+  }, [openPostMenuId]);
 
   // Time formatter for posts & comments
   function formatTimeAgo(dateString?: string | Date) {
@@ -462,8 +490,15 @@ export default function ChurchDirectoryPage() {
       const res = await fetch("/api/churches");
       if (res.ok) {
         const json = await res.json();
-        if (json.data) {
+        if (json.data && Array.isArray(json.data) && json.data.length > 0) {
           setChurches(json.data);
+          setPrayerForm((prev) => ({
+            ...prev,
+            churchSlug:
+              prev.churchSlug && json.data.some((c: any) => c.slug === prev.churchSlug)
+                ? prev.churchSlug
+                : json.data[0].slug,
+          }));
         }
       }
     } catch (err) {
@@ -676,6 +711,65 @@ export default function ChurchDirectoryPage() {
     }
   };
 
+  // Toast feedback helper
+  const showFeedToast = (msg: string) => {
+    setFeedToast(msg);
+    setTimeout(() => {
+      setFeedToast((curr) => (curr === msg ? null : curr));
+    }, 3200);
+  };
+
+  // Toggle Save Post (Bookmark)
+  const handleToggleSavePost = (postId: string) => {
+    setSavedPostIds((prev) => {
+      const isSaved = prev.includes(postId);
+      const next = isSaved ? prev.filter((id) => id !== postId) : [...prev, postId];
+      try {
+        localStorage.setItem("sacred_saved_posts", JSON.stringify(next));
+      } catch {
+        // Ignored
+      }
+      showFeedToast(isSaved ? "Đã gỡ bài viết khỏi mục đã lưu." : "Đã lưu bài viết vào mục yêu thích!");
+      return next;
+    });
+    setOpenPostMenuId(null);
+  };
+
+  // Hide Post from Feed
+  const handleHidePost = (postId: string) => {
+    setHiddenPostIds((prev) => [...prev, postId]);
+    setOpenPostMenuId(null);
+    showFeedToast("Đã ẩn bài viết khỏi bảng tin.");
+  };
+
+  // Copy Post Link
+  const handleCopyPostLink = (post: FeedPost) => {
+    const link = `${window.location.origin}/${post.churchSlug}?view=wall`;
+    navigator.clipboard.writeText(link);
+    setOpenPostMenuId(null);
+    showFeedToast("Đã sao chép liên kết bài viết vào bộ nhớ tạm!");
+  };
+
+  // Delete Post (For Superadmin or Church Admin/Pastor)
+  const handleDeleteFeedPost = async (postId: string) => {
+    if (!confirm("Bạn có chắc chắn muốn xóa vĩnh viễn bài viết này khỏi hệ thống?")) return;
+    try {
+      const res = await fetch(`/api/admin/posts?id=${postId}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (data.success) {
+        setFeedPosts((prev) => prev.filter((p) => p.id !== postId));
+        setOpenPostMenuId(null);
+        showFeedToast("Đã xóa bài viết thành công!");
+      } else {
+        alert(data.message || "Không thể xóa bài viết.");
+      }
+    } catch {
+      alert("Lỗi kết nối khi xóa bài viết.");
+    }
+  };
+
   // Create official church post (only for logged-in pastor/admin/superadmin)
   const handlePublishPost = async (customPayload?: {
     churchSlug?: string;
@@ -695,7 +789,7 @@ export default function ChurchDirectoryPage() {
       customPayload?.churchSlug ||
       (currentUser.churchSlug && currentUser.churchSlug !== "system"
         ? currentUser.churchSlug
-        : churches[0]?.slug || "loibansusong");
+        : churches[0]?.slug || "");
 
     const contentToUse = customPayload ? customPayload.content.trim() : composerText.trim();
     if (!contentToUse) {
@@ -752,10 +846,37 @@ export default function ChurchDirectoryPage() {
     }
   };
 
+  // Open prayer modal ensuring active churchSlug is populated
+  const handleOpenPrayerModal = (defaultSlug?: string) => {
+    setPrayerSubmitted(false);
+    const resolved =
+      defaultSlug ||
+      (prayerForm.churchSlug && churches.some((c) => c.slug === prayerForm.churchSlug)
+        ? prayerForm.churchSlug
+        : churches[0]?.slug || "");
+
+    setPrayerForm((prev) => ({
+      ...prev,
+      churchSlug: resolved,
+    }));
+    setShowPrayerModal(true);
+  };
+
   // Submit prayer request from believer
   const handleSendPrayer = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!prayerForm.prayerContent.trim()) return;
+
+    // Resolve churchSlug dynamically: prioritize matching selected church, or first active church
+    const targetSlug =
+      prayerForm.churchSlug && churches.some((c) => c.slug === prayerForm.churchSlug)
+        ? prayerForm.churchSlug
+        : churches[0]?.slug;
+
+    if (!targetSlug) {
+      alert("Hệ thống chưa tìm thấy Hội Thánh nào để tiếp nhận lời cầu nguyện.");
+      return;
+    }
 
     try {
       setIsSubmittingPrayer(true);
@@ -763,7 +884,7 @@ export default function ChurchDirectoryPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          churchSlug: prayerForm.churchSlug || churches[0]?.slug || "loibansusong",
+          churchSlug: targetSlug,
           name: prayerForm.isAnonymous ? "Con cái Chúa (Ẩn danh)" : (prayerForm.name || "Ẩn danh"),
           isAnonymous: prayerForm.isAnonymous,
           contact: prayerForm.contact || null,
@@ -821,6 +942,7 @@ export default function ChurchDirectoryPage() {
 
   // Filter feed posts across all churches
   const filteredFeedPosts = feedPosts.filter((post) => {
+    if (hiddenPostIds.includes(post.id)) return false;
     const term = searchTerm.toLowerCase().trim();
     const matchesSearch =
       !term ||
@@ -1495,10 +1617,7 @@ export default function ChurchDirectoryPage() {
 
                   <div className="flex items-center gap-2 pt-0.5">
                     <button
-                      onClick={() => {
-                        setPrayerSubmitted(false);
-                        setShowPrayerModal(true);
-                      }}
+                      onClick={() => handleOpenPrayerModal()}
                       className="flex-1 py-2 sm:py-2.5 px-3.5 rounded-xl bg-gold-400 hover:bg-gold-500 text-sanctuary-950 font-serif font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-candle transition-all cursor-pointer"
                     >
                       <Flame className="w-4 h-4 text-sanctuary-950" />
@@ -1626,9 +1745,154 @@ export default function ChurchDirectoryPage() {
                             </div>
                           </div>
 
-                          <button className="p-1.5 rounded-full hover:bg-sanctuary-850 text-sanctuary-400 hover:text-white transition-colors">
-                            <MoreHorizontal className="w-4 h-4" />
-                          </button>
+                          {/* 3-dots Options Menu */}
+                          <div className="relative">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setOpenPostMenuId(openPostMenuId === post.id ? null : post.id);
+                              }}
+                              aria-label="Tùy chọn bài viết"
+                              className={`p-1.5 rounded-full transition-colors cursor-pointer ${
+                                openPostMenuId === post.id
+                                  ? "bg-sanctuary-800 text-gold-300"
+                                  : "hover:bg-sanctuary-850 text-sanctuary-400 hover:text-white"
+                              }`}
+                            >
+                              <MoreHorizontal className="w-4 h-4" />
+                            </button>
+
+                            {openPostMenuId === post.id && (
+                              <div
+                                onClick={(e) => e.stopPropagation()}
+                                className="absolute right-0 top-full mt-1.5 w-60 sm:w-64 bg-[#14161f] border border-white/10 rounded-2xl shadow-2xl p-1.5 z-30 animate-fadeIn backdrop-blur-xl space-y-0.5"
+                              >
+                                {/* Save Post */}
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleSavePost(post.id)}
+                                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left text-xs text-sanctuary-200 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"
+                                >
+                                  {savedPostIds.includes(post.id) ? (
+                                    <BookmarkCheck className="w-4 h-4 text-gold-400 shrink-0" />
+                                  ) : (
+                                    <Bookmark className="w-4 h-4 text-sanctuary-400 shrink-0" />
+                                  )}
+                                  <div className="min-w-0 flex-1">
+                                    <span className="block font-medium">
+                                      {savedPostIds.includes(post.id) ? "Bỏ lưu bài viết" : "Lưu bài viết"}
+                                    </span>
+                                    <span className="block text-[10px] text-sanctuary-400 truncate">
+                                      {savedPostIds.includes(post.id) ? "Đã lưu vào danh sách yêu thích" : "Lưu vào danh sách đọc lại sau"}
+                                    </span>
+                                  </div>
+                                </button>
+
+                                {/* Copy Link */}
+                                <button
+                                  type="button"
+                                  onClick={() => handleCopyPostLink(post)}
+                                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left text-xs text-sanctuary-200 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"
+                                >
+                                  <Copy className="w-4 h-4 text-sanctuary-400 shrink-0" />
+                                  <div className="min-w-0 flex-1">
+                                    <span className="block font-medium">Sao chép liên kết</span>
+                                    <span className="block text-[10px] text-sanctuary-400 truncate">
+                                      Lấy liên kết chia sẻ bài viết
+                                    </span>
+                                  </div>
+                                </button>
+
+                                {/* Go to Church Wall */}
+                                <Link
+                                  href={`/${post.churchSlug}?view=wall`}
+                                  onClick={() => setOpenPostMenuId(null)}
+                                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left text-xs text-sanctuary-200 hover:text-white hover:bg-white/[0.06] transition-colors"
+                                >
+                                  <ChurchIcon className="w-4 h-4 text-gold-400 shrink-0" />
+                                  <div className="min-w-0 flex-1">
+                                    <span className="block font-medium">Đến Tường Hội Thánh</span>
+                                    <span className="block text-[10px] text-sanctuary-400 truncate">
+                                      Xem tất cả tin tức của nơi này
+                                    </span>
+                                  </div>
+                                </Link>
+
+                                {/* Go to Sanctuary / Live */}
+                                <Link
+                                  href={`/${post.churchSlug}?view=sanctuary`}
+                                  onClick={() => setOpenPostMenuId(null)}
+                                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left text-xs text-sanctuary-200 hover:text-white hover:bg-white/[0.06] transition-colors"
+                                >
+                                  <Radio className="w-4 h-4 text-red-400 shrink-0" />
+                                  <div className="min-w-0 flex-1">
+                                    <span className="block font-medium">Vào Phòng Thờ Phượng</span>
+                                    <span className="block text-[10px] text-sanctuary-400 truncate">
+                                      Tham dự giờ lễ & phòng chờ
+                                    </span>
+                                  </div>
+                                </Link>
+
+                                <div className="h-px bg-white/[0.08] my-1" />
+
+                                {/* Hide Post */}
+                                <button
+                                  type="button"
+                                  onClick={() => handleHidePost(post.id)}
+                                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left text-xs text-sanctuary-300 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"
+                                >
+                                  <EyeOff className="w-4 h-4 text-stone-400 shrink-0" />
+                                  <div className="min-w-0 flex-1">
+                                    <span className="block font-medium">Ẩn bài viết</span>
+                                    <span className="block text-[10px] text-sanctuary-400 truncate">
+                                      Ẩn khỏi bảng tin phiên này
+                                    </span>
+                                  </div>
+                                </button>
+
+                                {/* Report / Feedback */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setOpenPostMenuId(null);
+                                    window.dispatchEvent(new Event("open-feedback-modal"));
+                                  }}
+                                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left text-xs text-amber-300 hover:text-amber-200 hover:bg-amber-500/10 transition-colors cursor-pointer"
+                                >
+                                  <Flag className="w-4 h-4 text-amber-400 shrink-0" />
+                                  <div className="min-w-0 flex-1">
+                                    <span className="block font-medium">Báo cáo bài viết</span>
+                                    <span className="block text-[10px] text-amber-400/70 truncate">
+                                      Góp ý nội dung chưa chuẩn mực
+                                    </span>
+                                  </div>
+                                </button>
+
+                                {/* Admin / Pastor Delete */}
+                                {(currentUser?.role === "superadmin" ||
+                                  ((currentUser?.role === "pastor" || currentUser?.role === "admin") &&
+                                    currentUser?.churchSlug === post.churchSlug)) && (
+                                  <>
+                                    <div className="h-px bg-white/[0.08] my-1" />
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteFeedPost(post.id)}
+                                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left text-xs text-red-400 hover:text-red-300 hover:bg-red-950/40 transition-colors cursor-pointer"
+                                    >
+                                      <Trash2 className="w-4 h-4 text-red-400 shrink-0" />
+                                      <div className="min-w-0 flex-1">
+                                        <span className="block font-medium">Xóa bài viết này</span>
+                                        <span className="block text-[10px] text-red-400/70 truncate">
+                                          Quyền Quản Trị Viên Hội Thánh
+                                        </span>
+                                      </div>
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         </div>
 
                         {/* Post Content Caption */}
@@ -2852,7 +3116,11 @@ export default function ChurchDirectoryPage() {
                     <div className="space-y-1">
                       <label className="text-sanctuary-200 font-medium">Hội Thánh Tiếp Nhận</label>
                       <select
-                        value={prayerForm.churchSlug}
+                        value={
+                          prayerForm.churchSlug && churches.some((c) => c.slug === prayerForm.churchSlug)
+                            ? prayerForm.churchSlug
+                            : churches[0]?.slug || ""
+                        }
                         onChange={(e) => setPrayerForm({ ...prayerForm, churchSlug: e.target.value })}
                         className="w-full bg-[#131926] border border-white/10 rounded-xl px-3.5 py-2 text-white focus:outline-none"
                       >
@@ -3153,6 +3421,14 @@ export default function ChurchDirectoryPage() {
           <span className="text-[10px] mt-0.5">Góp Ý</span>
         </button>
       </nav>
+
+      {/* Floating Action Toast Notification */}
+      {feedToast && (
+        <div className="fixed bottom-20 sm:bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-full bg-sanctuary-900/95 border border-gold-400/40 text-xs text-white shadow-2xl backdrop-blur-md flex items-center gap-2 animate-bounce pointer-events-none">
+          <Check className="w-3.5 h-3.5 text-gold-400 shrink-0" />
+          <span>{feedToast}</span>
+        </div>
+      )}
     </div>
   );
 }

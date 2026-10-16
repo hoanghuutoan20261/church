@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongoose";
 import { PrayerRequest } from "@/models/PrayerRequest";
+import { Church } from "@/models/Church";
 import { getAuthUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -16,6 +17,19 @@ export async function GET(req: NextRequest) {
     }
 
     await connectDB();
+
+    // Self-healing migration: If "loibansusong" church does not exist on this server,
+    // reassign any orphaned prayer requests to the active church so pastors never lose believer prayers.
+    if (authSession.churchSlug && authSession.churchSlug !== "loibansusong") {
+      const loibanExists = await Church.exists({ slug: "loibansusong" });
+      if (!loibanExists) {
+        await PrayerRequest.updateMany(
+          { churchSlug: "loibansusong" },
+          { $set: { churchSlug: authSession.churchSlug } }
+        );
+      }
+    }
+
     const prayers = await PrayerRequest.find({
       churchSlug: authSession.churchSlug,
     })

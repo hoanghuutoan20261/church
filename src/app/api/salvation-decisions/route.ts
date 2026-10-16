@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongoose";
 import { SalvationDecision } from "@/models/SalvationDecision";
+import { Church } from "@/models/Church";
 import { getAuthUser } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -26,8 +27,21 @@ export async function POST(req: NextRequest) {
     const cleanCity = (city || "Chưa rõ").trim().slice(0, 100);
     const cleanTheme = (serviceTheme || "Thờ Phượng Chúa Nhật").trim().slice(0, 150);
 
+    // Resolve churchSlug dynamically: verify it exists or fallback to the first active church
+    let resolvedSlug = (churchSlug || "").toLowerCase().trim();
+    if (resolvedSlug) {
+      const exists = await Church.exists({ slug: resolvedSlug, isActive: true });
+      if (!exists) {
+        const firstChurch = await Church.findOne({ isActive: true });
+        if (firstChurch) resolvedSlug = firstChurch.slug;
+      }
+    } else {
+      const firstChurch = await Church.findOne({ isActive: true });
+      if (firstChurch) resolvedSlug = firstChurch.slug;
+    }
+
     const record = await SalvationDecision.create({
-      churchSlug: (churchSlug || "loibansusong").toLowerCase().trim(),
+      churchSlug: resolvedSlug || "hoithanh",
       fullName: cleanFullName,
       phoneNumber: cleanPhoneNumber,
       city: cleanCity,
