@@ -132,7 +132,7 @@ export const ImageUploadBox: React.FC<ImageUploadBoxProps> = ({
             onClick={() => setShowPresets(!showPresets)}
             className="text-[11px] text-[#c5a059] hover:underline font-serif cursor-pointer ml-auto"
           >
-            {showPresets ? "Đóng ảnh mẫu" : "⚡ Chọn ảnh mẫu Cơ Đốc"}
+            {showPresets ? "Đóng ảnh mẫu" : ""}
           </button>
         )}
       </div>
@@ -157,8 +157,8 @@ export const ImageUploadBox: React.FC<ImageUploadBoxProps> = ({
           onDrop={handleDrop}
           onClick={() => !isUploading && fileInputRef.current?.click()}
           className={`relative border-2 border-dashed rounded-xl p-4 sm:p-5 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2 ${isDragOver
-              ? "border-[#c5a059] bg-[#c5a059]/10"
-              : "border-stone-700 hover:border-[#c5a059]/70 bg-stone-900/60 hover:bg-stone-900"
+            ? "border-[#c5a059] bg-[#c5a059]/10"
+            : "border-stone-700 hover:border-[#c5a059]/70 bg-stone-900/60 hover:bg-stone-900"
             }`}
         >
           {isUploading ? (
@@ -225,7 +225,7 @@ export const ImageUploadBox: React.FC<ImageUploadBoxProps> = ({
 
             {/* Storage indicator tag */}
             <div className="absolute bottom-2 left-2 bg-black/70 backdrop-blur-md px-2 py-0.5 rounded text-[10px] text-stone-300 border border-white/10 font-mono">
-              {value.startsWith("/uploads/") ? "📁 Lưu trên VPS" : "🔗 Link ngoài"}
+              {value.startsWith("/uploads/") ? "📁" : "🔗 Link ngoài"}
             </div>
           </div>
         </div>
@@ -236,10 +236,6 @@ export const ImageUploadBox: React.FC<ImageUploadBoxProps> = ({
         <div className="p-2 bg-emerald-950/70 border border-emerald-500/40 rounded-lg text-[11px] text-emerald-300 font-serif flex items-center justify-between animate-fadeIn">
           <div className="flex items-center gap-1.5">
             <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-            <span>
-              Đã tối ưu: {formatBytes(uploadStats.originalSize)} ➔{" "}
-              <strong>{formatBytes(uploadStats.savedSize)}</strong> (-{uploadStats.savedPercent}%)
-            </span>
           </div>
           <span className="text-[10px] font-mono text-emerald-400">Đã lưu VPS</span>
         </div>
@@ -269,8 +265,8 @@ export const ImageUploadBox: React.FC<ImageUploadBoxProps> = ({
                   setUploadStats(null);
                 }}
                 className={`relative rounded-lg overflow-hidden border cursor-pointer group transition-all aspect-video ${value === ps.url
-                    ? "border-[#c5a059] ring-2 ring-[#c5a059]/50"
-                    : "border-stone-800 hover:border-stone-600"
+                  ? "border-[#c5a059] ring-2 ring-[#c5a059]/50"
+                  : "border-stone-800 hover:border-stone-600"
                   }`}
               >
                 <img

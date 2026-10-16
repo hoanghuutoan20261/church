@@ -489,10 +489,10 @@ export default function ChurchAdminDashboard() {
         setChurch((prev) =>
           prev
             ? {
-                ...prev,
-                streamType: streamSettingsForm.streamType,
-                streamUrl: streamSettingsForm.streamUrl.trim(),
-              }
+              ...prev,
+              streamType: streamSettingsForm.streamType,
+              streamUrl: streamSettingsForm.streamUrl.trim(),
+            }
             : null
         );
         setStreamSaveSuccess("Đã lưu và đồng bộ cấu hình nguồn phát trực tiếp!");
@@ -967,8 +967,8 @@ export default function ChurchAdminDashboard() {
               <button
                 onClick={() => setActiveTab("stream")}
                 className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-xs font-medium transition-all text-left ${activeTab === "stream"
-                    ? "bg-[#c5a059]/15 text-[#c5a059] border border-[#c5a059]/40 font-semibold shadow-sm"
-                    : "text-stone-300 hover:bg-stone-850 hover:text-stone-100 border border-transparent"
+                  ? "bg-[#c5a059]/15 text-[#c5a059] border border-[#c5a059]/40 font-semibold shadow-sm"
+                  : "text-stone-300 hover:bg-stone-850 hover:text-stone-100 border border-transparent"
                   }`}
               >
                 <Radio className="w-4 h-4 shrink-0 text-[#c5a059]" />
@@ -978,8 +978,8 @@ export default function ChurchAdminDashboard() {
               <button
                 onClick={() => setActiveTab("sermon")}
                 className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-xs font-medium transition-all text-left ${activeTab === "sermon"
-                    ? "bg-[#c5a059]/15 text-[#c5a059] border border-[#c5a059]/40 font-semibold shadow-sm"
-                    : "text-stone-300 hover:bg-stone-850 hover:text-stone-100 border border-transparent"
+                  ? "bg-[#c5a059]/15 text-[#c5a059] border border-[#c5a059]/40 font-semibold shadow-sm"
+                  : "text-stone-300 hover:bg-stone-850 hover:text-stone-100 border border-transparent"
                   }`}
               >
                 <BookOpen className="w-4 h-4 shrink-0 text-[#c5a059]" />
@@ -989,8 +989,8 @@ export default function ChurchAdminDashboard() {
               <button
                 onClick={() => setActiveTab("lyrics")}
                 className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg text-xs font-medium transition-all text-left ${activeTab === "lyrics"
-                    ? "bg-[#c5a059]/15 text-[#c5a059] border border-[#c5a059]/40 font-semibold shadow-sm"
-                    : "text-stone-300 hover:bg-stone-850 hover:text-stone-100 border border-transparent"
+                  ? "bg-[#c5a059]/15 text-[#c5a059] border border-[#c5a059]/40 font-semibold shadow-sm"
+                  : "text-stone-300 hover:bg-stone-850 hover:text-stone-100 border border-transparent"
                   }`}
               >
                 <div className="flex items-center gap-3">
@@ -1007,8 +1007,8 @@ export default function ChurchAdminDashboard() {
               <button
                 onClick={() => setActiveTab("prayers")}
                 className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg text-xs font-medium transition-all text-left ${activeTab === "prayers"
-                    ? "bg-[#c5a059]/15 text-[#c5a059] border border-[#c5a059]/40 font-semibold shadow-sm"
-                    : "text-stone-300 hover:bg-stone-850 hover:text-stone-100 border border-transparent"
+                  ? "bg-[#c5a059]/15 text-[#c5a059] border border-[#c5a059]/40 font-semibold shadow-sm"
+                  : "text-stone-300 hover:bg-stone-850 hover:text-stone-100 border border-transparent"
                   }`}
               >
                 <div className="flex items-center gap-3">
@@ -1025,8 +1025,8 @@ export default function ChurchAdminDashboard() {
               <button
                 onClick={() => setActiveTab("salvations")}
                 className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg text-xs font-medium transition-all text-left ${activeTab === "salvations"
-                    ? "bg-[#c5a059]/15 text-[#c5a059] border border-[#c5a059]/40 font-semibold shadow-sm"
-                    : "text-stone-300 hover:bg-stone-850 hover:text-stone-100 border border-transparent"
+                  ? "bg-[#c5a059]/15 text-[#c5a059] border border-[#c5a059]/40 font-semibold shadow-sm"
+                  : "text-stone-300 hover:bg-stone-850 hover:text-stone-100 border border-transparent"
                   }`}
               >
                 <div className="flex items-center gap-3">
@@ -1048,8 +1048,8 @@ export default function ChurchAdminDashboard() {
               <button
                 onClick={() => setActiveTab("chat")}
                 className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-xs font-medium transition-all text-left ${activeTab === "chat"
-                    ? "bg-[#c5a059]/15 text-[#c5a059] border border-[#c5a059]/40 font-semibold shadow-sm"
-                    : "text-stone-300 hover:bg-stone-850 hover:text-stone-100 border border-transparent"
+                  ? "bg-[#c5a059]/15 text-[#c5a059] border border-[#c5a059]/40 font-semibold shadow-sm"
+                  : "text-stone-300 hover:bg-stone-850 hover:text-stone-100 border border-transparent"
                   }`}
               >
                 <MessageSquare className="w-4 h-4 shrink-0 text-[#c5a059]" />
@@ -1059,8 +1059,8 @@ export default function ChurchAdminDashboard() {
               <button
                 onClick={() => setActiveTab("wall")}
                 className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-xs font-medium transition-all text-left ${activeTab === "wall"
-                    ? "bg-[#c5a059]/15 text-[#c5a059] border border-[#c5a059]/40 font-semibold shadow-sm"
-                    : "text-stone-300 hover:bg-stone-850 hover:text-stone-100 border border-transparent"
+                  ? "bg-[#c5a059]/15 text-[#c5a059] border border-[#c5a059]/40 font-semibold shadow-sm"
+                  : "text-stone-300 hover:bg-stone-850 hover:text-stone-100 border border-transparent"
                   }`}
               >
                 <Newspaper className="w-4 h-4 shrink-0 text-[#c5a059]" />
@@ -1070,8 +1070,8 @@ export default function ChurchAdminDashboard() {
               <button
                 onClick={() => setActiveTab("settings")}
                 className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-xs font-medium transition-all text-left ${activeTab === "settings"
-                    ? "bg-[#c5a059]/15 text-[#c5a059] border border-[#c5a059]/40 font-semibold shadow-sm"
-                    : "text-stone-300 hover:bg-stone-850 hover:text-stone-100 border border-transparent"
+                  ? "bg-[#c5a059]/15 text-[#c5a059] border border-[#c5a059]/40 font-semibold shadow-sm"
+                  : "text-stone-300 hover:bg-stone-850 hover:text-stone-100 border border-transparent"
                   }`}
               >
                 <CreditCard className="w-4 h-4 shrink-0 text-[#c5a059]" />
@@ -1113,8 +1113,8 @@ export default function ChurchAdminDashboard() {
                   <div className="flex items-center gap-2">
                     <span
                       className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-serif font-semibold border ${serviceForm.isLive
-                          ? "bg-red-500/15 text-red-400 border-red-500/30"
-                          : "bg-amber-500/15 text-amber-300 border-amber-500/30"
+                        ? "bg-red-500/15 text-red-400 border-red-500/30"
+                        : "bg-amber-500/15 text-amber-300 border-amber-500/30"
                         }`}
                     >
                       <span
@@ -1129,8 +1129,8 @@ export default function ChurchAdminDashboard() {
                 {/* Master Broadcast Control Banner */}
                 <div
                   className={`p-4 sm:p-5 rounded-xl border flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all shadow-lg ${serviceForm.isLive
-                      ? "bg-gradient-to-r from-red-950/70 via-stone-900 to-stone-900 border-red-500/50"
-                      : "bg-gradient-to-r from-amber-950/40 via-stone-900 to-stone-900 border-amber-500/30"
+                    ? "bg-gradient-to-r from-red-950/70 via-stone-900 to-stone-900 border-red-500/50"
+                    : "bg-gradient-to-r from-amber-950/40 via-stone-900 to-stone-900 border-amber-500/30"
                     }`}
                 >
                   <div className="space-y-1">
@@ -1209,8 +1209,8 @@ export default function ChurchAdminDashboard() {
                           </h3>
                           <span
                             className={`text-[10px] px-2 py-0.5 rounded font-mono font-medium ${serviceForm.isLive
-                                ? "bg-red-500/20 text-red-300 border border-red-500/30"
-                                : "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                              ? "bg-red-500/20 text-red-300 border border-red-500/30"
+                              : "bg-amber-500/20 text-amber-300 border border-amber-500/30"
                               }`}
                           >
                             {serviceForm.isLive ? "ON-AIR" : "PREVIEW CHỈ ADMIN"}
@@ -1236,8 +1236,8 @@ export default function ChurchAdminDashboard() {
                           {streamSettingsForm.streamType === "youtube"
                             ? "Dán link YouTube Live bên dưới và kiểm tra khung xem trước. Bấm 'Bắt Đầu Phát Sóng' để mở thánh đường cho tín hữu."
                             : streamSettingsForm.streamType === "facebook"
-                            ? "Dán link Facebook Live bên dưới. Bấm 'Bắt Đầu Phát Sóng' để mở thánh đường cho tín hữu."
-                            : "Khởi động OBS và bấm Start Streaming. Màn hình phía trên sẽ hiển thị khung hình thực tế. Người xem bên ngoài sẽ chỉ thấy khi bạn bấm 'Bắt Đầu Phát Sóng (Go Live)'."}
+                              ? "Dán link Facebook Live bên dưới. Bấm 'Bắt Đầu Phát Sóng' để mở thánh đường cho tín hữu."
+                              : "Khởi động OBS và bấm Start Streaming. Màn hình phía trên sẽ hiển thị khung hình thực tế. Người xem bên ngoài sẽ chỉ thấy khi bạn bấm 'Bắt Đầu Phát Sóng (Go Live)'."}
                         </span>
                       </div>
                     </div>
@@ -1266,11 +1266,10 @@ export default function ChurchAdminDashboard() {
                           onClick={() =>
                             setStreamSettingsForm((prev) => ({ ...prev, streamType: "youtube" }))
                           }
-                          className={`px-3 py-2 rounded-lg text-xs font-serif font-bold flex items-center justify-center gap-1.5 transition-all border cursor-pointer ${
-                            streamSettingsForm.streamType === "youtube"
+                          className={`px-3 py-2 rounded-lg text-xs font-serif font-bold flex items-center justify-center gap-1.5 transition-all border cursor-pointer ${streamSettingsForm.streamType === "youtube"
                               ? "bg-red-500/20 text-red-300 border-red-500/60 shadow-sm"
                               : "bg-[#14161a] text-stone-400 border-stone-800 hover:text-stone-200"
-                          }`}
+                            }`}
                         >
                           <span className="w-2 h-2 rounded-full bg-red-500" />
                           <span>YouTube Live</span>
@@ -1281,11 +1280,10 @@ export default function ChurchAdminDashboard() {
                           onClick={() =>
                             setStreamSettingsForm((prev) => ({ ...prev, streamType: "mediamtx" }))
                           }
-                          className={`px-3 py-2 rounded-lg text-xs font-serif font-bold flex items-center justify-center gap-1.5 transition-all border cursor-pointer ${
-                            streamSettingsForm.streamType === "mediamtx"
+                          className={`px-3 py-2 rounded-lg text-xs font-serif font-bold flex items-center justify-center gap-1.5 transition-all border cursor-pointer ${streamSettingsForm.streamType === "mediamtx"
                               ? "bg-amber-500/20 text-amber-300 border-amber-500/60 shadow-sm"
                               : "bg-[#14161a] text-stone-400 border-stone-800 hover:text-stone-200"
-                          }`}
+                            }`}
                         >
                           <Shield className="w-3.5 h-3.5" />
                           <span>OBS Studio</span>
@@ -1296,11 +1294,10 @@ export default function ChurchAdminDashboard() {
                           onClick={() =>
                             setStreamSettingsForm((prev) => ({ ...prev, streamType: "facebook" }))
                           }
-                          className={`px-3 py-2 rounded-lg text-xs font-serif font-bold flex items-center justify-center gap-1.5 transition-all border cursor-pointer ${
-                            streamSettingsForm.streamType === "facebook"
+                          className={`px-3 py-2 rounded-lg text-xs font-serif font-bold flex items-center justify-center gap-1.5 transition-all border cursor-pointer ${streamSettingsForm.streamType === "facebook"
                               ? "bg-blue-500/20 text-blue-300 border-blue-500/60 shadow-sm"
                               : "bg-[#14161a] text-stone-400 border-stone-800 hover:text-stone-200"
-                          }`}
+                            }`}
                         >
                           <span className="w-2 h-2 rounded-full bg-blue-500" />
                           <span>Facebook Live</span>
@@ -1311,11 +1308,10 @@ export default function ChurchAdminDashboard() {
                           onClick={() =>
                             setStreamSettingsForm((prev) => ({ ...prev, streamType: "custom_hls" }))
                           }
-                          className={`px-3 py-2 rounded-lg text-xs font-serif font-bold flex items-center justify-center gap-1.5 transition-all border cursor-pointer ${
-                            streamSettingsForm.streamType === "custom_hls"
+                          className={`px-3 py-2 rounded-lg text-xs font-serif font-bold flex items-center justify-center gap-1.5 transition-all border cursor-pointer ${streamSettingsForm.streamType === "custom_hls"
                               ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/60 shadow-sm"
                               : "bg-[#14161a] text-stone-400 border-stone-800 hover:text-stone-200"
-                          }`}
+                            }`}
                         >
                           <span className="w-2 h-2 rounded-full bg-emerald-500" />
                           <span>Luồng HLS (.m3u8)</span>
@@ -1434,7 +1430,6 @@ export default function ChurchAdminDashboard() {
                           <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-stone-900/60 p-3 rounded-lg border border-stone-800">
                             <div className="space-y-0.5">
                               <p className="text-xs font-semibold text-stone-200 flex items-center gap-1.5">
-                                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
                                 <span>Kiểm tra & Bắt luồng phát OBS:</span>
                               </p>
                               <p className="text-[11px] text-stone-400">
@@ -1875,10 +1870,10 @@ export default function ChurchAdminDashboard() {
                             <span className="text-[11px] text-stone-400">Trạng thái:</span>
                             <span
                               className={`text-[11px] font-semibold px-2 py-0.5 rounded ${prayer.status === "completed"
-                                  ? "bg-emerald-950 text-emerald-300 border border-emerald-800"
-                                  : prayer.status === "praying"
-                                    ? "bg-amber-950 text-amber-300 border border-amber-800"
-                                    : "bg-red-950 text-red-300 border border-red-800"
+                                ? "bg-emerald-950 text-emerald-300 border border-emerald-800"
+                                : prayer.status === "praying"
+                                  ? "bg-amber-950 text-amber-300 border border-amber-800"
+                                  : "bg-red-950 text-red-300 border border-red-800"
                                 }`}
                             >
                               {prayer.status === "completed"
@@ -1982,10 +1977,10 @@ export default function ChurchAdminDashboard() {
                         <div className="flex items-center gap-2 self-start sm:self-auto">
                           <span
                             className={`text-xs px-2.5 py-1 rounded font-medium ${item.status === "discipleship"
-                                ? "bg-emerald-950 text-emerald-300 border border-emerald-800"
-                                : item.status === "contacted"
-                                  ? "bg-blue-950 text-blue-300 border border-blue-800"
-                                  : "bg-amber-950 text-amber-300 border border-amber-800"
+                              ? "bg-emerald-950 text-emerald-300 border border-emerald-800"
+                              : item.status === "contacted"
+                                ? "bg-blue-950 text-blue-300 border border-blue-800"
+                                : "bg-amber-950 text-amber-300 border border-amber-800"
                               }`}
                           >
                             {item.status === "discipleship"
@@ -2326,8 +2321,8 @@ export default function ChurchAdminDashboard() {
                                 <button
                                   onClick={() => handleTogglePinPost(post._id, post.isPinned)}
                                   className={`p-1.5 rounded text-xs transition-colors cursor-pointer ${post.isPinned
-                                      ? "bg-amber-500/20 text-amber-300 hover:bg-amber-500/30"
-                                      : "text-stone-400 hover:text-stone-200 hover:bg-stone-800"
+                                    ? "bg-amber-500/20 text-amber-300 hover:bg-amber-500/30"
+                                    : "text-stone-400 hover:text-stone-200 hover:bg-stone-800"
                                     }`}
                                   title={post.isPinned ? "Bỏ ghim" : "Ghim lên đầu Tường"}
                                 >

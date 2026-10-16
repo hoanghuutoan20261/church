@@ -775,7 +775,7 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
               className="px-2.5 sm:px-3 py-1.5 rounded-lg bg-stone-850 hover:bg-stone-800 text-stone-200 border border-stone-700 text-xs font-serif flex items-center gap-1.5 transition-colors cursor-pointer"
             >
               <Settings className="w-3.5 h-3.5 text-[#c5a059]" />
-              <span>Sửa Thông Tin Tường</span>
+              <span>Sửa Thông Tin</span>
             </button>
 
             <Link
@@ -958,7 +958,7 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
                     title="Chỉnh sửa toàn bộ thông tin Tường Hội Thánh"
                   >
                     <Settings className="w-4 h-4 text-gold-400" />
-                    <span>Sửa Thông Tin Tường</span>
+                    <span>Sửa Thông Tin</span>
                   </button>
                 )}
               </div>
@@ -1237,9 +1237,6 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
                 ))}
               </div>
 
-              <p className="text-[11px] text-stone-500 text-center pt-1">
-                Chạm vào ảnh để xem kích thước lớn
-              </p>
             </div>
 
             {/* Card 4: Lời Chúa Khích Lệ */}
@@ -1407,7 +1404,7 @@ export const ChurchWallView: React.FC<ChurchWallViewProps> = ({
                     {/* Image Upload Box with WebP compression directly to VPS */}
                     <div className="bg-stone-900/50 p-3 rounded-xl border border-stone-800/80">
                       <ImageUploadBox
-                        label="Hình ảnh đính kèm bài viết (Tải lên VPS hoặc chọn ảnh mẫu)"
+                        label="Hình ảnh đính kèm bài viết"
                         value={newPostImageUrl}
                         onChange={(url) => setNewPostImageUrl(url)}
                         type="post"
