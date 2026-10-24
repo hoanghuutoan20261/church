@@ -1105,9 +1105,13 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
             "x5-video-player-fullscreen": "true",
           } as any)}
           onClick={() => {
-            togglePlay();
-            setShowControls(true);
-            resetControlsTimeout();
+            setShowControls((prev) => {
+              const nextState = !prev;
+              if (nextState) {
+                resetControlsTimeout();
+              }
+              return nextState;
+            });
           }}
         />
       )}
