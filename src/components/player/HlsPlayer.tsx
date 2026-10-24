@@ -447,7 +447,6 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
         playPromise
           .then(() => {
             setIsPlaying(true);
-            setIsBuffering(false);
           })
           .catch(() => {
             // If browser blocked unmuted autoplay (especially iOS Safari), mute and play immediately
@@ -457,7 +456,6 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
               .play()
               .then(() => {
                 setIsPlaying(true);
-                setIsBuffering(false);
               })
               .catch(() => {});
           });
@@ -468,13 +466,13 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
       enableWorker: !isMobile, // Disable worker on low-end mobile devices to avoid postMessage overhead; enable on desktop
       lowLatencyMode: false, // Standard live HLS: allows healthy buffer cushion so mobile does not stutter
       backBufferLength: isMobile ? 0 : 6, // 0 on mobile immediately frees memory, avoiding QuotaExceededError & decoder crash!
-      liveSyncDurationCount: isMobile ? 2 : 3, // Fast live start on mobile with 2 segments
-      liveMaxLatencyDurationCount: isMobile ? 12 : 8, // Give mobile more breathing room to avoid dropping frames
-      maxLiveSyncPlaybackRate: isMobile ? 1.02 : 1.06, // Do not fast-forward on mobile network
+      liveSyncDurationCount: isMobile ? 3 : 3, // Healthy 3-segment live buffer cushion so mobile never runs dry
+      liveMaxLatencyDurationCount: isMobile ? 15 : 10, // Give mobile generous breathing room over international links
+      maxLiveSyncPlaybackRate: isMobile ? 1.0 : 1.04, // Never speed up playback on mobile network
       liveDurationInfinity: true,
-      maxBufferLength: isMobile ? 8 : 20, // 8 seconds forward buffer on mobile (lightweight, zero memory crash)
-      maxMaxBufferLength: isMobile ? 14 : 35,
-      maxBufferSize: isMobile ? 15 * 1000 * 1000 : 60 * 1000 * 1000, // 15MB limit on mobile vs 60MB on desktop
+      maxBufferLength: isMobile ? 14 : 24, // 14 seconds forward buffer on mobile
+      maxMaxBufferLength: isMobile ? 24 : 40,
+      maxBufferSize: isMobile ? 20 * 1000 * 1000 : 60 * 1000 * 1000,
       capLevelToPlayerSize: true, // Crucial: scale resolution to viewport to prevent mobile GPU throttling
       nudgeOffset: 0.2, // Auto-nudge past minor decoding holes
       nudgeMaxRetry: 10,
@@ -497,7 +495,6 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
 
       hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
         setHasError(false);
-        setIsBuffering(false);
         const levels = data.levels.map((lvl, index) => ({
           height: lvl.height || 720,
           index,
@@ -553,30 +550,18 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
         }
       });
     } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
-      // Native Safari iOS / macOS hardware-accelerated HLS
+      // Native Safari iOS / macOS hardware-accelerated HLS:
+      // Let Apple's native AVPlayer manage its own buffer & live edge without aggressive JS interference!
       setIsBuffering(true);
-      // On iOS, starting muted guarantees immediate high-priority segment preloading without WebKit autoplay rejection delay
       if (isIOS && !isAdminPreview) {
         video.muted = true;
         setIsMuted(true);
       }
       video.src = activeUrl;
-      video.load();
-      attemptAutoPlay();
 
       const handleLoadedMetadata = () => {
         setHasError(false);
-        if (video.paused) {
-          attemptAutoPlay();
-        }
-      };
-
-      const handleCanPlay = () => {
-        setHasError(false);
-        setIsBuffering(false);
-        if (video.paused && !hasStartedPlaybackRef.current) {
-          attemptAutoPlay();
-        }
+        attemptAutoPlay();
       };
 
       const handleWaiting = () => setIsBuffering(true);
@@ -587,7 +572,7 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
       };
 
       const handleError = () => {
-        // Retry loading actual stream after 2.5s to recover from brief network drop
+        // Retry loading actual stream after 3s to recover from brief network drop
         setTimeout(() => {
           if (videoRef.current && activeUrl) {
             hasStartedPlaybackRef.current = false;
@@ -596,18 +581,16 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
             videoRef.current.load();
             attemptAutoPlay();
           }
-        }, 2500);
+        }, 3000);
       };
 
       video.addEventListener("loadedmetadata", handleLoadedMetadata);
-      video.addEventListener("canplay", handleCanPlay);
       video.addEventListener("waiting", handleWaiting);
       video.addEventListener("playing", handlePlaying);
       video.addEventListener("error", handleError);
 
       return () => {
         video.removeEventListener("loadedmetadata", handleLoadedMetadata);
-        video.removeEventListener("canplay", handleCanPlay);
         video.removeEventListener("waiting", handleWaiting);
         video.removeEventListener("playing", handlePlaying);
         video.removeEventListener("error", handleError);
@@ -644,15 +627,15 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
         video.currentTime = hls.liveSyncPosition;
       } else if (video.seekable && video.seekable.length > 0) {
         const liveEnd = video.seekable.end(video.seekable.length - 1);
-        // Safe 2.5s cushion ahead of playhead so mobile decoder does not stall at the raw edge!
-        video.currentTime = Math.max(0, liveEnd - 2.5);
+        // Safe 4s cushion ahead of playhead so mobile decoder does not stall at the raw edge!
+        video.currentTime = Math.max(0, liveEnd - 4.0);
       }
     } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
-      // Native iOS Safari: jump to seekable end with safe cushion so AVPlayer does not stall
+      // Native iOS Safari: keep at least 3 segments (~8s) cushion from liveEnd so AVPlayer NEVER runs dry after a few seconds!
       if (video.seekable && video.seekable.length > 0) {
         const liveEnd = video.seekable.end(video.seekable.length - 1);
-        if (liveEnd > 4) {
-          video.currentTime = Math.max(0, liveEnd - 3.5);
+        if (liveEnd > 10) {
+          video.currentTime = Math.max(0, liveEnd - 8.0);
         }
       }
     }
@@ -679,25 +662,23 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
         hls.stopLoad();
         hls.loadSource(activeUrl);
         hls.startLoad();
-      } else if (timePaused > 4000) {
-        // Paused 4s - 35s: segments are still on server, just seek to live edge
+      } else if (timePaused > 6000) {
+        // Paused 6s - 35s: segments are still on server, just seek to live edge
         jumpToLive();
       }
     } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
-      // Native iOS Safari: server holds ~50s (12 segments).
-      // Only reload video.src if paused > 35s! For shorter pauses, keep existing AVPlayer pipeline so resume is instant!
+      // Native iOS Safari: DO NOT seek or reload on short/medium pauses (< 35s)!
+      // Letting AVPlayer resume directly from its existing buffer avoids flushing the hardware decoder.
       if (timePaused > 35000) {
         setIsBuffering(true);
         hasStartedPlaybackRef.current = false;
         video.src = activeUrl;
         video.load();
-      } else if (timePaused > 6000) {
-        jumpToLive();
       }
     }
   }, [activeUrl, jumpToLive]);
 
-  // Monitor live distance: if user falls behind (> 35s), auto-resync to live edge so segments don't 404!
+  // Monitor live distance (only for hls.js; native iOS AVPlayer manages live sync automatically)
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
@@ -708,22 +689,15 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
       const hls = hlsRef.current;
       if (hls && typeof hls.liveSyncPosition === "number" && hls.liveSyncPosition > 0) {
         const distance = hls.liveSyncPosition - video.currentTime;
-        setIsBehindLive(distance > 10);
-        if (distance > 35) {
-          console.warn(`Lag distance is ${distance.toFixed(1)}s. Auto-resyncing to live!`);
-          jumpToLive();
-        }
-      } else if (video.seekable && video.seekable.length > 0) {
-        const liveEnd = video.seekable.end(video.seekable.length - 1);
-        const distance = liveEnd - video.currentTime;
         setIsBehindLive(distance > 12);
-        if (distance > 38) {
+        if (distance > 40) {
+          console.warn(`Lag distance is ${distance.toFixed(1)}s. Auto-resyncing to live!`);
           jumpToLive();
         }
       }
     };
 
-    const interval = setInterval(checkLiveDistance, 4000);
+    const interval = setInterval(checkLiveDistance, 5000);
     return () => clearInterval(interval);
   }, [jumpToLive]);
 
@@ -748,7 +722,7 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
           hls.startLoad();
           if (typeof hls.liveSyncPosition === "number" && hls.liveSyncPosition > 0) {
             const distance = hls.liveSyncPosition - video.currentTime;
-            if (distance > 15) {
+            if (distance > 18) {
               jumpToLive();
             }
           }
@@ -760,21 +734,16 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
             });
           }
         } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
-          // Native Safari iOS: DO NOT destroy video.src if stream is still healthy or only briefly backgrounded!
-          if (hiddenDuration > 35000) {
+          // Native Safari iOS: only reload if backgrounded > 40s; otherwise let AVPlayer continue seamlessly
+          if (hiddenDuration > 40000) {
             setIsBuffering(true);
             hasStartedPlaybackRef.current = false;
             lastPauseTimeRef.current = 0;
             video.src = activeUrl;
             video.load();
             video.play().catch(() => {});
-          } else {
-            if (hiddenDuration > 8000) {
-              jumpToLive();
-            }
-            if (video.paused) {
-              video.play().catch(() => {});
-            }
+          } else if (video.paused) {
+            video.play().catch(() => {});
           }
         }
       }
@@ -787,8 +756,7 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
     };
   }, [activeUrl, jumpToLive]);
 
-  // Freeze / Black Screen Watchdog:
-  // Only monitors AFTER initial playback has started so it never aborts iOS initial buffering!
+  // Freeze / Black Screen Watchdog (only for hls.js; native iOS AVPlayer recovers internally without JS resets)
   useEffect(() => {
     let lastTime = 0;
     let freezeCount = 0;
@@ -797,32 +765,23 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
     const watchdog = setInterval(() => {
       const video = videoRef.current;
       const hls = hlsRef.current;
-      if (!video || document.visibilityState !== "visible") return;
-      // Never interrupt initial stream startup before first frame has played
+      // Do not interfere with native iOS AVPlayer
+      if (!video || !hls || document.visibilityState !== "visible") return;
       if (!hasStartedPlaybackRef.current) return;
 
       if (!video.paused && !video.ended) {
         if (Math.abs(video.currentTime - lastTime) < 0.1 && video.currentTime > 0) {
-          // If video is waiting for network buffer (readyState < 3), monitor hang with generous 16s window
           if (video.readyState < 3) {
             setIsBuffering(true);
             bufferHangCount++;
             if (bufferHangCount >= 8) {
-              // 16s of genuine buffering stall
               console.warn("Buffer stall detected (>16s). Auto-recovering live stream...");
               bufferHangCount = 0;
-              if (hls) {
-                hls.stopLoad();
-                hls.loadSource(activeUrl);
-                hls.startLoad();
-              } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
-                hasStartedPlaybackRef.current = false;
-                lastPauseTimeRef.current = 0;
-                video.src = activeUrl;
-                video.load();
-              }
+              hls.stopLoad();
+              hls.loadSource(activeUrl);
+              hls.startLoad();
               video.play().catch(() => {});
-            } else if (hls) {
+            } else {
               hls.startLoad();
             }
             return;
@@ -830,16 +789,11 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
 
           freezeCount++;
           bufferHangCount = 0;
-          // Stuck on exact same timestamp while readyState >= 3 for >= 10 seconds
           if (freezeCount >= 5) {
             console.warn("Live stream freeze detected (>10s). Auto-recovering...");
             freezeCount = 0;
-            if (hls) {
-              hls.startLoad();
-              jumpToLive();
-            } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
-              jumpToLive();
-            }
+            hls.startLoad();
+            jumpToLive();
             video.play().catch(() => {});
           }
         } else {
@@ -863,7 +817,6 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
     if (!video) return;
 
     const onPlay = () => {
-      setIsPlaying(true);
       if (lastPauseTimeRef.current > 0) {
         resumeFromPause();
       }
@@ -876,12 +829,16 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
     };
 
     const onCanPlay = () => {
-      setIsBuffering(false);
+      if (!video.paused && video.readyState >= 3) {
+        setIsBuffering(false);
+      }
     };
 
     const onTimeUpdate = () => {
-      hasStartedPlaybackRef.current = true;
-      setIsBuffering(false);
+      if (!video.paused && video.readyState >= 3) {
+        hasStartedPlaybackRef.current = true;
+        setIsBuffering(false);
+      }
     };
 
     const onPause = () => {
