@@ -1,5 +1,5 @@
 // Church Online Vietnam - Progressive Web App Service Worker
-const CACHE_NAME = "church-pwa-v2";
+const CACHE_NAME = "church-pwa-v3";
 
 const PRECACHE_ASSETS = [
   "/",
@@ -42,12 +42,15 @@ self.addEventListener("fetch", (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Never cache API routes, Server-Sent Events, or non-GET requests
+  // Never cache API routes, live HLS streams, Server-Sent Events, or non-GET requests
   if (
     request.method !== "GET" ||
     url.pathname.startsWith("/api/") ||
+    url.pathname.startsWith("/live/") ||
     url.pathname.includes(".m3u8") ||
-    url.pathname.includes(".ts")
+    url.pathname.includes(".ts") ||
+    url.pathname.includes(".mp4") ||
+    url.pathname.includes(".m4s")
   ) {
     return;
   }
