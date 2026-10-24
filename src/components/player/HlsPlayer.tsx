@@ -889,6 +889,8 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
     return () => clearTimeout(initialTimer);
   }, []);
 
+  const lastTouchTimeRef = useRef<number>(0);
+
   const resetControlsTimeout = useCallback(() => {
     if (controlsTimeoutRef.current) {
       clearTimeout(controlsTimeoutRef.current);
@@ -897,20 +899,35 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
       if (!showQualityMenuRef.current) {
         setShowControls(false);
       }
-    }, 2800);
+    }, 3500);
   }, []);
 
+  const toggleControls = useCallback(() => {
+    setShowControls((prev) => {
+      const next = !prev;
+      if (next) {
+        resetControlsTimeout();
+      }
+      return next;
+    });
+  }, [resetControlsTimeout]);
+
   const handleMouseEnter = useCallback(() => {
+    if (Date.now() - lastTouchTimeRef.current < 1000) return;
     setShowControls(true);
     resetControlsTimeout();
   }, [resetControlsTimeout]);
 
   const handleMouseMove = useCallback(() => {
+    // If touched on mobile within 1000ms, ignore synthesized mousemove so it does not conflict with tap
+    if (Date.now() - lastTouchTimeRef.current < 1000) return;
     setShowControls(true);
     resetControlsTimeout();
   }, [resetControlsTimeout]);
 
   const handleMouseLeave = useCallback(() => {
+    // Never hide controls on mouseleave for touch devices (finger release generates simulated mouseleave)
+    if (Date.now() - lastTouchTimeRef.current < 1500) return;
     setShowQualityMenu(false);
     showQualityMenuRef.current = false;
     setShowControls(false);
@@ -1064,6 +1081,9 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
   return (
     <div
       ref={containerRef}
+      onTouchStart={() => {
+        lastTouchTimeRef.current = Date.now();
+      }}
       onMouseEnter={handleMouseEnter}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
@@ -1097,22 +1117,27 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
           autoPlay
           preload="auto"
           muted={isAdminPreview || isMuted}
-          className="w-full h-full object-contain bg-black cursor-pointer"
+          className="w-full h-full object-contain bg-black"
           {...({
             "webkit-playsinline": "true",
             "x5-playsinline": "true",
             "x5-video-player-type": "h5-page",
             "x5-video-player-fullscreen": "true",
           } as any)}
-          onClick={() => {
-            setShowControls((prev) => {
-              const nextState = !prev;
-              if (nextState) {
-                resetControlsTimeout();
-              }
-              return nextState;
-            });
+        />
+      )}
+
+      {/* Full-Surface Click / Tap Capture: guaranteed 100% reliable tap detection on all mobile devices without pausing */}
+      {!isYouTube && !isFacebook && (
+        <div
+          onClick={(e) => {
+            if ((e.target as HTMLElement).closest("button, input, select, a, [role='button']")) {
+              return;
+            }
+            toggleControls();
           }}
+          className="absolute inset-0 z-10 cursor-pointer"
+          aria-label="Chạm để hiện hoặc ẩn công cụ điều khiển"
         />
       )}
 
@@ -1250,7 +1275,7 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
             setShowControls(true);
             resetControlsTimeout();
           }}
-          className={`absolute inset-0 flex items-center justify-center bg-black/35 cursor-pointer z-10 transition-all duration-300 ${
+          className={`absolute inset-0 flex items-center justify-center bg-black/35 cursor-pointer z-15 transition-all duration-300 ${
             showControls
               ? "opacity-100 scale-100 pointer-events-auto"
               : "opacity-0 scale-95 pointer-events-none"

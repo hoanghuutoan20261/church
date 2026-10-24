@@ -1,5 +1,5 @@
 // Church Online Vietnam - Progressive Web App Service Worker
-const CACHE_NAME = "church-pwa-v1";
+const CACHE_NAME = "church-pwa-v2";
 
 const PRECACHE_ASSETS = [
   "/",
