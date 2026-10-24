@@ -615,15 +615,21 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
         video.currentTime = hls.liveSyncPosition;
       } else if (video.seekable && video.seekable.length > 0) {
         const liveEnd = video.seekable.end(video.seekable.length - 1);
-        // Safe 4.0s cushion ahead of playhead so mobile decoder does not stall at the raw edge!
-        video.currentTime = Math.max(0, liveEnd - 4.0);
+        // Safe 2.5s cushion ahead of playhead so mobile decoder does not stall at the raw edge!
+        video.currentTime = Math.max(0, liveEnd - 2.5);
       } else {
         hls.loadSource(activeUrl);
         hls.startLoad();
       }
-    } else if (video.seekable && video.seekable.length > 0) {
-      const liveEnd = video.seekable.end(video.seekable.length - 1);
-      video.currentTime = Math.max(0, liveEnd - 4.0);
+    } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+      // Native iOS Safari: jump to seekable end or reload source if seekable is stale
+      if (video.seekable && video.seekable.length > 0) {
+        const liveEnd = video.seekable.end(video.seekable.length - 1);
+        video.currentTime = Math.max(0, liveEnd - 2.0);
+      } else {
+        video.src = activeUrl;
+        video.load();
+      }
     }
     setIsBehindLive(false);
   }, [activeUrl]);
@@ -674,7 +680,7 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
           // Check if distance has become large while tab was in background
           if (typeof hls.liveSyncPosition === "number" && hls.liveSyncPosition > 0) {
             const distance = hls.liveSyncPosition - video.currentTime;
-            if (distance > 15) {
+            if (distance > 12) {
               jumpToLive();
             }
           }
@@ -687,12 +693,10 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
             });
           }
         } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
-          if (video.seekable && video.seekable.length > 0) {
-            video.currentTime = Math.max(0, video.seekable.end(video.seekable.length - 1) - 4.0);
-          }
-          if (video.paused) {
-            video.play().catch(() => {});
-          }
+          // Native Safari iOS: re-attach live source to fetch newest playlist
+          video.src = activeUrl;
+          video.load();
+          video.play().catch(() => {});
         }
       }
     };
@@ -704,13 +708,14 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("focus", handleVisibilityChange);
     };
-  }, [jumpToLive]);
+  }, [activeUrl, jumpToLive]);
 
   // Freeze / Black Screen Watchdog:
-  // Automatically detects if video playback is genuinely frozen on black screen for >= 10s
+  // Automatically detects if video playback is genuinely frozen on black screen for >= 8s
   useEffect(() => {
     let lastTime = 0;
     let freezeCount = 0;
+    let bufferHangCount = 0;
 
     const watchdog = setInterval(() => {
       const video = videoRef.current;
@@ -719,36 +724,59 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
 
       if (!video.paused && !video.ended) {
         if (Math.abs(video.currentTime - lastTime) < 0.1 && video.currentTime > 0) {
-          // If video is simply waiting for network buffer (readyState < 3), don't jump to live! Just ensure loading!
+          // If video is simply waiting for network buffer (readyState < 3), monitor hang
           if (video.readyState < 3) {
             setIsBuffering(true);
-            if (hls) hls.startLoad();
+            bufferHangCount++;
+            if (bufferHangCount >= 4) {
+              // 8s of buffering stall on mobile
+              console.warn("Buffer stall detected (>8s). Auto-recovering live stream...");
+              bufferHangCount = 0;
+              if (hls) {
+                hls.stopLoad();
+                hls.loadSource(activeUrl);
+                hls.startLoad();
+                jumpToLive();
+              } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+                video.src = activeUrl;
+                video.load();
+              }
+              video.play().catch(() => {});
+            } else if (hls) {
+              hls.startLoad();
+            }
             return;
           }
 
           freezeCount++;
-          // Stuck on exact same timestamp while readyState >= 3 for >= 10 seconds
-          if (freezeCount >= 5) {
-            console.warn("Live stream freeze detected (>10s). Auto-recovering...");
+          bufferHangCount = 0;
+          // Stuck on exact same timestamp while readyState >= 3 for >= 8 seconds
+          if (freezeCount >= 4) {
+            console.warn("Live stream freeze detected (>8s). Auto-recovering...");
             freezeCount = 0;
             if (hls) {
               hls.startLoad();
               jumpToLive();
+            } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+              video.src = activeUrl;
+              video.load();
             }
             video.play().catch(() => {});
           }
         } else {
           lastTime = video.currentTime;
           freezeCount = 0;
+          bufferHangCount = 0;
           setIsBuffering(false);
         }
       } else {
         freezeCount = 0;
+        bufferHangCount = 0;
       }
     }, 2000);
 
     return () => clearInterval(watchdog);
-  }, [jumpToLive]);
+  }, [activeUrl, jumpToLive]);
 
   // Video State listeners & buffer stall recovery
   useEffect(() => {
@@ -759,12 +787,22 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
       setIsPlaying(true);
       const timePaused = Date.now() - lastPauseTimeRef.current;
       if (lastPauseTimeRef.current > 0 && timePaused > 2000) {
-        if (timePaused > 10000 && hlsRef.current) {
-          hlsRef.current.stopLoad();
-          hlsRef.current.loadSource(activeUrl);
-          hlsRef.current.startLoad();
+        if (hlsRef.current) {
+          if (timePaused > 5000) {
+            hlsRef.current.stopLoad();
+            hlsRef.current.loadSource(activeUrl);
+            hlsRef.current.startLoad();
+          }
+          jumpToLive();
+        } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+          // Native Safari iOS: if paused for > 3.5s, reload live playlist so expired segments don't cause 404 & freeze
+          if (timePaused > 3500) {
+            video.src = activeUrl;
+            video.load();
+          } else {
+            jumpToLive();
+          }
         }
-        jumpToLive();
       }
     };
 
@@ -888,12 +926,22 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
       const timePaused = Date.now() - lastPauseTimeRef.current;
       // If paused for more than 2 seconds, immediately jump to the live edge
       if (lastPauseTimeRef.current > 0 && timePaused > 2000) {
-        if (timePaused > 8000 && hlsRef.current) {
-          hlsRef.current.stopLoad();
-          hlsRef.current.loadSource(activeUrl);
-          hlsRef.current.startLoad();
+        if (hlsRef.current) {
+          if (timePaused > 5000) {
+            hlsRef.current.stopLoad();
+            hlsRef.current.loadSource(activeUrl);
+            hlsRef.current.startLoad();
+          }
+          jumpToLive();
+        } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+          // Native Safari iOS: if paused for > 3.5s, reload live playlist so expired segments don't cause 404 & freeze
+          if (timePaused > 3500) {
+            video.src = activeUrl;
+            video.load();
+          } else {
+            jumpToLive();
+          }
         }
-        jumpToLive();
       }
       video.play().catch(() => {
         // Autoplay policy fallback
