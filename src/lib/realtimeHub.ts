@@ -44,6 +44,7 @@ export type RealtimeEventCallback = (data: any) => void;
 
 class ChurchRealtimeHub extends EventEmitter {
   private activeViewers: Map<string, Set<string>> = new Map();
+  private disconnectTimeouts: Map<string, NodeJS.Timeout> = new Map();
 
   constructor() {
     super();
@@ -53,24 +54,52 @@ class ChurchRealtimeHub extends EventEmitter {
 
   addViewer(churchSlug: string, clientId: string): number {
     const slug = churchSlug.toLowerCase().trim();
+    const key = `${slug}:${clientId}`;
+
+    // If there's a pending disconnect for this viewer, cancel it immediately
+    if (this.disconnectTimeouts.has(key)) {
+      clearTimeout(this.disconnectTimeouts.get(key)!);
+      this.disconnectTimeouts.delete(key);
+    }
+
     if (!this.activeViewers.has(slug)) {
       this.activeViewers.set(slug, new Set());
     }
-    this.activeViewers.get(slug)!.add(clientId);
-    const count = this.activeViewers.get(slug)!.size;
-    this.emitViewers(slug, count);
+    const set = this.activeViewers.get(slug)!;
+    const wasPresent = set.has(clientId);
+    set.add(clientId);
+    const count = set.size;
+
+    // Only emit when an actual new viewer is added
+    if (!wasPresent) {
+      this.emitViewers(slug, count);
+    }
     return count;
   }
 
-  removeViewer(churchSlug: string, clientId: string): number {
+  removeViewer(churchSlug: string, clientId: string, delayMs = 6000): number {
     const slug = churchSlug.toLowerCase().trim();
-    if (this.activeViewers.has(slug)) {
-      this.activeViewers.get(slug)!.delete(clientId);
-      const count = this.activeViewers.get(slug)!.size;
-      this.emitViewers(slug, count);
-      return count;
+    const key = `${slug}:${clientId}`;
+
+    if (this.disconnectTimeouts.has(key)) {
+      clearTimeout(this.disconnectTimeouts.get(key)!);
     }
-    return 0;
+
+    // Debounce disconnect by 6 seconds to prevent flickering on quick tab switch or reconnect
+    const timer = setTimeout(() => {
+      this.disconnectTimeouts.delete(key);
+      if (this.activeViewers.has(slug)) {
+        const set = this.activeViewers.get(slug)!;
+        if (set.has(clientId)) {
+          set.delete(clientId);
+          const count = set.size;
+          this.emitViewers(slug, count);
+        }
+      }
+    }, delayMs);
+
+    this.disconnectTimeouts.set(key, timer);
+    return this.activeViewers.get(slug)?.size || 0;
   }
 
   getViewersCount(churchSlug: string): number {

@@ -46,8 +46,11 @@ export async function GET(req: NextRequest) {
     }
   };
 
-  const clientId = crypto.randomUUID();
-  const currentViewers = realtimeHub.addViewer(churchSlug, clientId);
+  const clientId = searchParams.get("viewerId") || crypto.randomUUID();
+  const isViewer = channel === "all" || searchParams.get("isViewer") === "true";
+  const currentViewers = isViewer
+    ? realtimeHub.addViewer(churchSlug, clientId)
+    : realtimeHub.getViewersCount(churchSlug);
 
   // Initial connection ready confirmation
   safeWrite(
@@ -134,7 +137,9 @@ export async function GET(req: NextRequest) {
   req.signal.addEventListener("abort", () => {
     isClosed = true;
     clearInterval(heartbeatInterval);
-    realtimeHub.removeViewer(churchSlug, clientId);
+    if (isViewer) {
+      realtimeHub.removeViewer(churchSlug, clientId);
+    }
     if (unsubscribeChat) unsubscribeChat();
     if (unsubscribeLyrics) unsubscribeLyrics();
     if (unsubscribeStatus) unsubscribeStatus();

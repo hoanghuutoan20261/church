@@ -97,16 +97,22 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
     referenceTranslation?: string;
   } | null>(null);
   const [showLyricsSubtitle, setShowLyricsSubtitle] = useState<boolean>(true);
-  const [liveViewersCount, setLiveViewersCount] = useState<number>(
-    church?.currentService?.viewersCount || 1
-  );
+  const [liveViewersCount, setLiveViewersCount] = useState<number>(1);
+  const viewerIdRef = useRef<string>("");
 
-  // Synchronize when church context updates viewersCount
+  // Persist unique viewer ID per session to avoid jitter and duplicates across tabs
   useEffect(() => {
-    if (church?.currentService?.viewersCount && church.currentService.viewersCount > 0) {
-      setLiveViewersCount(church.currentService.viewersCount);
+    if (typeof window !== "undefined") {
+      let vid = sessionStorage.getItem("sanctuary_viewer_id");
+      if (!vid) {
+        vid = "v_" + Math.random().toString(36).substring(2, 10);
+        try {
+          sessionStorage.setItem("sanctuary_viewer_id", vid);
+        } catch {}
+      }
+      viewerIdRef.current = vid;
     }
-  }, [church?.currentService?.viewersCount]);
+  }, []);
 
   // Real-time live lyrics & viewers count synchronization via Server-Sent Events (SSE)
   useEffect(() => {
@@ -132,9 +138,7 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
 
         if (churchRes.ok) {
           const cData = await churchRes.json();
-          if (isMounted && cData.success && cData.data?.currentService?.viewersCount) {
-            setLiveViewersCount(cData.data.currentService.viewersCount);
-          }
+          // Keep liveViewersCount driven purely by real-time SSE to avoid ping-pong jitter with database values
         }
       } catch { }
     };
@@ -146,8 +150,9 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
 
     if (typeof window !== "undefined" && "EventSource" in window) {
       try {
+        const vid = viewerIdRef.current || (sessionStorage.getItem("sanctuary_viewer_id") || "v_guest");
         eventSource = new EventSource(
-          `/api/realtime?churchSlug=${encodeURIComponent(slug)}&channel=all`
+          `/api/realtime?churchSlug=${encodeURIComponent(slug)}&channel=all&viewerId=${encodeURIComponent(vid)}`
         );
 
         eventSource.addEventListener("lyrics", (e: MessageEvent) => {
@@ -1187,7 +1192,7 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
                 videoRef.current.play().catch(() => { });
               }
             }}
-            className={`pointer-events-auto flex items-center gap-2 px-2.5 py-1 rounded text-xs font-medium backdrop-blur-sm border transition-all ${isAdminPreview
+            className={`pointer-events-auto flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-medium backdrop-blur-sm border transition-all ${isAdminPreview
                 ? "bg-black/60 border-amber-400/50 text-amber-300"
                 : isBehindLive
                   ? "bg-red-950/90 hover:bg-red-900 border-red-500 text-red-200 animate-pulse cursor-pointer shadow-md ring-1 ring-red-500/40"
@@ -1201,22 +1206,22 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
                   : "Đang xem trực tiếp thời gian thực. Bấm để làm mới luồng."
             }
           >
-            <span className="relative flex h-2 w-2">
+            <span className="relative flex h-1.5 w-1.5">
               <span
                 className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${isAdminPreview ? "bg-amber-400" : "bg-red-400"
                   }`}
               />
               <span
-                className={`relative inline-flex rounded-full h-2 w-2 ${isAdminPreview ? "bg-amber-500" : "bg-red-500"
+                className={`relative inline-flex rounded-full h-1.5 w-1.5 ${isAdminPreview ? "bg-amber-500" : "bg-red-500"
                   }`}
               />
             </span>
-            <span className="tracking-wider text-[11px] font-semibold uppercase font-serif">
+            <span className="tracking-wide text-[9.5px] font-medium uppercase font-sans">
               {isAdminPreview
-                ? "TỔNG DUYỆT (CHỈ ADMIN)"
+                ? "TỔNG DUYỆT"
                 : isBehindLive
-                  ? "Trực Tiếp"
-                  : "TRỰC TIẾP"}
+                  ? "Trực tiếp"
+                  : "Trực tiếp"}
             </span>
           </button>
 
@@ -1224,20 +1229,20 @@ export const HlsPlayer: React.FC<HlsPlayerProps> = ({
           {isAdminPreview && (
             <button
               onClick={handleProbeObs}
-              className="pointer-events-auto flex items-center gap-1.5 text-[11px] bg-black/70 hover:bg-gold-400/20 text-gold-300 border border-white/15 hover:border-gold-400/40 px-2.5 py-1 rounded transition-colors shadow-sm"
+              className="pointer-events-auto flex items-center gap-1 text-[10px] bg-black/70 hover:bg-gold-400/20 text-gold-300 border border-white/15 hover:border-gold-400/40 px-2 py-0.5 rounded transition-colors shadow-sm"
               title="Kiểm tra và kết nối với OBS Studio trên máy của bạn"
             >
-              <RefreshCw className="w-3 h-3 text-gold-400" />
+              <RefreshCw className="w-2.5 h-2.5 text-gold-400" />
               <span className="hidden sm:inline">
                 {isLocalStream ? "Đang Bắt OBS" : "Bắt Luồng OBS"}
               </span>
             </button>
           )}
 
-          <div className="flex items-center gap-1.5 text-xs text-sanctuary-300 bg-black/50 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded border border-white/[0.06]">
-            <Users className="w-3.5 h-3.5 text-sanctuary-400 shrink-0" />
-            <span className="text-[11px] sm:text-xs">
-              {Math.max(1, liveViewersCount).toLocaleString("vi-VN")} đang hiệp ý
+          <div className="flex items-center gap-1 text-[11px] text-sanctuary-300 bg-black/60 px-2 py-0.5 rounded border border-white/10 font-mono">
+            <Users className="w-3 h-3 text-sanctuary-400 shrink-0" />
+            <span className="text-[11px] text-stone-200 font-medium">
+              {Math.max(1, liveViewersCount).toLocaleString("vi-VN")}
             </span>
           </div>
         </div>
