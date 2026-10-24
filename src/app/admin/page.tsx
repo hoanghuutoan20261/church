@@ -1436,7 +1436,7 @@ export default function ChurchAdminDashboard() {
                           <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-stone-900/60 p-3 rounded-lg border border-stone-800">
                             <div className="space-y-0.5">
                               <p className="text-xs font-semibold text-stone-200 flex items-center gap-1.5">
-                                <span>Kiểm tra & Bắt luồng phát OBS:</span>
+                                <span>Check OBS:</span>
                               </p>
                               <p className="text-[11px] text-stone-400">
                                 Sau khi bấm Start Streaming trên OBS, bấm nút để hệ thống tự động bắt và lưu luồng.
@@ -1456,12 +1456,12 @@ export default function ChurchAdminDashboard() {
                               {isProbingObs ? (
                                 <>
                                   <div className="w-3.5 h-3.5 border-2 border-stone-950 border-t-transparent rounded-full animate-spin" />
-                                  <span>Đang kiểm tra luồng...</span>
+                                  <span>Đang check...</span>
                                 </>
                               ) : (
                                 <>
                                   <Radio className="w-3.5 h-3.5" />
-                                  <span>Bắt Luồng OBS & Tự Động Lưu</span>
+                                  <span>Check OBS</span>
                                 </>
                               )}
                             </button>
