@@ -36,6 +36,9 @@ import {
   Music2,
   Plus,
   MapPin,
+  ListOrdered,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import { HlsPlayer } from "@/components/player/HlsPlayer";
 import { WorshipProvider } from "@/context/WorshipContext";
@@ -43,9 +46,18 @@ import { AdminLyricsPresenter } from "@/components/admin/AdminLyricsPresenter";
 import { getChurchAvatar } from "@/lib/churchAvatar";
 import { ImageUploadBox } from "@/components/common/ImageUploadBox";
 import { AmenIcon } from "@/components/common/AmenIcon";
-import { IWorshipScheduleItem } from "@/models/Church";
+import { IWorshipScheduleItem, IServiceStage } from "@/models/Church";
 import { getChurchGoogleMapsUrl } from "@/lib/mapUtils";
 import { CrossIcon } from "@/components/common/CrossIcon";
+
+const DEFAULT_WORSHIP_STAGES: IServiceStage[] = [
+  { id: "1", name: "Khai Lễ & Tôn Vinh", time: "09:00", status: "completed" },
+  { id: "2", name: "Ngợi Khen & Ca Nguyện", time: "09:15", status: "completed" },
+  { id: "3", name: "Cầu Nguyện Khai Lễ", time: "09:45", status: "completed" },
+  { id: "4", name: "Giảng Luận Lời Chúa", time: "09:55", status: "current" },
+  { id: "5", name: "Cầu Nguyện Đáp Ứng & Dâng Hiến", time: "10:45", status: "upcoming" },
+  { id: "6", name: "Thông Báo & Chúc Phước", time: "11:05", status: "upcoming" },
+];
 
 interface AdminUser {
   id: string;
@@ -73,6 +85,7 @@ interface ChurchConfig {
     welcomeMessage: string;
     isLive: boolean;
     viewersCount: number;
+    stages?: IServiceStage[];
   };
   bankingConfig: {
     bankName: string;
@@ -263,6 +276,7 @@ export default function ChurchAdminDashboard() {
     scriptureReference: "",
     welcomeMessage: "",
     isLive: false,
+    stages: DEFAULT_WORSHIP_STAGES as IServiceStage[],
   });
 
   const [streamSettingsForm, setStreamSettingsForm] = useState<{
@@ -356,6 +370,11 @@ export default function ChurchAdminDashboard() {
               scriptureReference: ch.currentService.scriptureReference || "",
               welcomeMessage: ch.currentService.welcomeMessage || "",
               isLive: Boolean(ch.currentService.isLive),
+              stages:
+                Array.isArray(ch.currentService.stages) &&
+                ch.currentService.stages.length > 0
+                  ? ch.currentService.stages
+                  : DEFAULT_WORSHIP_STAGES,
             });
           }
 
@@ -452,19 +471,60 @@ export default function ChurchAdminDashboard() {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          churchSlug: church?.slug,
           currentService: serviceForm,
         }),
       });
 
       const data = await res.json();
       if (data.success) {
-        setSaveSuccess("Đã lưu và cập nhật tức thì lên phòng thờ phượng!");
+        if (data.data) setChurch(data.data);
+        setSaveSuccess("Đã lưu Chương trình Lễ Thờ Phượng & cập nhật tức thì lên phòng nhóm!");
         setTimeout(() => setSaveSuccess(""), 4000);
       }
     } catch {
       alert("Lỗi khi lưu dữ liệu. Xin thử lại.");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  // Quick 1-click switch active stage in Worship Program and sync immediately
+  const handleQuickActivateStage = async (activeIndex: number) => {
+    const updatedStages: IServiceStage[] = (serviceForm.stages || []).map((st, idx) => ({
+      ...st,
+      status:
+        idx < activeIndex
+          ? "completed"
+          : idx === activeIndex
+          ? "current"
+          : "upcoming",
+    }));
+
+    const nextServiceForm = {
+      ...serviceForm,
+      stages: updatedStages,
+    };
+    setServiceForm(nextServiceForm);
+
+    try {
+      const res = await fetch("/api/admin/church", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          churchSlug: church?.slug,
+          currentService: nextServiceForm,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        if (data.data) setChurch(data.data);
+        const stageName = updatedStages[activeIndex]?.name || "Tiết mục";
+        setSaveSuccess(`Đang diễn ra: "${stageName}" — Đã đồng bộ trực tiếp tới tín hữu!`);
+        setTimeout(() => setSaveSuccess(""), 3500);
+      }
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -1651,6 +1711,68 @@ export default function ChurchAdminDashboard() {
                       </div>
                     </form>
 
+                    {/* Quick Live Stage Switcher inside Live Studio */}
+                    <div className="bg-[#0f1115] border border-stone-800 rounded-xl p-4 sm:p-5 space-y-3 shadow-lg">
+                      <div className="flex items-center justify-between border-b border-stone-800 pb-2.5">
+                        <div className="flex items-center gap-2">
+                          <ListOrdered className="w-4 h-4 text-[#c5a059]" />
+                          <h3 className="font-serif text-sm font-semibold text-stone-100">
+                            Chương Trình Lễ Thờ Phượng (Bấm Chuyển Nhanh)
+                          </h3>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab("sermon")}
+                          className="text-[11px] text-[#c5a059] hover:underline font-serif cursor-pointer"
+                        >
+                          Sửa tiết mục →
+                        </button>
+                      </div>
+
+                      <p className="text-[11px] text-stone-400">
+                        Bấm vào tiết mục để đánh dấu <strong className="text-[#c5a059]">Đang diễn ra</strong> trên màn hình người xem Live:
+                      </p>
+
+                      <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
+                        {(serviceForm.stages || []).map((stage, idx) => {
+                          const isCurrent = stage.status === "current";
+                          const isCompleted = stage.status === "completed";
+                          return (
+                            <button
+                              key={stage.id || idx}
+                              type="button"
+                              onClick={() => handleQuickActivateStage(idx)}
+                              className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg border text-xs transition-all text-left cursor-pointer ${
+                                isCurrent
+                                  ? "bg-[#c5a059]/15 border-[#c5a059] text-[#c5a059] font-semibold shadow-sm"
+                                  : isCompleted
+                                  ? "bg-[#14161a]/60 border-stone-800/80 text-stone-500 hover:border-stone-700"
+                                  : "bg-[#14161a] border-stone-800 text-stone-300 hover:border-[#c5a059]/40"
+                              }`}
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="font-mono text-[11px] px-1.5 py-0.5 rounded bg-black/40 text-stone-400 border border-stone-800 shrink-0">
+                                  {stage.time}
+                                </span>
+                                <span className="font-serif truncate">{stage.name}</span>
+                              </div>
+                              <span className="shrink-0 text-[10px]">
+                                {isCurrent ? (
+                                  <span className="bg-[#c5a059]/20 text-[#c5a059] border border-[#c5a059]/40 px-2 py-0.5 rounded-full font-bold animate-pulse">
+                                    ● Đang diễn ra
+                                  </span>
+                                ) : isCompleted ? (
+                                  <span className="text-stone-500">✓ Đã xong</span>
+                                ) : (
+                                  <span className="text-stone-400">Sắp tới</span>
+                                )}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
                     {/* Public Link Card for Testing */}
                     <div className="bg-[#0f1115] border border-stone-800 rounded-xl p-4 sm:p-5 space-y-3 shadow-lg">
                       <div className="flex items-center gap-2 text-xs text-stone-400 font-medium">
@@ -1786,6 +1908,236 @@ export default function ChurchAdminDashboard() {
                       placeholder="Chào mừng quý con cái Chúa và thân hữu..."
                       className="w-full bg-[#0f1115] border border-stone-700 rounded-lg p-3 text-xs sm:text-sm text-stone-100 focus:outline-none focus:border-[#c5a059]"
                     />
+                  </div>
+                </div>
+
+                {/* Chương Trình Lễ Thờ Phượng (Order of Service Stages Management) */}
+                <div className="p-4 sm:p-5 rounded-xl bg-[#0f1115] border border-stone-800 space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-stone-800 pb-3.5">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <ListOrdered className="w-4 h-4 text-[#c5a059]" />
+                        <h3 className="font-serif text-sm sm:text-base font-bold text-[#c5a059]">
+                          Chương Trình Lễ Thờ Phượng — {church.name}
+                        </h3>
+                      </div>
+                      <p className="text-xs text-stone-400">
+                        Quản lý thứ tự các tiết mục hiển thị ở mục &ldquo;Chương Trình Lễ Thờ Phượng&rdquo; trên trang người xem Live.
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (
+                            confirm(
+                              "Khôi phục lại 6 tiết mục mẫu mặc định cho Chương Trình Lễ Thờ Phượng?"
+                            )
+                          ) {
+                            setServiceForm({
+                              ...serviceForm,
+                              stages: DEFAULT_WORSHIP_STAGES.map((s) => ({ ...s })),
+                            });
+                          }
+                        }}
+                        className="px-3 py-1.5 rounded-lg bg-stone-800 hover:bg-stone-750 text-stone-300 border border-stone-700 text-xs font-serif transition-colors cursor-pointer"
+                      >
+                        Mẫu Mặc Định
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const nextIdx = (serviceForm.stages?.length || 0) + 1;
+                          const nextStages: IServiceStage[] = [
+                            ...(serviceForm.stages || []),
+                            {
+                              id: String(Date.now()),
+                              time: "10:00",
+                              name: `Tiết mục ${nextIdx}`,
+                              status: "upcoming",
+                            },
+                          ];
+                          setServiceForm({ ...serviceForm, stages: nextStages });
+                        }}
+                        className="px-3 py-1.5 rounded-lg bg-[#c5a059]/20 hover:bg-[#c5a059]/30 text-[#c5a059] border border-[#c5a059]/40 text-xs font-serif font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Thêm Tiết Mục</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Stages List Editor */}
+                  {(!serviceForm.stages || serviceForm.stages.length === 0) ? (
+                    <div className="p-6 text-center text-xs text-stone-400 border border-dashed border-stone-800 rounded-lg">
+                      Chưa có tiết mục nào. Hãy bấm &ldquo;Thêm Tiết Mục&rdquo; hoặc &ldquo;Mẫu Mặc Định&rdquo;.
+                    </div>
+                  ) : (
+                    <div className="space-y-2.5">
+                      {serviceForm.stages.map((stage, idx) => {
+                        const isCurrent = stage.status === "current";
+                        const isCompleted = stage.status === "completed";
+                        return (
+                          <div
+                            key={stage.id || idx}
+                            className={`p-3 rounded-xl border transition-all ${
+                              isCurrent
+                                ? "bg-[#c5a059]/10 border-[#c5a059]/60 shadow-sm"
+                                : isCompleted
+                                ? "bg-[#14161a]/60 border-stone-800/80"
+                                : "bg-[#14161a] border-stone-800"
+                            }`}
+                          >
+                            <div className="grid grid-cols-12 gap-2.5 items-center">
+                              {/* Order Number & Up/Down Reorder */}
+                              <div className="col-span-3 sm:col-span-2 flex items-center gap-1">
+                                <span className="w-6 h-6 rounded-full bg-stone-900 border border-stone-700 text-[11px] font-mono font-bold text-[#c5a059] flex items-center justify-center shrink-0">
+                                  {idx + 1}
+                                </span>
+                                <div className="flex flex-col">
+                                  <button
+                                    type="button"
+                                    disabled={idx === 0}
+                                    onClick={() => {
+                                      const arr = [...(serviceForm.stages || [])];
+                                      const temp = arr[idx - 1];
+                                      arr[idx - 1] = arr[idx];
+                                      arr[idx] = temp;
+                                      setServiceForm({ ...serviceForm, stages: arr });
+                                    }}
+                                    className="p-0.5 text-stone-400 hover:text-stone-100 disabled:opacity-25 cursor-pointer"
+                                    title="Chuyển lên"
+                                  >
+                                    <ArrowUp className="w-3 h-3" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={idx === (serviceForm.stages?.length || 1) - 1}
+                                    onClick={() => {
+                                      const arr = [...(serviceForm.stages || [])];
+                                      const temp = arr[idx + 1];
+                                      arr[idx + 1] = arr[idx];
+                                      arr[idx] = temp;
+                                      setServiceForm({ ...serviceForm, stages: arr });
+                                    }}
+                                    className="p-0.5 text-stone-400 hover:text-stone-100 disabled:opacity-25 cursor-pointer"
+                                    title="Chuyển xuống"
+                                  >
+                                    <ArrowDown className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Time Input */}
+                              <div className="col-span-9 sm:col-span-2">
+                                <label className="text-[10px] text-stone-400 block mb-0.5 sm:hidden">
+                                  Giờ
+                                </label>
+                                <input
+                                  type="text"
+                                  value={stage.time}
+                                  onChange={(e) => {
+                                    const updated = [...(serviceForm.stages || [])];
+                                    updated[idx] = { ...updated[idx], time: e.target.value };
+                                    setServiceForm({ ...serviceForm, stages: updated });
+                                  }}
+                                  placeholder="09:00"
+                                  className="w-full bg-[#0f1115] border border-stone-700 rounded-lg px-2.5 py-1.5 text-xs font-mono text-stone-100 focus:outline-none focus:border-[#c5a059]"
+                                />
+                              </div>
+
+                              {/* Stage Name Input */}
+                              <div className="col-span-12 sm:col-span-4">
+                                <label className="text-[10px] text-stone-400 block mb-0.5 sm:hidden">
+                                  Tên tiết mục
+                                </label>
+                                <input
+                                  type="text"
+                                  value={stage.name}
+                                  onChange={(e) => {
+                                    const updated = [...(serviceForm.stages || [])];
+                                    updated[idx] = { ...updated[idx], name: e.target.value };
+                                    setServiceForm({ ...serviceForm, stages: updated });
+                                  }}
+                                  placeholder="Khai Lễ & Tôn Vinh..."
+                                  className="w-full bg-[#0f1115] border border-stone-700 rounded-lg px-3 py-1.5 text-xs font-serif text-stone-100 focus:outline-none focus:border-[#c5a059]"
+                                />
+                              </div>
+
+                              {/* Status Select & Quick Activate */}
+                              <div className="col-span-10 sm:col-span-3 flex items-center gap-1.5">
+                                <select
+                                  value={stage.status}
+                                  onChange={(e) => {
+                                    const updated = [...(serviceForm.stages || [])];
+                                    updated[idx] = {
+                                      ...updated[idx],
+                                      status: e.target.value as IServiceStage["status"],
+                                    };
+                                    setServiceForm({ ...serviceForm, stages: updated });
+                                  }}
+                                  className={`flex-1 bg-[#0f1115] border rounded-lg px-2 py-1.5 text-xs focus:outline-none ${
+                                    isCurrent
+                                      ? "border-[#c5a059] text-[#c5a059] font-semibold"
+                                      : isCompleted
+                                      ? "border-stone-700 text-stone-400"
+                                      : "border-stone-700 text-stone-200"
+                                  }`}
+                                >
+                                  <option value="completed">✓ Đã hoàn tất</option>
+                                  <option value="current">● Đang diễn ra</option>
+                                  <option value="upcoming">Sắp tới</option>
+                                </select>
+
+                                {!isCurrent && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleQuickActivateStage(idx)}
+                                    className="px-2 py-1.5 rounded-lg bg-[#c5a059]/15 hover:bg-[#c5a059] text-[#c5a059] hover:text-stone-950 border border-[#c5a059]/40 text-[10px] font-serif font-bold transition-colors shrink-0 cursor-pointer"
+                                    title="Đặt tiết mục này làm Đang diễn ra và đồng bộ ngay lập tức"
+                                  >
+                                    Phát ngay
+                                  </button>
+                                )}
+                              </div>
+
+                              {/* Delete Stage */}
+                              <div className="col-span-2 sm:col-span-1 flex items-center justify-end">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const updated = (serviceForm.stages || []).filter(
+                                      (_, i) => i !== idx
+                                    );
+                                    setServiceForm({ ...serviceForm, stages: updated });
+                                  }}
+                                  className="p-1.5 rounded-lg text-stone-400 hover:text-red-400 hover:bg-red-950/40 transition-colors cursor-pointer"
+                                  title="Xóa tiết mục này"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-t border-stone-800/80 text-[11px] text-stone-400">
+                    <span>
+                      💡 Mẹo: Bấm nút <strong className="text-[#c5a059]">&ldquo;Phát ngay&rdquo;</strong> trên bất kỳ tiết mục nào để tự động chuyển trạng thái các tiết mục trước thành <em>Đã hoàn tất</em> và đồng bộ tức thì sang màn hình người xem.
+                    </span>
+                    <button
+                      type="submit"
+                      disabled={isSaving}
+                      className="self-end sm:self-auto px-4 py-2 rounded-lg bg-[#c5a059] hover:bg-[#d6b068] text-stone-950 font-serif font-bold text-xs flex items-center gap-1.5 transition-colors shadow-sm disabled:opacity-50 cursor-pointer shrink-0"
+                    >
+                      <Save className="w-3.5 h-3.5" />
+                      <span>{isSaving ? "Đang lưu..." : "Lưu Chương Trình Lễ"}</span>
+                    </button>
                   </div>
                 </div>
               </form>

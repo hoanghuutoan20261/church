@@ -33,9 +33,16 @@ export interface RealtimeServiceStatus {
   isLive: boolean;
   title?: string;
   speaker?: string;
+  speakerTitle?: string;
   viewersCount?: number;
   scriptureReference?: string;
   welcomeMessage?: string;
+  stages?: {
+    id: string;
+    name: string;
+    time: string;
+    status: "completed" | "current" | "upcoming";
+  }[];
   streamType?: string;
   streamUrl?: string;
 }

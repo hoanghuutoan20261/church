@@ -64,7 +64,10 @@ export const HymnalSheetModal: React.FC = () => {
 
   if (activeModal !== "hymnal") return null;
 
-  const { stages } = worshipData;
+  const stages =
+    church.currentService?.stages && church.currentService.stages.length > 0
+      ? church.currentService.stages
+      : worshipData.stages;
 
   const currentKey = selectedSong
     ? transposeChord(selectedSong.defaultKey, semitoneShift)

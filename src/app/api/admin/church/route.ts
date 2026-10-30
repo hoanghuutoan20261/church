@@ -139,6 +139,16 @@ export async function PUT(req: NextRequest) {
           currentService.viewersCount ??
           church.currentService?.viewersCount ??
           0,
+        stages: Array.isArray(currentService.stages)
+          ? currentService.stages.map((st: any, idx: number) => ({
+              id: st.id || String(idx + 1),
+              name: (st.name || "").trim() || `Tiết mục ${idx + 1}`,
+              time: (st.time || "").trim() || "09:00",
+              status: ["completed", "current", "upcoming"].includes(st.status)
+                ? st.status
+                : "upcoming",
+            }))
+          : church.currentService?.stages ?? [],
       };
     }
 
@@ -195,16 +205,18 @@ export async function PUT(req: NextRequest) {
 
     await church.save();
 
-    // Broadcast live status update to all sanctuary viewers in real time
+    // Broadcast live status & program update to all sanctuary viewers in real time
     if (church.currentService) {
       try {
         realtimeHub.emitStatus(church.slug, {
           isLive: Boolean(church.currentService.isLive),
           title: church.currentService.title,
           speaker: church.currentService.speaker,
+          speakerTitle: church.currentService.speakerTitle,
           viewersCount: church.currentService.viewersCount,
           scriptureReference: church.currentService.scriptureReference,
           welcomeMessage: church.currentService.welcomeMessage,
+          stages: church.currentService.stages,
           streamType: church.streamType,
           streamUrl: church.streamUrl,
         });

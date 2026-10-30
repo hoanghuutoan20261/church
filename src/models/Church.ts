@@ -12,6 +12,13 @@ export interface IBankingConfig {
   branch?: string;
 }
 
+export interface IServiceStage {
+  id: string;
+  name: string;
+  time: string;
+  status: "completed" | "current" | "upcoming";
+}
+
 export interface ICurrentService {
   title: string;
   speaker: string;
@@ -20,6 +27,7 @@ export interface ICurrentService {
   welcomeMessage: string;
   isLive: boolean;
   viewersCount: number;
+  stages?: IServiceStage[];
 }
 
 export interface IGalleryImage {
@@ -248,6 +256,29 @@ const ChurchSchema = new Schema<IChurch>(
         type: Number,
         default: 0,
       },
+      stages: {
+        type: [
+          {
+            _id: false,
+            id: { type: String, required: true },
+            name: { type: String, required: true, trim: true },
+            time: { type: String, default: "09:00", trim: true },
+            status: {
+              type: String,
+              enum: ["completed", "current", "upcoming"],
+              default: "upcoming",
+            },
+          },
+        ],
+        default: [
+          { id: "1", name: "Khai Lễ & Tôn Vinh", time: "09:00", status: "completed" },
+          { id: "2", name: "Ngợi Khen & Ca Nguyện", time: "09:15", status: "completed" },
+          { id: "3", name: "Cầu Nguyện Khai Lễ", time: "09:45", status: "completed" },
+          { id: "4", name: "Giảng Luận Lời Chúa", time: "09:55", status: "current" },
+          { id: "5", name: "Cầu Nguyện Đáp Ứng & Dâng Hiến", time: "10:45", status: "upcoming" },
+          { id: "6", name: "Thông Báo & Chúc Phước", time: "11:05", status: "upcoming" },
+        ],
+      },
     },
     liveLyrics: {
       isEnabled: {
@@ -314,7 +345,14 @@ const ChurchSchema = new Schema<IChurch>(
   }
 );
 
-// Prevent mongoose model overwrite in dev reload
+// Prevent mongoose model overwrite in dev reload, while refreshing if schema changed
+if (
+  mongoose.models.Church &&
+  !mongoose.models.Church.schema.path("currentService.stages")
+) {
+  delete mongoose.models.Church;
+}
+
 export const Church: Model<IChurch> =
   mongoose.models.Church || mongoose.model<IChurch>("Church", ChurchSchema);
 

@@ -176,6 +176,16 @@ export default async function ChurchSanctuaryPage({ params, searchParams }: Page
           welcomeMessage: churchDoc.currentService.welcomeMessage,
           isLive: Boolean(churchDoc.currentService.isLive),
           viewersCount: churchDoc.currentService.viewersCount || 0,
+          stages:
+            Array.isArray(churchDoc.currentService.stages) &&
+            churchDoc.currentService.stages.length > 0
+              ? churchDoc.currentService.stages.map((st: any, idx: number) => ({
+                  id: st.id || String(idx + 1),
+                  name: st.name || `Tiết mục ${idx + 1}`,
+                  time: st.time || "09:00",
+                  status: st.status || "upcoming",
+                }))
+              : undefined,
         }
       : undefined,
   };

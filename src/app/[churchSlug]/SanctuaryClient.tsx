@@ -16,12 +16,12 @@ import { ChurchWallView } from "@/components/wall/ChurchWallView";
 import { CommunityChatTab } from "@/components/sidebar/CommunityChatTab";
 import { ScriptureNotesTab } from "@/components/sidebar/ScriptureNotesTab";
 import { PrivatePrayerTab } from "@/components/sidebar/PrivatePrayerTab";
-import { EyeOff, BookOpen, User, MapPin, MessageSquare, Lock, Info, ExternalLink } from "lucide-react";
+import { EyeOff, BookOpen, User, MapPin, MessageSquare, Lock, Info, ExternalLink, ListOrdered } from "lucide-react";
 import { getChurchGoogleMapsUrl } from "@/lib/mapUtils";
 import { useState, useEffect } from "react";
 
 function WorshipSanctuaryScreen() {
-  const { church, updateChurch, isFocusMode, toggleFocusMode, activeView, setActiveView } = useWorship();
+  const { church, updateChurch, isFocusMode, toggleFocusMode, activeView, setActiveView, openModal } = useWorship();
   const [isLive, setIsLive] = useState<boolean>(
     Boolean(church.currentService?.isLive)
   );
@@ -47,12 +47,12 @@ function WorshipSanctuaryScreen() {
           if (json.success && json.data && !isCancelled) {
             const serverLiveState = Boolean(json.data.currentService?.isLive);
             setIsLive(serverLiveState);
-            if (json.data.streamType || json.data.streamUrl !== undefined) {
-              updateChurch({
-                streamType: json.data.streamType,
-                streamUrl: json.data.streamUrl,
-              });
-            }
+            updateChurch({
+              ...(json.data.streamType ? { streamType: json.data.streamType } : {}),
+              ...(json.data.streamUrl !== undefined ? { streamUrl: json.data.streamUrl } : {}),
+              ...(json.data.liveSchedule ? { liveSchedule: json.data.liveSchedule } : {}),
+              ...(json.data.currentService ? { currentService: json.data.currentService } : {}),
+            });
           }
         }
       } catch {}
@@ -75,12 +75,32 @@ function WorshipSanctuaryScreen() {
             const status = JSON.parse(e.data);
             if (status && typeof status.isLive === "boolean") {
               setIsLive(status.isLive);
-              if (status.streamType || status.streamUrl !== undefined) {
-                updateChurch({
-                  streamType: status.streamType,
-                  streamUrl: status.streamUrl,
-                });
-              }
+              updateChurch({
+                ...(status.streamType ? { streamType: status.streamType } : {}),
+                ...(status.streamUrl !== undefined ? { streamUrl: status.streamUrl } : {}),
+                currentService: {
+                  title: status.title ?? church.currentService?.title ?? "",
+                  speaker: status.speaker ?? church.currentService?.speaker ?? "",
+                  speakerTitle:
+                    status.speakerTitle ??
+                    church.currentService?.speakerTitle ??
+                    "Diễn giả",
+                  scriptureReference:
+                    status.scriptureReference ??
+                    church.currentService?.scriptureReference ??
+                    "",
+                  welcomeMessage:
+                    status.welcomeMessage ??
+                    church.currentService?.welcomeMessage ??
+                    "",
+                  isLive: status.isLive,
+                  viewersCount:
+                    status.viewersCount ??
+                    church.currentService?.viewersCount ??
+                    0,
+                  stages: status.stages ?? church.currentService?.stages,
+                },
+              });
             }
           } catch {}
         });
@@ -217,6 +237,73 @@ function WorshipSanctuaryScreen() {
           </p>
         </div>
       </div>
+
+      {/* Chương Trình Lễ Thờ Phượng (Order of Worship) */}
+      {(() => {
+        const stages =
+          church.currentService?.stages && church.currentService.stages.length > 0
+            ? church.currentService.stages
+            : worshipData.stages;
+        if (!stages || stages.length === 0) return null;
+        return (
+          <div className="pt-2 border-t border-white/[0.06] space-y-2.5">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <ListOrdered className="w-4 h-4 text-gold-400 shrink-0" />
+                <h3 className="font-serif text-xs sm:text-sm font-bold text-sanctuary-100">
+                  Chương Trình Lễ Thờ Phượng — {church.name}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => openModal("hymnal")}
+                className="text-[11px] text-gold-400 hover:text-gold-300 font-serif hover:underline cursor-pointer"
+              >
+                Xem toàn màn hình →
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+              {stages.map((stage) => {
+                const isCurrent = stage.status === "current";
+                const isCompleted = stage.status === "completed";
+                return (
+                  <div
+                    key={stage.id}
+                    className={`flex items-center justify-between gap-2 p-2.5 rounded-lg border text-xs transition-all ${
+                      isCurrent
+                        ? "bg-gold-400/10 border-gold-400/50 text-gold-300 shadow-sm"
+                        : isCompleted
+                        ? "bg-sanctuary-900/40 border-white/[0.04] text-sanctuary-400"
+                        : "bg-sanctuary-850/60 border-white/[0.06] text-sanctuary-200"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="font-mono text-[11px] px-1.5 py-0.5 rounded bg-black/30 text-sanctuary-400 border border-white/5 shrink-0">
+                        {stage.time}
+                      </span>
+                      <span className="font-serif font-medium truncate">
+                        {stage.name}
+                      </span>
+                    </div>
+                    <div className="shrink-0">
+                      {isCurrent ? (
+                        <span className="text-[9px] uppercase font-semibold text-gold-400 bg-gold-400/20 px-2 py-0.5 rounded-full border border-gold-400/40 animate-pulse">
+                          Đang diễn ra
+                        </span>
+                      ) : isCompleted ? (
+                        <span className="text-[10px] text-sanctuary-500">✓ Xong</span>
+                      ) : (
+                        <span className="text-[10px] text-sanctuary-400">Sắp tới</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 

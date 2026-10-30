@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { ChatMessage, worshipData } from "@/data/worshipServiceData";
+import { ChatMessage, worshipData, ServiceStage } from "@/data/worshipServiceData";
 import { buildHlsStreamUrl } from "@/lib/streamConfig";
 
 export type FontSizeOption = "normal" | "large" | "xlarge";
@@ -32,6 +32,7 @@ export interface CurrentChurchInfo {
     welcomeMessage: string;
     isLive: boolean;
     viewersCount: number;
+    stages?: ServiceStage[];
   };
   profileConfig?: {
     coverImageUrl?: string;
@@ -155,6 +156,33 @@ export function WorshipProvider({
     setChurch((prev) => ({
       ...prev,
       ...updated,
+      currentService:
+        updated.currentService || prev.currentService
+          ? {
+              title: updated.currentService?.title ?? prev.currentService?.title ?? "",
+              speaker: updated.currentService?.speaker ?? prev.currentService?.speaker ?? "",
+              speakerTitle:
+                updated.currentService?.speakerTitle ??
+                prev.currentService?.speakerTitle ??
+                "Diễn giả",
+              scriptureReference:
+                updated.currentService?.scriptureReference ??
+                prev.currentService?.scriptureReference ??
+                "",
+              welcomeMessage:
+                updated.currentService?.welcomeMessage ??
+                prev.currentService?.welcomeMessage ??
+                "",
+              isLive:
+                updated.currentService?.isLive ?? prev.currentService?.isLive ?? false,
+              viewersCount:
+                updated.currentService?.viewersCount ??
+                prev.currentService?.viewersCount ??
+                0,
+              stages:
+                updated.currentService?.stages ?? prev.currentService?.stages,
+            }
+          : undefined,
       profileConfig: {
         ...prev.profileConfig,
         ...(updated.profileConfig || {}),
