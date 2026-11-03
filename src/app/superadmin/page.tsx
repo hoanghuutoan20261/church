@@ -43,6 +43,7 @@ import {
   AlertTriangle,
   Server,
   Filter,
+  BookOpen,
 } from "lucide-react";
 import { AmenIcon } from "@/components/common/AmenIcon";
 import { buildHlsStreamUrl } from "@/lib/streamConfig";
@@ -165,8 +166,19 @@ export default function SuperAdminPage() {
 
   // Active navigation tab
   const [activeTab, setActiveTab] = useState<
-    "overview" | "churches" | "posts" | "users" | "broadcasts" | "feedbacks" | "maintenance"
+    "overview" | "churches" | "posts" | "users" | "broadcasts" | "feedbacks" | "maintenance" | "daily-verse"
   >("overview");
+
+  // Daily Verse Management States
+  const [dailyVerseAdminData, setDailyVerseAdminData] = useState<any>(null);
+  const [dailyVerseForm, setDailyVerseForm] = useState({
+    verse: "",
+    reference: "",
+    topic: "",
+    isPinned: false,
+  });
+  const [isSavingVerse, setIsSavingVerse] = useState(false);
+  const [verseFeedbackMessage, setVerseFeedbackMessage] = useState<string | null>(null);
 
   // Dashboard Data
   const [kpis, setKpis] = useState<SuperAdminKPIs | null>(null);
@@ -305,6 +317,103 @@ export default function SuperAdminPage() {
     }
   };
 
+  const fetchDailyVerseAdmin = async () => {
+    try {
+      const res = await fetch("/api/superadmin/daily-verse");
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data) {
+          setDailyVerseAdminData(json.data);
+          if (json.data.current) {
+            setDailyVerseForm({
+              verse: json.data.current.verse || "",
+              reference: json.data.current.reference || "",
+              topic: json.data.current.topic || "",
+              isPinned: Boolean(json.data.current.isPinned),
+            });
+          }
+        }
+      }
+    } catch (e) {
+      console.error("fetchDailyVerseAdmin error:", e);
+    }
+  };
+
+  const handleSaveCustomVerse = async () => {
+    if (!dailyVerseForm.verse.trim() || !dailyVerseForm.reference.trim()) {
+      alert("Vui lòng nhập đầy đủ câu Kinh Thánh và Địa hạt!");
+      return;
+    }
+    setIsSavingVerse(true);
+    setVerseFeedbackMessage(null);
+    try {
+      const res = await fetch("/api/superadmin/daily-verse", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "set",
+          ...dailyVerseForm,
+        }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setVerseFeedbackMessage("Đã lưu can thiệp Câu Gốc Hôm Nay thành công!");
+        fetchDailyVerseAdmin();
+      } else {
+        alert(json.message || "Lỗi khi lưu");
+      }
+    } catch (e: any) {
+      alert(e.message || "Lỗi lưu câu gốc");
+    } finally {
+      setIsSavingVerse(false);
+    }
+  };
+
+  const handleResetToAutoVerse = async () => {
+    if (!confirm("Bạn có chắc muốn hủy can thiệp và đưa Câu Gốc Hôm Nay về chế độ TỰ ĐỘNG luân phiên mỗi ngày?")) return;
+    setIsSavingVerse(true);
+    setVerseFeedbackMessage(null);
+    try {
+      const res = await fetch("/api/superadmin/daily-verse", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "reset" }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setVerseFeedbackMessage("Đã đặt lại về chế độ TỰ ĐỘNG luân phiên mỗi ngày!");
+        fetchDailyVerseAdmin();
+      } else {
+        alert(json.message || "Lỗi khi đặt lại");
+      }
+    } catch (e: any) {
+      alert(e.message || "Lỗi");
+    } finally {
+      setIsSavingVerse(false);
+    }
+  };
+
+  const handleRandomPresetVerse = async () => {
+    setIsSavingVerse(true);
+    setVerseFeedbackMessage(null);
+    try {
+      const res = await fetch("/api/superadmin/daily-verse", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "random" }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setVerseFeedbackMessage(json.message || "Đã chọn ngẫu nhiên câu gốc thành công!");
+        fetchDailyVerseAdmin();
+      }
+    } catch (e: any) {
+      alert(e.message || "Lỗi");
+    } finally {
+      setIsSavingVerse(false);
+    }
+  };
+
   const loadAllData = async () => {
     setLoadingData(true);
     try {
@@ -315,6 +424,7 @@ export default function SuperAdminPage() {
         fetch("/api/superadmin/users"),
         fetch("/api/superadmin/feedback"),
       ]);
+      fetchDailyVerseAdmin();
 
       if (statsRes.ok) {
         const statsJson = await statsRes.json();
@@ -1001,6 +1111,7 @@ export default function SuperAdminPage() {
             badge: feedbacks.filter((f) => f.status === "new").length || feedbacks.length,
             badgeLive: feedbacks.some((f) => f.status === "new"),
           },
+          { id: "daily-verse", label: "📖 Câu Gốc Hôm Nay", badge: dailyVerseAdminData?.current?.isCustom ? "Can thiệp" : null, badgeLive: Boolean(dailyVerseAdminData?.current?.isCustom) },
           { id: "maintenance", label: "⚙️ CSDL & Bảo Trì", badge: null },
         ].map((tab) => (
           <button
@@ -2083,6 +2194,207 @@ export default function SuperAdminPage() {
                     <span>Tạo, cấp quyền và đặt lại mật khẩu cho tất cả tài khoản Mục sư.</span>
                   </li>
                 </ul>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* =================================================================== */}
+        {/* TAB 8: QUẢN LÝ CÂU GỐC HÔM NAY (DAILY SCRIPTURE MANAGEMENT)          */}
+        {/* =================================================================== */}
+        {activeTab === "daily-verse" && (
+          <div className="space-y-6 animate-fadeIn">
+            {/* Header info */}
+            <div className="bg-[#0e131d] p-5 rounded-2xl border border-gold-400/30 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <BookOpen className="w-5 h-5 text-gold-400" />
+                  <h3 className="font-serif text-lg font-bold text-white">
+                    Quản Lý Câu Gốc Hôm Nay (Hiển Thị Trang Chủ)
+                  </h3>
+                </div>
+                <p className="text-xs text-sanctuary-300">
+                  Hệ thống tự động luân phiên đổi câu Kinh Thánh mỗi ngày theo lịch định sẵn. Superadmin có thể can thiệp ghi đè câu gốc bất cứ lúc nào.
+                </p>
+              </div>
+
+              {/* Status Badge */}
+              <div className="flex items-center gap-2">
+                {dailyVerseAdminData?.current?.isCustom ? (
+                  <span className="px-3 py-1.5 rounded-full text-xs font-serif font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-1.5 shadow-sm">
+                    <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                    <span>Đang Can Thiệp Thủ Công</span>
+                  </span>
+                ) : (
+                  <span className="px-3 py-1.5 rounded-full text-xs font-serif font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center gap-1.5 shadow-sm">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <span>Đang Tự Động Luân Phiên Mỗi Ngày</span>
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Current Active Preview */}
+            <div className="p-5 rounded-2xl bg-gradient-to-br from-[#121622] via-[#0f121a] to-[#0a0c12] border border-gold-400/40 space-y-3 shadow-candle">
+              <div className="flex items-center justify-between border-b border-white/[0.08] pb-2.5">
+                <span className="text-xs font-serif font-bold text-gold-300 uppercase tracking-wider flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4 text-gold-400" />
+                  <span>Nội Dung Đang Hiển Thị Thực Tế Ngoài Trang Chủ</span>
+                </span>
+                <span className="text-[11px] font-mono text-sanctuary-400">
+                  Ngày: {dailyVerseAdminData?.todayDate || "Hôm nay"}
+                </span>
+              </div>
+
+              <blockquote className="italic font-serif text-base sm:text-lg text-white leading-relaxed px-4 py-2 border-l-2 border-gold-400 bg-black/20 rounded-r-xl">
+                &ldquo;{dailyVerseAdminData?.current?.verse || "Đang tải câu gốc..."}&rdquo;
+              </blockquote>
+
+              <div className="flex items-center justify-between text-xs pt-1">
+                <span className="font-serif font-bold text-gold-400 text-sm">
+                  — {dailyVerseAdminData?.current?.reference}
+                </span>
+                <span className="text-[11px] text-sanctuary-400 font-sans">
+                  Nguồn: <strong>{dailyVerseAdminData?.current?.updatedBy || "Hệ thống tự động"}</strong>
+                </span>
+              </div>
+            </div>
+
+            {/* Edit / Intervention Form */}
+            <div className="bg-[#0e131d] border border-white/[0.08] rounded-2xl p-5 sm:p-6 space-y-4">
+              <h4 className="font-serif font-bold text-sm sm:text-base text-white flex items-center gap-2">
+                <Edit className="w-4 h-4 text-gold-400" />
+                <span>Can Thiệp / Thay Đổi Câu Gốc Hôm Nay</span>
+              </h4>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs text-sanctuary-300 block mb-1 font-serif">
+                    Nội Dung Câu Kinh Thánh:
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={dailyVerseForm.verse}
+                    onChange={(e) => setDailyVerseForm({ ...dailyVerseForm, verse: e.target.value })}
+                    placeholder="Nhập lời Kinh Thánh..."
+                    className="w-full bg-[#131926] border border-white/10 focus:border-gold-400/60 rounded-xl p-3 text-white text-xs sm:text-sm font-serif leading-relaxed focus:outline-none"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-sanctuary-300 block mb-1 font-serif">
+                      Địa Hạt (Sách, Đoạn, Câu):
+                    </label>
+                    <input
+                      type="text"
+                      value={dailyVerseForm.reference}
+                      onChange={(e) => setDailyVerseForm({ ...dailyVerseForm, reference: e.target.value })}
+                      placeholder="Ví dụ: Giăng 3:16"
+                      className="w-full bg-[#131926] border border-white/10 focus:border-gold-400/60 rounded-xl p-2.5 text-white text-xs sm:text-sm font-serif focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs text-sanctuary-300 block mb-1 font-serif">
+                      Chủ Đề (Tùy chọn):
+                    </label>
+                    <input
+                      type="text"
+                      value={dailyVerseForm.topic}
+                      onChange={(e) => setDailyVerseForm({ ...dailyVerseForm, topic: e.target.value })}
+                      placeholder="Ví dụ: Bình An, Đức Tin..."
+                      className="w-full bg-[#131926] border border-white/10 focus:border-gold-400/60 rounded-xl p-2.5 text-white text-xs sm:text-sm font-serif focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Checkbox: Pin as permanent */}
+                <div className="flex items-center gap-2 pt-1">
+                  <input
+                    type="checkbox"
+                    id="pinVerseCheckbox"
+                    checked={dailyVerseForm.isPinned}
+                    onChange={(e) => setDailyVerseForm({ ...dailyVerseForm, isPinned: e.target.checked })}
+                    className="w-4 h-4 rounded accent-gold-400 cursor-pointer"
+                  />
+                  <label htmlFor="pinVerseCheckbox" className="text-xs text-sanctuary-300 cursor-pointer font-serif select-none">
+                    Ghim cố định câu này (Không tự động đổi sang câu khác cho đến khi bạn bỏ ghim)
+                  </label>
+                </div>
+
+                {verseFeedbackMessage && (
+                  <div className="p-3 rounded-xl bg-gold-400/15 border border-gold-400/40 text-gold-300 text-xs flex items-center gap-2 animate-fadeIn">
+                    <CheckCircle2 className="w-4 h-4 shrink-0 text-gold-400" />
+                    <span>{verseFeedbackMessage}</span>
+                  </div>
+                )}
+
+                {/* Actions Button Bar */}
+                <div className="flex flex-wrap items-center gap-2 pt-2">
+                  <button
+                    onClick={handleSaveCustomVerse}
+                    disabled={isSavingVerse || !dailyVerseForm.verse.trim()}
+                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-gold-400 to-amber-500 hover:from-gold-300 hover:to-amber-400 text-sanctuary-950 font-serif font-bold text-xs flex items-center gap-1.5 shadow-candle cursor-pointer disabled:opacity-50"
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                    <span>{isSavingVerse ? "Đang Lưu..." : "Lưu Can Thiệp Câu Gốc"}</span>
+                  </button>
+
+                  <button
+                    onClick={handleResetToAutoVerse}
+                    disabled={isSavingVerse}
+                    className="px-4 py-2.5 rounded-xl bg-sanctuary-850 hover:bg-sanctuary-800 text-sanctuary-200 border border-white/10 font-serif text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                    title="Hủy can thiệp thủ công và bật lại chế độ tự động luân phiên mỗi ngày"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Đặt Lại Về Tự Động (Reset to Auto)</span>
+                  </button>
+
+                  <button
+                    onClick={handleRandomPresetVerse}
+                    disabled={isSavingVerse}
+                    className="px-4 py-2.5 rounded-xl bg-sanctuary-850 hover:bg-sanctuary-800 text-gold-300 border border-gold-400/30 font-serif text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                    title="Chọn ngẫu nhiên một câu gốc khác trong kho gợi ý"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-gold-400" />
+                    <span>Chọn Ngẫu Nhiên Từ Kho</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Presets Gallery for 1-Click Selection */}
+            <div className="bg-[#0e131d] border border-white/[0.08] rounded-2xl p-5 space-y-3">
+              <h4 className="font-serif font-bold text-sm text-white flex items-center gap-2">
+                <BookOpen className="w-4 h-4 text-gold-400" />
+                <span>Kho Câu Gốc Mẫu Tự Động Xoay Vòng (Bấm vào thẻ để chọn nhanh)</span>
+              </h4>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-80 overflow-y-auto no-scrollbar pr-1">
+                {(dailyVerseAdminData?.presets || []).map((p: any, idx: number) => (
+                  <div
+                    key={idx}
+                    onClick={() => {
+                      setDailyVerseForm({
+                        verse: p.verse,
+                        reference: p.reference,
+                        topic: p.topic || "",
+                        isPinned: false,
+                      });
+                    }}
+                    className="p-3 rounded-xl bg-sanctuary-950/70 hover:bg-sanctuary-850 border border-white/[0.05] hover:border-gold-400/40 transition-all cursor-pointer space-y-1.5 group"
+                  >
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="font-serif font-bold text-gold-400 group-hover:underline">
+                        {p.reference}
+                      </span>
+                      <span className="text-[10px] text-sanctuary-400">{p.topic}</span>
+                    </div>
+                    <p className="text-[11px] text-sanctuary-200 italic line-clamp-2">
+                      &ldquo;{p.verse}&rdquo;
+                    </p>
+                  </div>
+                ))}
               </div>
             </div>
           </div>

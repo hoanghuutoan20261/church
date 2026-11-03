@@ -4,7 +4,6 @@ import { Post } from "@/models/Post";
 import { Church } from "@/models/Church";
 import { getAuthUser } from "@/lib/auth";
 import { getChurchAvatar } from "@/lib/churchAvatar";
-import { getTodayDevotion } from "@/data/dailyDevotions";
 
 // GET /api/posts?churchSlug=...&category=...
 export async function GET(req: NextRequest) {
@@ -48,60 +47,10 @@ export async function GET(req: NextRequest) {
       };
     });
 
-    // 2.A: Automatically inject Today's Daily Bread Devotional if category matches
-    let finalPosts = [...enrichedPosts];
-    const shouldIncludeDevotion =
-      !category || category === "all" || category === "devotion" || category === "scripture";
-
-    if (shouldIncludeDevotion && (!churchSlug || churchSlug === "all" || churchSlug === "loibansusong")) {
-      const todayDevotion = getTodayDevotion();
-      const alreadyHasToday = finalPosts.some(
-        (p: any) => p._id === todayDevotion.id || p.title?.includes(todayDevotion.dateString)
-      );
-
-      if (!alreadyHasToday) {
-        const devotionItem = {
-          _id: todayDevotion.id,
-          churchId: "devotion-pinned",
-          churchSlug: todayDevotion.churchSlug,
-          author: {
-            name: todayDevotion.churchName,
-            role: "Ban Tĩnh Nguyện",
-            avatarUrl: "",
-          },
-          category: todayDevotion.category,
-          title: todayDevotion.title,
-          content: todayDevotion.content,
-          scriptureVerse: todayDevotion.scriptureVerse,
-          imageUrl: todayDevotion.imageUrl,
-          isPinned: true,
-          likesCount: todayDevotion.amenCount,
-          amenCount: todayDevotion.amenCount,
-          loveCount: todayDevotion.loveCount,
-          shareCount: todayDevotion.shareCount,
-          comments: todayDevotion.comments.map((c) => ({
-            _id: c.id,
-            authorName: c.author,
-            authorRole: "Tín hữu",
-            content: c.content,
-            createdAt: new Date(),
-          })),
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          churchName: todayDevotion.churchName,
-          churchDenomination: todayDevotion.denomination,
-          churchAvatar: getChurchAvatar(todayDevotion.churchName, todayDevotion.churchSlug),
-          isLive: false,
-          viewersCount: 0,
-        };
-        finalPosts.unshift(devotionItem);
-      }
-    }
-
     return NextResponse.json({
       success: true,
-      data: finalPosts,
-      count: finalPosts.length,
+      data: enrichedPosts,
+      count: enrichedPosts.length,
     });
   } catch (error: any) {
     console.error("GET /api/posts error:", error);
