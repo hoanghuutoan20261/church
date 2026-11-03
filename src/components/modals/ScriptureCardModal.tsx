@@ -619,7 +619,7 @@ export const ScriptureCardModal: React.FC<ScriptureCardModalProps> = ({
                     >
                       <img
                         src={theme.imageUrl}
-                        alt={theme.name}
+                        alt={theme.tag}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                       {isSelected && (
