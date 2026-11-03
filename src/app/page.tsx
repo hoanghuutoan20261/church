@@ -59,7 +59,6 @@ import { ImageUploadBox } from "@/components/common/ImageUploadBox";
 import { AmenIcon } from "@/components/common/AmenIcon";
 import { getChurchGoogleMapsUrl } from "@/lib/mapUtils";
 import { getTodayFeedPost } from "@/data/dailyDevotions";
-import { SacredFellowshipPresence } from "@/components/wall/SacredFellowshipPresence";
 import { ScriptureCardModal } from "@/components/modals/ScriptureCardModal";
 
 interface ChurchItem {
@@ -1408,10 +1407,6 @@ export default function ChurchDirectoryPage() {
           {/* TAB 1: BẢNG TIN (THE MAIN FACEBOOK-STYLE FEED) */}
           {navTab === "feed" && (
             <>
-              {/* 2.C: Compact Sacred Fellowship Presence on Mobile */}
-              <div className="lg:hidden">
-                <SacredFellowshipPresence compact />
-              </div>
               {/* ================================================================= */}
               {/* FACEBOOK STORIES / REELS CAROUSEL                                  */}
               {/* ================================================================= */}
@@ -2655,8 +2650,6 @@ export default function ChurchDirectoryPage() {
         {/* 2.3 RIGHT COLUMN: FACEBOOK-STYLE EVENTS, ONLINE CONTACTS & NOTIFICATIONS*/}
         {/* ----------------------------------------------------------------------- */}
         <aside className="w-72 xl:w-80 hidden lg:flex flex-col gap-4 shrink-0 sticky top-16 max-h-[calc(100vh-5rem)] overflow-y-auto no-scrollbar pb-6 select-none">
-          {/* 2.C: Sacred Fellowship Presence / Bản Đồ Tín Hữu Hiệp Một */}
-          <SacredFellowshipPresence />
           {/* Sunday Service Countdown Card (Giống mục Sự Kiện Facebook) */}
           <div className="p-4 rounded-2xl bg-sanctuary-900 border border-gold-400/30 space-y-3 shadow-md">
             <div className="flex items-center justify-between">
