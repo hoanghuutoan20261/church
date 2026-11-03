@@ -2,6 +2,7 @@
 
 import React from "react";
 import { useWorship } from "@/context/WorshipContext";
+import { AmbientHymnPlayer } from "@/components/sanctuary/AmbientHymnPlayer";
 import {
   Church as ChurchIcon,
   Clock,
@@ -101,6 +102,11 @@ export const SanctuaryWaitingRoom: React.FC = () => {
         <p className="text-[11px] sm:text-sm text-stone-400 font-sans leading-relaxed italic max-w-xl mx-auto px-2 sm:px-4 line-clamp-2 sm:line-clamp-none">
           &ldquo;{welcomeMessage}&rdquo;
         </p>
+
+        {/* 1.B: Sacred Sanctuary Ambient Audio Player */}
+        <div className="pt-1 sm:pt-2 w-full max-w-xl mx-auto">
+          <AmbientHymnPlayer />
+        </div>
       </div>
 
       {/* 3. Bottom Status Bar & Quick Spiritual Preparation */}

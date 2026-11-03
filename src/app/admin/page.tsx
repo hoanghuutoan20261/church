@@ -372,7 +372,7 @@ export default function ChurchAdminDashboard() {
               isLive: Boolean(ch.currentService.isLive),
               stages:
                 Array.isArray(ch.currentService.stages) &&
-                ch.currentService.stages.length > 0
+                  ch.currentService.stages.length > 0
                   ? ch.currentService.stages
                   : DEFAULT_WORSHIP_STAGES,
             });
@@ -497,8 +497,8 @@ export default function ChurchAdminDashboard() {
         idx < activeIndex
           ? "completed"
           : idx === activeIndex
-          ? "current"
-          : "upcoming",
+            ? "current"
+            : "upcoming",
     }));
 
     const nextServiceForm = {
@@ -1041,7 +1041,6 @@ export default function ChurchAdminDashboard() {
         {/* 2. Global Save Feedback Banner */}
         {saveSuccess && (
           <div className="bg-emerald-950/90 border-b border-emerald-500/50 text-emerald-200 px-4 py-2 text-xs font-serif text-center flex items-center justify-center gap-2 animate-fade-in shadow-md">
-            <Sparkles className="w-4 h-4 text-emerald-400 shrink-0" />
             <span>{saveSuccess}</span>
           </div>
         )}
@@ -1742,13 +1741,12 @@ export default function ChurchAdminDashboard() {
                               key={stage.id || idx}
                               type="button"
                               onClick={() => handleQuickActivateStage(idx)}
-                              className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg border text-xs transition-all text-left cursor-pointer ${
-                                isCurrent
-                                  ? "bg-[#c5a059]/15 border-[#c5a059] text-[#c5a059] font-semibold shadow-sm"
-                                  : isCompleted
+                              className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg border text-xs transition-all text-left cursor-pointer ${isCurrent
+                                ? "bg-[#c5a059]/15 border-[#c5a059] text-[#c5a059] font-semibold shadow-sm"
+                                : isCompleted
                                   ? "bg-[#14161a]/60 border-stone-800/80 text-stone-500 hover:border-stone-700"
                                   : "bg-[#14161a] border-stone-800 text-stone-300 hover:border-[#c5a059]/40"
-                              }`}
+                                }`}
                             >
                               <div className="flex items-center gap-2 min-w-0">
                                 <span className="font-mono text-[11px] px-1.5 py-0.5 rounded bg-black/40 text-stone-400 border border-stone-800 shrink-0">
@@ -1982,13 +1980,12 @@ export default function ChurchAdminDashboard() {
                         return (
                           <div
                             key={stage.id || idx}
-                            className={`p-3 rounded-xl border transition-all ${
-                              isCurrent
-                                ? "bg-[#c5a059]/10 border-[#c5a059]/60 shadow-sm"
-                                : isCompleted
+                            className={`p-3 rounded-xl border transition-all ${isCurrent
+                              ? "bg-[#c5a059]/10 border-[#c5a059]/60 shadow-sm"
+                              : isCompleted
                                 ? "bg-[#14161a]/60 border-stone-800/80"
                                 : "bg-[#14161a] border-stone-800"
-                            }`}
+                              }`}
                           >
                             <div className="grid grid-cols-12 gap-2.5 items-center">
                               {/* Order Number & Up/Down Reorder */}
@@ -2078,13 +2075,12 @@ export default function ChurchAdminDashboard() {
                                     };
                                     setServiceForm({ ...serviceForm, stages: updated });
                                   }}
-                                  className={`flex-1 bg-[#0f1115] border rounded-lg px-2 py-1.5 text-xs focus:outline-none ${
-                                    isCurrent
-                                      ? "border-[#c5a059] text-[#c5a059] font-semibold"
-                                      : isCompleted
+                                  className={`flex-1 bg-[#0f1115] border rounded-lg px-2 py-1.5 text-xs focus:outline-none ${isCurrent
+                                    ? "border-[#c5a059] text-[#c5a059] font-semibold"
+                                    : isCompleted
                                       ? "border-stone-700 text-stone-400"
                                       : "border-stone-700 text-stone-200"
-                                  }`}
+                                    }`}
                                 >
                                   <option value="completed">✓ Đã hoàn tất</option>
                                   <option value="current">● Đang diễn ra</option>
@@ -2303,7 +2299,6 @@ export default function ChurchAdminDashboard() {
 
                 {salvations.length === 0 ? (
                   <div className="py-12 text-center text-stone-500 font-serif space-y-2">
-                    <Sparkles className="w-8 h-8 mx-auto text-stone-600" />
                     <p className="text-sm">Chưa có thông tin thân hữu tiếp nhận Chúa được ghi nhận.</p>
                   </div>
                 ) : (

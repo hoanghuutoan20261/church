@@ -53,10 +53,14 @@ import {
   ExternalLink,
   EyeOff,
   Flag,
+  Palette,
 } from "lucide-react";
 import { ImageUploadBox } from "@/components/common/ImageUploadBox";
 import { AmenIcon } from "@/components/common/AmenIcon";
 import { getChurchGoogleMapsUrl } from "@/lib/mapUtils";
+import { getTodayFeedPost } from "@/data/dailyDevotions";
+import { SacredFellowshipPresence } from "@/components/wall/SacredFellowshipPresence";
+import { ScriptureCardModal } from "@/components/modals/ScriptureCardModal";
 
 interface ChurchItem {
   _id: string;
@@ -178,6 +182,7 @@ const STORIES_DATA = [
 
 // Initial Facebook-style feed posts
 const INITIAL_FEED_POSTS: FeedPost[] = [
+  getTodayFeedPost(),
   {
     id: "post-live-1",
     churchSlug: "loibansusong",
@@ -227,6 +232,7 @@ const INITIAL_FEED_POSTS: FeedPost[] = [
       "Lời Chúa là sức mạnh và sự nâng đỡ kỳ diệu cho linh hồn chúng ta giữa mọi cơn bão táp của cuộc đời. Hãy cùng suy ngẫm câu gốc nuôi dưỡng tâm linh hôm nay:",
     scriptureVerse: "“Đức Giê-hô-va là Đấng chăn giữ tôi: tôi chẳng thiếu thốn gì. Ngài khiến tôi an nghỉ nơi đồng cỏ xanh tươi, dẫn tôi đến mé nước bình tịnh.” — Thi-thiên 23:1-2",
     mediaType: "scripture",
+    mediaUrl: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80",
     amenCount: 215,
     loveCount: 120,
     shareCount: 42,
@@ -343,6 +349,10 @@ export default function ChurchDirectoryPage() {
   const [savedPostIds, setSavedPostIds] = useState<string[]>([]);
   const [hiddenPostIds, setHiddenPostIds] = useState<string[]>([]);
   const [feedToast, setFeedToast] = useState<string | null>(null);
+  const [showScriptureCardModal, setShowScriptureCardModal] = useState<boolean>(false);
+  const [cardModalVerse, setCardModalVerse] = useState<string>("");
+  const [cardModalRef, setCardModalRef] = useState<string>("");
+  const [cardModalImageUrl, setCardModalImageUrl] = useState<string>("");
 
   // Load saved posts from localStorage
   useEffect(() => {
@@ -1398,6 +1408,10 @@ export default function ChurchDirectoryPage() {
           {/* TAB 1: BẢNG TIN (THE MAIN FACEBOOK-STYLE FEED) */}
           {navTab === "feed" && (
             <>
+              {/* 2.C: Compact Sacred Fellowship Presence on Mobile */}
+              <div className="lg:hidden">
+                <SacredFellowshipPresence compact />
+              </div>
               {/* ================================================================= */}
               {/* FACEBOOK STORIES / REELS CAROUSEL                                  */}
               {/* ================================================================= */}
@@ -1405,6 +1419,34 @@ export default function ChurchDirectoryPage() {
               {/* FACEBOOK STORIES / REELS CAROUSEL (DYNAMIC FROM CHURCHES)          */}
               {/* ================================================================= */}
               <div className="flex items-center gap-2 sm:gap-2.5 overflow-x-auto pb-1 no-scrollbar select-none -mx-2 px-2 sm:mx-0 sm:px-0">
+                {/* 3.1: Create Scripture Card for Zalo/Facebook */}
+                <div
+                  onClick={() => {
+                    setCardModalVerse("");
+                    setCardModalRef("");
+                    setCardModalImageUrl("");
+                    setShowScriptureCardModal(true);
+                  }}
+                  className="w-24 sm:w-32 h-36 sm:h-48 rounded-xl sm:rounded-2xl border border-gold-400/60 hover:border-gold-300 flex flex-col justify-between p-2 sm:p-2.5 shrink-0 cursor-pointer group shadow-candle transition-all relative overflow-hidden"
+                  title="Tạo thiệp Lời Chúa tuyệt đẹp chia sẻ Zalo & Facebook"
+                >
+                  <img
+                    src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80"
+                    alt="Thiệp Lời Chúa"
+                    className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 brightness-75"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/20" />
+
+                  <div className="relative z-10 w-7 h-7 sm:w-8 sm:h-8 rounded-full">
+                  </div>
+
+                  <div className="relative z-10">
+                    <span className="text-[10px] sm:text-xs font-serif font-bold text-gold-300 block line-clamp-2 leading-tight drop-shadow-md">
+                      Lời Chúa
+                    </span>
+                  </div>
+                </div>
+
                 {/* 1. Register new church / create post card */}
                 <div
                   onClick={() => setShowRegisterModal(true)}
@@ -1754,11 +1796,10 @@ export default function ChurchDirectoryPage() {
                                 setOpenPostMenuId(openPostMenuId === post.id ? null : post.id);
                               }}
                               aria-label="Tùy chọn bài viết"
-                              className={`p-1.5 rounded-full transition-colors cursor-pointer ${
-                                openPostMenuId === post.id
-                                  ? "bg-sanctuary-800 text-gold-300"
-                                  : "hover:bg-sanctuary-850 text-sanctuary-400 hover:text-white"
-                              }`}
+                              className={`p-1.5 rounded-full transition-colors cursor-pointer ${openPostMenuId === post.id
+                                ? "bg-sanctuary-800 text-gold-300"
+                                : "hover:bg-sanctuary-850 text-sanctuary-400 hover:text-white"
+                                }`}
                             >
                               <MoreHorizontal className="w-4 h-4" />
                             </button>
@@ -1873,23 +1914,23 @@ export default function ChurchDirectoryPage() {
                                 {(currentUser?.role === "superadmin" ||
                                   ((currentUser?.role === "pastor" || currentUser?.role === "admin") &&
                                     currentUser?.churchSlug === post.churchSlug)) && (
-                                  <>
-                                    <div className="h-px bg-white/[0.08] my-1" />
-                                    <button
-                                      type="button"
-                                      onClick={() => handleDeleteFeedPost(post.id)}
-                                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left text-xs text-red-400 hover:text-red-300 hover:bg-red-950/40 transition-colors cursor-pointer"
-                                    >
-                                      <Trash2 className="w-4 h-4 text-red-400 shrink-0" />
-                                      <div className="min-w-0 flex-1">
-                                        <span className="block font-medium">Xóa bài viết này</span>
-                                        <span className="block text-[10px] text-red-400/70 truncate">
-                                          Quyền Quản Trị Viên Hội Thánh
-                                        </span>
-                                      </div>
-                                    </button>
-                                  </>
-                                )}
+                                    <>
+                                      <div className="h-px bg-white/[0.08] my-1" />
+                                      <button
+                                        type="button"
+                                        onClick={() => handleDeleteFeedPost(post.id)}
+                                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left text-xs text-red-400 hover:text-red-300 hover:bg-red-950/40 transition-colors cursor-pointer"
+                                      >
+                                        <Trash2 className="w-4 h-4 text-red-400 shrink-0" />
+                                        <div className="min-w-0 flex-1">
+                                          <span className="block font-medium">Xóa bài viết này</span>
+                                          <span className="block text-[10px] text-red-400/70 truncate">
+                                            Quyền Quản Trị Viên Hội Thánh
+                                          </span>
+                                        </div>
+                                      </button>
+                                    </>
+                                  )}
                               </div>
                             )}
                           </div>
@@ -1959,18 +2000,80 @@ export default function ChurchDirectoryPage() {
                           </div>
                         )}
 
-                        {post.mediaType === "scripture" && post.scriptureVerse && (
-                          <div className="px-4 py-2">
-                            <div className="p-4 rounded-xl bg-gradient-to-br from-[#181510] to-[#12141a] border border-gold-400/30 text-center space-y-2 shadow-inner">
-                              <BookOpen className="w-5 h-5 text-gold-400 mx-auto" />
-                              <p className="font-serif italic text-sm sm:text-base text-gold-100 leading-relaxed">
-                                {post.scriptureVerse}
-                              </p>
+                        {post.scriptureVerse ? (
+                          /* Breathtaking Sacred Scripture Art Banner */
+                          <div className="px-3 sm:px-4 py-2">
+                            <div className="relative rounded-2xl overflow-hidden border border-gold-400/40 shadow-2xl group transition-all duration-300 hover:border-gold-400/70 select-none">
+                              {/* Background Photography with Zoom Effect on Hover */}
+                              <div className="absolute inset-0">
+                                <img
+                                  src={
+                                    post.mediaUrl ||
+                                    "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80"
+                                  }
+                                  alt="Tranh Lời Chúa"
+                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 brightness-95"
+                                />
+                                {/* Cinematic Dark Vignette Scrim */}
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/65 to-black/40" />
+                                <div className="absolute inset-0 bg-radial-gradient from-transparent via-transparent to-black/60" />
+                              </div>
+
+                              {/* Card Content & Sacred Typography */}
+                              <div className="relative z-10 p-5 sm:p-7 flex flex-col justify-between min-h-[260px] sm:min-h-[300px] text-center">
+                                {/* Top Ribbon */}
+                                <div className="flex items-center justify-between gap-2">
+                                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/60 border border-gold-400/50 backdrop-blur-md">
+                                    <span className="text-[10px] sm:text-[11px] font-serif font-bold uppercase tracking-widest text-gold-300">
+                                      Lời Chúa Hằng Sống
+                                    </span>
+                                  </div>
+
+                                  {/* Quick Customize & Download Button right on card */}
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setCardModalVerse(post.scriptureVerse || post.content);
+                                      setCardModalRef(post.title || post.churchName);
+                                      setCardModalImageUrl(post.mediaUrl || "");
+                                      setShowScriptureCardModal(true);
+                                    }}
+                                    className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-gold-400/20 hover:bg-gold-400/35 border border-gold-400/60 text-gold-200 text-[11px] font-serif backdrop-blur-md transition-all shadow-candle cursor-pointer"
+                                    title="Tùy biến & Tải ảnh thiệp Lời Chúa 1080p"
+                                  >
+                                    <Palette className="w-3 h-3 text-gold-400" />
+                                    <span>Tùy Biến Thiệp</span>
+                                  </button>
+                                </div>
+
+                                {/* Center: Large Scripture Typography */}
+                                <div className="my-auto py-4 space-y-2 max-w-xl mx-auto">
+                                  <span className="text-3xl sm:text-4xl text-gold-400/50 font-serif leading-none block select-none">
+                                    “
+                                  </span>
+                                  <p className="font-serif italic font-medium text-base sm:text-xl text-white leading-relaxed tracking-wide drop-shadow-[0_2px_10px_rgba(0,0,0,0.9)]">
+                                    {post.scriptureVerse.replace(/^[“”"]+|[“”"]+$/g, "")}
+                                  </p>
+                                  <span className="text-3xl sm:text-4xl text-gold-400/50 font-serif leading-none block select-none -mt-1">
+                                    ”
+                                  </span>
+                                </div>
+
+                                {/* Bottom: Reference & Church Watermark */}
+                                <div className="pt-2 flex flex-col items-center gap-1.5">
+                                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gold-400/15 border border-gold-400/40 text-gold-300 text-xs font-serif font-bold tracking-wider backdrop-blur-sm">
+                                    <BookOpen className="w-3 h-3 text-gold-400" />
+                                    <span>{post.title || post.churchName}</span>
+                                  </div>
+
+                                  <span className="text-[10px] text-stone-400 font-sans tracking-wide">
+                                    🕊️ Nền Tảng Thờ Phượng Trực Tuyến • Chia sẻ phước hạnh
+                                  </span>
+                                </div>
+                              </div>
                             </div>
                           </div>
-                        )}
-
-                        {post.mediaType === "image" && post.mediaUrl && (
+                        ) : post.mediaType === "image" && post.mediaUrl ? (
                           <div className="w-full overflow-hidden bg-black">
                             <img
                               src={post.mediaUrl}
@@ -1978,7 +2081,7 @@ export default function ChurchDirectoryPage() {
                               className="w-full max-h-[460px] object-cover"
                             />
                           </div>
-                        )}
+                        ) : null}
 
                         {/* Post Reactions Stats Summary */}
                         <div className="px-4 py-2 flex items-center justify-between text-xs text-sanctuary-400 border-b border-white/[0.05]">
@@ -2061,6 +2164,20 @@ export default function ChurchDirectoryPage() {
                           >
                             <Share2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
                             <span className="truncate">Chia Sẻ</span>
+                          </button>
+
+                          <button
+                            onClick={() => {
+                              setCardModalVerse(post.scriptureVerse || post.content);
+                              setCardModalRef(post.title || post.churchName);
+                              setCardModalImageUrl(post.mediaUrl || "");
+                              setShowScriptureCardModal(true);
+                            }}
+                            className="flex-1 flex items-center justify-center gap-1 py-1.5 sm:py-2 px-1 rounded-xl text-gold-400 hover:bg-gold-400/10 hover:text-gold-300 transition-colors font-medium"
+                            title="Tạo thiệp câu gốc chia sẻ Zalo / Facebook"
+                          >
+                            <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 text-gold-400" />
+                            <span className="truncate">Tạo Thiệp</span>
                           </button>
                         </div>
 
@@ -2538,6 +2655,8 @@ export default function ChurchDirectoryPage() {
         {/* 2.3 RIGHT COLUMN: FACEBOOK-STYLE EVENTS, ONLINE CONTACTS & NOTIFICATIONS*/}
         {/* ----------------------------------------------------------------------- */}
         <aside className="w-72 xl:w-80 hidden lg:flex flex-col gap-4 shrink-0 sticky top-16 max-h-[calc(100vh-5rem)] overflow-y-auto no-scrollbar pb-6 select-none">
+          {/* 2.C: Sacred Fellowship Presence / Bản Đồ Tín Hữu Hiệp Một */}
+          <SacredFellowshipPresence />
           {/* Sunday Service Countdown Card (Giống mục Sự Kiện Facebook) */}
           <div className="p-4 rounded-2xl bg-sanctuary-900 border border-gold-400/30 space-y-3 shadow-md">
             <div className="flex items-center justify-between">
@@ -3421,6 +3540,15 @@ export default function ChurchDirectoryPage() {
           <span className="text-[10px] mt-0.5">Góp Ý</span>
         </button>
       </nav>
+
+      {/* 3.1: Scripture Card Generator Modal for Zalo / Facebook */}
+      <ScriptureCardModal
+        isOpen={showScriptureCardModal}
+        onClose={() => setShowScriptureCardModal(false)}
+        initialVerse={cardModalVerse}
+        initialReference={cardModalRef}
+        initialImageUrl={cardModalImageUrl}
+      />
 
       {/* Floating Action Toast Notification */}
       {feedToast && (
