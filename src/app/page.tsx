@@ -1590,70 +1590,7 @@ export default function ChurchDirectoryPage() {
                 })}
               </div>
 
-              {/* ================================================================= */}
-              {/* MOBILE ONLY: CÂU GỐC HÔM NAY BANNER (MÀN HÌNH NHỎ DI ĐỘNG)        */}
-              {/* ================================================================= */}
-              <div className="md:hidden">
-                <div className="p-3.5 rounded-2xl bg-gradient-to-br from-[#161c2b] via-[#10141f] to-[#0a0d14] border border-gold-400/35 text-xs font-serif space-y-2 shadow-md relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-28 h-28 bg-gold-400/10 rounded-full blur-2xl pointer-events-none" />
 
-                  <div className="flex items-center justify-between relative z-10">
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-6 h-6 rounded-lg bg-gold-400/20 border border-gold-400/40 flex items-center justify-center text-gold-400">
-                        <BookOpen className="w-3.5 h-3.5" />
-                      </div>
-                      <span className="text-[11px] uppercase tracking-wider text-gold-300 font-bold">
-                        Câu Gốc Hôm Nay
-                      </span>
-                      {dailyVerse.isCustom ? (
-                        <span className="text-[8px] font-sans px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                          Mục Vụ
-                        </span>
-                      ) : (
-                        <span className="text-[8px] font-sans px-1.5 py-0.2 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                          Mỗi Ngày
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setCardModalVerse(dailyVerse.verse);
-                          setCardModalRef(dailyVerse.reference);
-                          setCardModalImageUrl(dailyVerse.imageUrl || "");
-                          setShowScriptureCardModal(true);
-                        }}
-                        className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-gold-400/20 text-gold-300 border border-gold-400/40 text-[10px] font-bold shadow-sm cursor-pointer"
-                      >
-                        <span>Lưu</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          navigator.clipboard.writeText(`🕊️ CÂU GỐC HÔM NAY:\n“${dailyVerse.verse}”\n— ${dailyVerse.reference} —\n${window.location.origin}`);
-                          setFeedToast("Đã sao chép câu gốc hôm nay!");
-                          setTimeout(() => setFeedToast(null), 3000);
-                        }}
-                        className="p-1 rounded-full bg-sanctuary-850 text-sanctuary-300 border border-white/10 hover:text-white cursor-pointer"
-                        title="Sao chép câu gốc"
-                      >
-                        <Copy className="w-3 h-3" />
-                      </button>
-                    </div>
-                  </div>
-
-                  <p className="italic text-sanctuary-100 text-xs sm:text-sm leading-relaxed relative z-10">
-                    &ldquo;{dailyVerse.verse}&rdquo;
-                  </p>
-
-                  <div className="text-right pt-0.5 border-t border-white/[0.06] relative z-10">
-                    <span className="text-xs text-gold-400 font-bold">— {dailyVerse.reference}</span>
-                  </div>
-                </div>
-              </div>
 
               {/* ================================================================= */}
               {/* FACEBOOK-STYLE ROLE-AWARE BAR: OFFICIAL PUBLISHER VS PRAYER BOX   */}
@@ -1839,6 +1776,72 @@ export default function ChurchDirectoryPage() {
                   </button>
                 ))}
               </div>
+
+              {/* ================================================================= */}
+              {/* MOBILE ONLY: CÂU GỐC HÔM NAY BANNER (MÀN HÌNH NHỎ DI ĐỘNG)        */}
+              {/* ================================================================= */}
+              <div className="md:hidden">
+                <div className="p-3.5 rounded-2xl bg-gradient-to-br from-[#161c2b] via-[#10141f] to-[#0a0d14] border border-gold-400/35 text-xs font-serif space-y-2 shadow-md relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-28 h-28 bg-gold-400/10 rounded-full blur-2xl pointer-events-none" />
+
+                  <div className="flex items-center justify-between relative z-10">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-6 h-6 rounded-lg bg-gold-400/20 border border-gold-400/40 flex items-center justify-center text-gold-400">
+                        <BookOpen className="w-3.5 h-3.5" />
+                      </div>
+                      <span className="text-[11px] uppercase tracking-wider text-gold-300 font-bold">
+                        Câu Gốc Hôm Nay
+                      </span>
+                      {dailyVerse.isCustom ? (
+                        <span className="text-[8px] font-sans px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                          Mục Vụ
+                        </span>
+                      ) : (
+                        <span className="text-[8px] font-sans px-1.5 py-0.2 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                          Mỗi Ngày
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCardModalVerse(dailyVerse.verse);
+                          setCardModalRef(dailyVerse.reference);
+                          setCardModalImageUrl(dailyVerse.imageUrl || "");
+                          setShowScriptureCardModal(true);
+                        }}
+                        className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-gold-400/20 text-gold-300 border border-gold-400/40 text-[10px] font-bold shadow-sm cursor-pointer"
+                      >
+                        <span>Lưu</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(`🕊️ CÂU GỐC HÔM NAY:\n“${dailyVerse.verse}”\n— ${dailyVerse.reference} —\n${window.location.origin}`);
+                          setFeedToast("Đã sao chép câu gốc hôm nay!");
+                          setTimeout(() => setFeedToast(null), 3000);
+                        }}
+                        className="p-1 rounded-full bg-sanctuary-850 text-sanctuary-300 border border-white/10 hover:text-white cursor-pointer"
+                        title="Sao chép câu gốc"
+                      >
+                        <Copy className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <p className="italic text-sanctuary-100 text-xs sm:text-sm leading-relaxed relative z-10">
+                    &ldquo;{dailyVerse.verse}&rdquo;
+                  </p>
+
+                  <div className="text-right pt-0.5 border-t border-white/[0.06] relative z-10">
+                    <span className="text-xs text-gold-400 font-bold">— {dailyVerse.reference}</span>
+                  </div>
+                </div>
+              </div>
+
 
               {/* ================================================================= */}
               {/* FACEBOOK-STYLE FEED POSTS (CÁC BÀI VIẾT TỪ TOÀN BỘ CÁC HỘI THÁNH) */}
