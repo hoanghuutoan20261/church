@@ -60,7 +60,6 @@ export const SCRIPTURE_PRESETS: ScripturePreset[] = [
 
 export interface BackgroundArtTheme {
   id: string;
-  name: string;
   tag: string;
   imageUrl: string;
   accentColor: string;
